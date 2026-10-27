@@ -95,10 +95,17 @@
     width: calc(var(--bh) * var(--s, .8) * .3); overflow: visible; opacity: .62; }
 
   .service { position: relative; flex: 1 1 auto; min-height: 80px; }
-  .rail { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: min(96vw, 860px); height: auto; }
-  .bartender { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); height: 100%; max-height: 210px; width: auto; }
-  .shaker { transform-box: fill-box; transform-origin: 50% 100%; }
-  .bartender.shaking .shaker { animation: shake .45s ease-in-out 2; }
+  .rail { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: min(96vw, 860px); height: auto; pointer-events: none; }
+  .bartender { position: absolute; left: 0; bottom: -8px; height: calc(100% + 8px); max-height: 260px; overflow: visible;
+    pointer-events: none; transform: translateX(calc(50vw - 50%)); will-change: transform; }
+  .patron { position: absolute; bottom: 0; z-index: 1; width: clamp(150px, 15vw, 230px); height: auto; pointer-events: none; overflow: hidden; }
+  .patron.a { left: 1.5%; }
+  .patron.b { right: 1.5%; }
+  .pa-head { transform-box: view-box; transform-origin: 100px 84px; animation: pa-turn 11s ease-in-out infinite; }
+  .pb-arm { transform-box: view-box; transform-origin: 148px 118px; transform: rotate(150deg); animation: pb-drink 13s ease-in-out 2s infinite; }
+  .pb-head { transform-box: view-box; transform-origin: 100px 86px; animation: pb-tilt 13s ease-in-out 2s infinite; }
+  .dust { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; pointer-events: none; mix-blend-mode: screen; }
+  .neon.blink { animation: neon-blink .8s steps(1, end); }
 
   .counter { position: relative; flex: 0 0 clamp(118px, 17svh, 160px); display: flex; flex-direction: column; }
   .counter-top { position: relative; height: 30px;
@@ -110,10 +117,9 @@
     box-shadow: inset 0 14px 18px rgba(0,0,0,.55); }
   .hint { position: relative; z-index: 3; margin: 0; color: var(--muted); font-size: 15px; opacity: 0; animation: fade-in .9s 3.4s forwards; }
   .prop { position: absolute; bottom: calc(100% - 14px); overflow: visible; }
-  .prop.limes { left: 5%; width: 92px; }
-  .prop.glasses { left: 20%; width: 86px; }
-  .prop.bucket { left: 72%; width: 48px; }
-  .prop.shaker2 { left: 82%; width: 34px; }
+  .prop.limes { left: 24%; width: 92px; }
+  .prop.glasses { left: 36%; width: 86px; }
+  .prop.bucket { left: 62%; width: 48px; }
   .vignette { position: absolute; inset: 0; z-index: 2; pointer-events: none;
     background: linear-gradient(rgba(0,0,0,.12), rgba(0,0,0,.12)),
       radial-gradient(ellipse at 50% 38%, rgba(0,0,0,0) 20%, rgba(4,1,2,.8) 100%); }
@@ -232,6 +238,9 @@
     .go-right { padding: 10px 10px 10px 14px; }
     .prop.glasses { display: none; }
     .music { padding: 8px; }
+    .patron { display: none; }
+    .prop.limes { left: 4%; }
+    .prop.bucket { left: 76%; }
     .music .label { display: none; }
   }
 
@@ -248,6 +257,10 @@
   @keyframes reveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   @keyframes pour-up { from { transform: translateY(120px); } to { transform: none; } }
   @keyframes fade-in-late { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pa-turn { 0%, 55%, 100% { transform: rotate(0); } 62%, 84% { transform: rotate(6deg); } }
+  @keyframes pb-drink { 0%, 62%, 100% { transform: rotate(150deg); } 72%, 86% { transform: rotate(0deg); } }
+  @keyframes pb-tilt { 0%, 70%, 100% { transform: none; } 76%, 84% { transform: translateY(-2px) rotate(-3deg); } }
+  @keyframes neon-blink { 0% { opacity: 1; } 10% { opacity: .35; } 18% { opacity: 1; } 30% { opacity: .5; } 36% { opacity: 1; } 100% { opacity: 1; } }
   @keyframes shake { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8px) rotate(-6deg); }
     50% { transform: translateY(4px) rotate(5deg); } 75% { transform: translateY(-6px) rotate(-4deg); } }
   @keyframes flame { 0%, 100% { transform: scale(1, 1) skewX(0); } 25% { transform: scale(.96, 1.07) skewX(-2.5deg); }
@@ -268,7 +281,8 @@
     .card-inner > *, .pour, .late { animation: none; }
     dialog.card[open] { animation: none; }
     .bottle svg { transition: none; }
-    .bartender.shaking .shaker { animation: none; }
+    .pa-head, .pb-arm, .pb-head, .neon.blink { animation: none; }
+    .dust { display: none; }
     .music { opacity: 1; animation: none; }
     .music.on .disc { animation: none; }
   }
@@ -346,17 +360,76 @@
 
         <div class="service">
           <svg class="rail" id="rail" viewBox="0 0 860 50" aria-hidden="true" focusable="false"></svg>
-          <svg class="bartender" id="bartender" viewBox="0 0 240 280" aria-hidden="true" focusable="false">
-            <g fill="#07030a" stroke="rgba(255,100,120,.28)" stroke-width="1.5">
-              <circle cx="110" cy="60" r="30"/>
-              <rect x="98" y="84" width="24" height="26"/>
-              <path d="M40 280V170C40 128 70 108 110 108C150 108 180 128 180 170V280Z"/>
-            </g>
-            <path d="M62 132L40 190L66 232" fill="none" stroke="#07030a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M158 132L204 160L186 88" fill="none" stroke="#07030a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-            <g class="shaker" fill="#07030a" stroke="rgba(255,100,120,.35)" stroke-width="1.5">
-              <path d="M174 54H200L196 92H178Z"/>
-              <rect x="180" y="42" width="14" height="14" rx="3"/>
+          <svg class="bartender" id="bartender" viewBox="0 0 260 300" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="bt-shirt" x1="0" x2="1"><stop offset="0" stop-color="#5a3a43"/><stop offset=".5" stop-color="#3a252b"/><stop offset="1" stop-color="#5e3a44"/></linearGradient>
+              <linearGradient id="bt-vest" x1="0" x2="1"><stop offset="0" stop-color="#1c0f13"/><stop offset=".5" stop-color="#0d0709"/><stop offset="1" stop-color="#1f1015"/></linearGradient>
+              <linearGradient id="bt-skin" x1="0" x2="1"><stop offset="0" stop-color="#6a4236"/><stop offset=".5" stop-color="#43281f"/><stop offset="1" stop-color="#6e4236"/></linearGradient>
+            </defs>
+            <g id="bt-root">
+              <g id="bt-torso">
+                <rect x="119" y="76" width="22" height="32" rx="7" fill="url(#bt-skin)"/>
+                <path d="M86 106C104 98 156 98 174 106C190 114 196 134 194 166L190 300H70L66 166C64 134 70 114 86 106Z" fill="url(#bt-shirt)" stroke="rgba(255,110,135,.4)" stroke-width="1.5"/>
+                <path d="M114 99L130 112L120 118Z" fill="#6b5258"/>
+                <path d="M146 99L130 112L140 118Z" fill="#6b5258"/>
+                <path d="M90 112L118 104L130 154L142 104L170 112C182 122 186 142 184 172L182 300H78L76 172C74 142 78 122 90 112Z" fill="url(#bt-vest)" stroke="rgba(255,110,135,.25)"/>
+                <g fill="#b48a44"><circle cx="130" cy="170" r="2.3"/><circle cx="130" cy="194" r="2.3"/><circle cx="130" cy="218" r="2.3"/><circle cx="130" cy="242" r="2.3"/></g>
+                <path d="M134 204Q150 218 164 206" fill="none" stroke="#b48a44" stroke-width="1.2"/>
+                <rect x="98" y="196" width="18" height="3" rx="1.5" fill="#2a1a1e"/>
+                <path d="M130 108L114 100V116Z" fill="#7a1228"/>
+                <path d="M130 108L146 100V116Z" fill="#7a1228"/>
+                <rect x="126.5" y="103.5" width="7" height="9" rx="2" fill="#5a0c1c"/>
+                <path d="M78 254H182L184 300H76Z" fill="#100a0b"/>
+                <rect x="76" y="250" width="108" height="5" rx="2" fill="#2e1d22"/>
+                <path id="bt-rag-shoulder" d="M88 102L102 98L106 150Q98 154 92 151Z" fill="#d9ccb0" opacity=".7"/>
+              </g>
+              <g id="bt-head">
+                <ellipse cx="106" cy="63" rx="5" ry="8" fill="#4a2c22"/>
+                <ellipse cx="154" cy="63" rx="5" ry="8" fill="#4a2c22"/>
+                <ellipse cx="130" cy="60" rx="24" ry="29" fill="url(#bt-skin)" stroke="rgba(255,120,140,.35)" stroke-width="1.2"/>
+                <path d="M107 62C108 82 118 93 130 94C142 93 152 82 153 62C148 75 140 79 130 79C120 79 112 75 107 62Z" fill="#0d0708"/>
+                <path d="M117 73C123 68 137 68 143 73C137 76 123 76 117 73Z" fill="#0d0708"/>
+                <path d="M117 51L126 50M134 50L143 51" stroke="#0d0708" stroke-width="2.2" stroke-linecap="round"/>
+                <g id="bt-eyes" fill="#120a0a"><ellipse cx="121" cy="58" rx="2.7" ry="1.8"/><ellipse cx="139" cy="58" rx="2.7" ry="1.8"/></g>
+                <path d="M130 58L127 68H132" fill="none" stroke="rgba(20,10,10,.45)" stroke-width="1.4" stroke-linecap="round"/>
+                <path d="M104 56C101 30 117 21 132 21C150 21 161 33 156 56C153 42 143 35 131 37C119 37 108 43 104 56Z" fill="#080405" stroke="rgba(255,120,140,.4)" stroke-width="1.2"/>
+                <path d="M118 30C126 26 140 26 148 33" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="1.5"/>
+              </g>
+              <g id="bt-armL" transform="translate(86 112)">
+                <g class="up">
+                  <rect x="-12" y="-8" width="24" height="72" rx="11" fill="url(#bt-shirt)" stroke="rgba(255,110,135,.35)"/>
+                  <g transform="translate(0 62)"><g class="fo">
+                    <rect x="-8" y="2" width="16" height="52" rx="7" fill="url(#bt-skin)"/>
+                    <rect x="-13" y="-5" width="26" height="12" rx="5" fill="#6b4c54"/>
+                    <g transform="translate(0 56)">
+                      <g id="bt-glass">
+                        <path d="M-11 -30H11L9 -2Q9 1 6 1H-6Q-9 1 -9 -2Z" fill="rgba(255,235,240,.14)" stroke="rgba(255,225,235,.65)"/>
+                        <path d="M-6 -26L-5 -6" stroke="rgba(255,255,255,.45)" stroke-width="1.5"/>
+                      </g>
+                      <ellipse cx="0" cy="2" rx="9" ry="10" fill="url(#bt-skin)"/>
+                    </g>
+                  </g></g>
+                </g>
+              </g>
+              <g id="bt-armR" transform="translate(174 112)">
+                <g class="up">
+                  <rect x="-12" y="-8" width="24" height="72" rx="11" fill="url(#bt-shirt)" stroke="rgba(255,110,135,.35)"/>
+                  <g transform="translate(0 62)"><g class="fo">
+                    <rect x="-8" y="2" width="16" height="52" rx="7" fill="url(#bt-skin)"/>
+                    <rect x="-13" y="-5" width="26" height="12" rx="5" fill="#6b4c54"/>
+                    <g transform="translate(0 56)">
+                      <g id="bt-shaker">
+                        <path d="M-9 -6H9L11 40Q11 44 7 44H-7Q-11 44 -11 40Z" fill="#b9bec3"/>
+                        <path d="M-7 44H7L5 54H-5Z" fill="#d4d8dc"/>
+                        <rect x="-3" y="54" width="6" height="6" rx="1.5" fill="#d4d8dc"/>
+                        <rect x="4" y="-2" width="3" height="40" fill="#fff" opacity=".35"/>
+                      </g>
+                      <path id="bt-rag" d="M-12 -2L12 -6L16 26Q4 32 -8 28Z" fill="#d9ccb0" opacity=".9"/>
+                      <ellipse cx="0" cy="2" rx="9" ry="10" fill="url(#bt-skin)"/>
+                    </g>
+                  </g></g>
+                </g>
+              </g>
             </g>
           </svg>
         </div>
@@ -376,18 +449,41 @@
               <path d="M6 14H44L40 52H10Z" fill="#1b1013" stroke="rgba(255,255,255,.25)"/>
               <g fill="rgba(255,255,255,.55)"><rect x="12" y="6" width="9" height="9" rx="2" transform="rotate(-10 16 10)"/><rect x="24" y="5" width="9" height="9" rx="2" transform="rotate(8 28 9)"/><rect x="33" y="8" width="8" height="8" rx="2"/></g>
             </svg>
-            <svg class="prop shaker2" viewBox="0 0 34 70" aria-hidden="true">
-              <rect x="14" y="6" width="6" height="7" rx="1" fill="#cfd4d8"/><path d="M10 12H24L26 22H8Z" fill="#cfd4d8"/>
-              <path d="M8 22H26L24 66Q24 68 22 68H12Q10 68 10 66Z" fill="#b9bec3"/>
-              <rect x="21" y="24" width="3" height="42" fill="#8d9399" opacity=".5"/><rect x="12" y="26" width="2" height="36" fill="#fff" opacity=".35"/>
-            </svg>
           </div>
+          <svg class="patron a" viewBox="0 0 200 170" aria-hidden="true" focusable="false">
+            <g class="pa-head">
+              <rect x="88" y="66" width="24" height="36" rx="6" fill="#1c100e"/>
+              <ellipse cx="76" cy="64" rx="4" ry="7" fill="#170c0c"/><ellipse cx="124" cy="64" rx="4" ry="7" fill="#170c0c"/>
+              <ellipse cx="100" cy="62" rx="23" ry="25" fill="#0e0708" stroke="rgba(255,90,120,.4)" stroke-width="1.5"/>
+              <path d="M70 46C70 20 84 11 100 11C116 11 130 20 130 46Z" fill="#110a0b" stroke="rgba(255,90,120,.5)" stroke-width="1.5"/>
+              <rect x="70" y="33" width="60" height="7" fill="#4a0d1a"/>
+              <ellipse cx="100" cy="46" rx="46" ry="8" fill="#0b0607" stroke="rgba(255,90,120,.55)" stroke-width="1.5"/>
+            </g>
+            <path d="M6 170C10 124 38 102 72 98H128C162 102 190 124 194 170Z" fill="#0b0607" stroke="rgba(255,90,120,.5)" stroke-width="2"/>
+            <path d="M70 100Q100 92 130 100L126 112Q100 105 74 112Z" fill="#1c1013"/>
+          </svg>
+          <svg class="patron b" viewBox="0 0 200 170" aria-hidden="true" focusable="false">
+            <g class="pb-arm">
+              <path d="M148 118L166 82L150 54" fill="none" stroke="#2a1714" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M136 30Q150 46 164 30Z" fill="rgba(255,170,190,.35)" stroke="rgba(255,220,230,.75)" stroke-width="1.2"/>
+              <path d="M150 38V54" stroke="rgba(255,220,230,.75)" stroke-width="1.2"/>
+            </g>
+            <g class="pb-head">
+              <rect x="90" y="70" width="20" height="36" rx="6" fill="#26150f"/>
+              <path d="M72 64C70 34 84 24 100 24C116 24 130 34 128 64C128 78 122 86 114 88H86C78 86 72 78 72 64Z" fill="#080405" stroke="rgba(255,90,120,.5)" stroke-width="1.5"/>
+              <path d="M73 46Q100 38 127 46" fill="none" stroke="#b08a48" stroke-width="3"/>
+              <path d="M118 42C126 24 134 16 142 12C136 22 130 32 122 44Z" fill="#d8ccb8" opacity=".75"/>
+            </g>
+            <path d="M26 170C32 128 54 110 80 106H120C146 110 168 128 174 170Z" fill="#0d0708" stroke="rgba(255,90,120,.5)" stroke-width="2"/>
+            <path d="M84 107Q100 120 116 107" fill="none" stroke="rgba(230,215,200,.55)" stroke-width="2.5" stroke-dasharray="1 3" stroke-linecap="round"/>
+          </svg>
           <div class="counter-front">
             <p class="hint">Выбери бутылку на полке, и мы расскажем, что внутри.</p>
           </div>
         </div>
 
         <div class="vignette"></div>
+        <canvas class="dust" id="dust" aria-hidden="true"></canvas>
       </div>
     </section>
 
@@ -789,7 +885,6 @@
 
   /* ---------- клик по бутылке: поднялась, прокрутилась, открылась карточка ---------- */
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
-  const bartender = document.getElementById("bartender");
   let busy = false, pickedSvg = null;
   function pick(btn, d) {
     if (busy) return;
@@ -799,12 +894,14 @@
     pickedSvg = svg;
     shelving.classList.add("picking");
     btn.classList.add("chosen");
-    bartender.classList.add("shaking");
     svg.style.transition = "transform .9s cubic-bezier(.45,.05,.2,1)";
     svg.style.transform = "translateY(-28px) scale(1.12) rotateY(360deg)";
-    setTimeout(() => { openCard(d); busy = false; bartender.classList.remove("shaking"); }, 850);
+    const br = btn.getBoundingClientRect(), sr = document.querySelector(".service").getBoundingClientRect();
+    const walk = Bartender.serve(br.left + br.width / 2 - sr.left);
+    setTimeout(() => { openCard(d); busy = false; }, Math.min(1500, Math.max(850, walk + 150)));
   }
   dlg.addEventListener("close", () => {
+    Bartender.release();
     shelving.classList.remove("picking");
     if (!pickedSvg) return;
     const svg = pickedSvg;
@@ -929,7 +1026,7 @@
 
   const Music = (() => {
     const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1;
+    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null;
     const roomFreq = () => roomIdx === 1 ? 3400 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -965,6 +1062,7 @@
     }
     function run() {
       nextTime = ctx.currentTime + .1;
+      anchor = nextTime - (Math.floor(step / 2) * BEAT + (step % 2 ? EIGHTH * 1.25 : 0));
       clearInterval(timer);
       timer = setInterval(tick, 40);
     }
@@ -994,7 +1092,32 @@
       if (document.hidden) { clearInterval(timer); ctx.suspend(); }
       else ctx.resume().then(run);
     });
-    return { start, stop, room, get on() { return on; } };
+    // где мы внутри доли: 0 — сильная доля, бармен кивает
+    function beat() {
+      if (!ctx || !on || ctx.state !== "running") return null;
+      return (((ctx.currentTime - anchor) / BEAT) % 1 + 1) % 1;
+    }
+    // лёд в шейкере
+    function shake(ms) {
+      if (!ctx || !on) return;
+      if (!sfx) {
+        sfx = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .2), ctx.sampleRate);
+        const d = sfx.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      const t0 = ctx.currentTime + .05, n = Math.floor(ms / 120);
+      for (let i = 0; i < n; i++) {
+        const t = t0 + i * .12 + (Math.random() - .5) * .015, v = i % 2 ? .05 : .08;
+        const src = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+        src.buffer = sfx; f.type = "bandpass"; f.frequency.value = 3800 + Math.random() * 1200; f.Q.value = 1.2;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(v, t + .01);
+        g.gain.exponentialRampToValueAtTime(.0001, t + .09);
+        src.connect(f).connect(g).connect(master);
+        src.start(t, Math.random() * .08, .1);
+      }
+    }
+    return { start, stop, room, beat, shake, get on() { return on; } };
   })();
 
   const musicBtn = document.getElementById("music");
@@ -1015,6 +1138,292 @@
     addEventListener("pointerdown", e => { if (!e.target.closest("#music") && !Music.on) setMusic(true); }, { once: true });
   }
 
+  /* ---------- бармен: живёт своей жизнью и подаёт бутылки ---------- */
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const Bartender = (() => {
+    const svg = document.getElementById("bartender"), service = svg.parentElement;
+    const el = id => document.getElementById(id);
+    const root = el("bt-root"), head = el("bt-head"), eyes = el("bt-eyes");
+    const arm = side => { const g = el("bt-arm" + side); return { up: g.querySelector(".up"), fo: g.querySelector(".fo") }; };
+    const L = arm("L"), R = arm("R");
+    const items = { shaker: el("bt-shaker"), rag: el("bt-rag"), glass: el("bt-glass"), shoulder: el("bt-rag-shoulder") };
+    // углы рук в градусах: плечо (up) и локоть (fo)
+    const REST = { bob: 0, head: 0, look: 0, eyesY: 0, lUp: 8, lFo: -6, rUp: -8, rFo: 6 };
+    const P = {
+      wipe:   { bob: 0, look: 0, head: -4, eyesY: 2, lUp: 20, lFo: -114, rUp: -20, rFo: 120 },
+      shake:  { bob: 0, look: 0, head: 2, eyesY: 0, lUp: 8, lFo: -6, rUp: -50, rFo: -155 },
+      reachR: { look: 0, head: 4, eyesY: -3, lUp: 8, lFo: -6, rUp: -168, rFo: -6 },
+      reachL: { look: 0, head: -4, eyesY: -3, lUp: 168, lFo: 6, rUp: -8, rFo: 6 },
+      lean:   { look: 0, head: 0, eyesY: 1, bob: 10, lUp: 30, lFo: -26, rUp: -30, rFo: 26 }
+    };
+    const pose = { x: 0, ...REST };
+    const CANCEL = Symbol("cancel"), waits = new Set();
+    let w = 0, bw = 0, mode = "idle", walkPhase = 0, lastX = 0, tw = null, raf = 0;
+    let active = true, hold = false, serving = false, parked = [], nextBlink = 0, blinkUntil = 0;
+    const still = reduceMotion.matches;
+    const ease = k => k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+
+    function measure() {
+      const nw = service.clientWidth;
+      bw = Math.min(service.clientHeight + 8, 260) * 260 / 300;
+      svg.style.width = bw + "px";
+      if (w && nw && nw !== w) {
+        const k = nw / w;
+        pose.x *= k;
+        if (tw && "x" in tw.to) { tw.from.x *= k; tw.to.x *= k; }   // идёт куда-то — пересчитываем и цель
+      }
+      w = nw;
+      if (!pose.x) pose.x = w / 2;
+      pose.x = clampX(pose.x);
+      if (tw && "x" in tw.to) { tw.to.x = clampX(tw.to.x); tw.from.x = clampX(tw.from.x); }
+      render(performance.now());
+    }
+    function bounds() {
+      const l = shelving.offsetLeft - service.offsetLeft, r = l + shelving.offsetWidth, half = bw * .42;
+      return [Math.max(half, l + half * .5), Math.min(w - half, r - half * .5)];
+    }
+    function clampX(x) { const [a, b] = bounds(); return b < a ? w / 2 : Math.min(b, Math.max(a, x)); }
+
+    function hand(right, left) {
+      items.shaker.style.display = right === "shaker" ? "" : "none";
+      items.rag.style.display = right === "rag" ? "" : "none";
+      items.shoulder.style.display = right === "rag" ? "none" : "";
+      items.glass.style.display = left === "glass" ? "" : "none";
+    }
+
+    function render(now) {
+      const o = { bob: 0, head: 0, lUp: 0, lFo: 0, rUp: 0, rFo: 0 }, t = now / 1000;
+      if (mode === "walk") {
+        const k = Math.sin(walkPhase);
+        o.bob -= Math.abs(k) * 5; o.lUp += k * 7; o.rUp += k * 7; o.head += k * 1.5;
+      } else if (mode === "wipe") {
+        const a = t * 2 * Math.PI * 1.1;
+        o.rFo += Math.sin(a) * 14; o.rUp += Math.cos(a) * 6;
+      } else if (mode === "shake") {
+        const a = t * 2 * Math.PI * 4.2;
+        o.rUp += Math.sin(a) * 8; o.rFo += Math.sin(a) * 12; o.bob += Math.abs(Math.sin(a)) * 1.5; o.head += Math.sin(a) * .8;
+      }
+      const ph = still ? null : Music.beat();
+      if (ph !== null && mode !== "shake") {
+        const k = Math.pow(Math.max(0, Math.cos(ph * 2 * Math.PI)), 6);
+        o.head += k * 2.2; o.bob += k * 1.4;
+      }
+      const breath = 1 + .009 * Math.sin(t * 2 * Math.PI / 4.2);
+      const p = pose, lu = p.lUp + o.lUp, lf = p.lFo + o.lFo, ru = p.rUp + o.rUp, rf = p.rFo + o.rFo;
+      svg.style.transform = `translateX(${(p.x - bw / 2).toFixed(1)}px)`;
+      root.setAttribute("transform", `translate(0 ${(p.bob + o.bob).toFixed(2)}) translate(130 300) scale(1 ${breath.toFixed(4)}) translate(-130 -300)`);
+      head.setAttribute("transform", `rotate(${(p.head + o.head + p.look * 3).toFixed(2)} 130 92)`);
+      eyes.setAttribute("transform", `translate(${(p.look * 2.5).toFixed(2)} ${p.eyesY.toFixed(2)}) translate(0 58) scale(1 ${now < blinkUntil ? .1 : 1}) translate(0 -58)`);
+      L.up.setAttribute("transform", `rotate(${lu.toFixed(2)})`);
+      L.fo.setAttribute("transform", `rotate(${lf.toFixed(2)})`);
+      R.up.setAttribute("transform", `rotate(${ru.toFixed(2)})`);
+      R.fo.setAttribute("transform", `rotate(${rf.toFixed(2)})`);
+      items.glass.setAttribute("transform", `rotate(${(-(lu + lf)).toFixed(2)})`);   // бокал всегда стоит ровно
+    }
+
+    function frame(now) {
+      raf = 0;
+      if (!active) return;
+      if (tw) {
+        const k = Math.min(1, (now - tw.t0) / tw.dur), e = ease(k);
+        for (const key in tw.to) pose[key] = tw.from[key] + (tw.to[key] - tw.from[key]) * e;
+        if (k === 1) { const done = tw.resolve; tw = null; done(); }
+      }
+      walkPhase += Math.abs(pose.x - lastX) * .045; lastX = pose.x;
+      if (now > nextBlink) { blinkUntil = now + 130; nextBlink = now + rnd(2500, 6000); }
+      render(now);
+      raf = requestAnimationFrame(frame);
+    }
+    function tween(to, dur) {
+      return new Promise((resolve, reject) => {
+        if (tw) { const r = tw.reject; tw = null; r(CANCEL); }
+        const from = {};
+        for (const k in to) from[k] = pose[k];
+        tw = { from, to, dur: Math.max(1, dur), t0: performance.now(), resolve, reject };
+        if (!raf && active) raf = requestAnimationFrame(frame);
+      });
+    }
+    function wait(ms) {
+      return new Promise((resolve, reject) => {
+        const x = { reject };
+        x.id = setTimeout(() => { waits.delete(x); resolve(); }, ms);
+        waits.add(x);
+      });
+    }
+    function cancelAll() {
+      if (tw) { const r = tw.reject; tw = null; r(CANCEL); }
+      waits.forEach(x => { clearTimeout(x.id); x.reject(CANCEL); });
+      waits.clear();
+      mode = "idle";
+    }
+    const park = () => new Promise(r => parked.push(r));
+    function wake() { const r = parked; parked = []; r.forEach(f => f()); }
+    const swallow = e => { if (e !== CANCEL) throw e; };
+
+    async function walkTo(x, speed) {
+      x = clampX(x);
+      const d = x - pose.x;
+      if (Math.abs(d) < 8) return;
+      mode = "walk";
+      await tween({ ...REST, x, look: Math.sign(d) }, Math.min(2600, Math.max(350, Math.abs(d) / speed * 1000)));
+      mode = "idle";
+      await tween({ look: 0 }, 300);
+    }
+    function station() {
+      const [a, b] = bounds();
+      let x = rnd(a, b);
+      for (let i = 0; i < 10 && Math.abs(x - pose.x) < (b - a) * .2; i++) x = rnd(a, b);
+      return x;
+    }
+    async function shake(ms) {
+      hand("shaker", null);
+      await tween(P.shake, 500);
+      mode = "shake";
+      Music.shake(ms);
+      await wait(ms);
+      mode = "idle";
+      await tween(REST, 550);
+      hand(null, null);
+    }
+    // что бармен делает, пока его никто не зовёт (число — как часто)
+    const ROUTINES = [
+      [3, async () => {                                   // протирает бокал
+        hand("rag", "glass");
+        await tween(P.wipe, 650);
+        mode = "wipe";
+        await wait(rnd(2600, 4200));
+        mode = "idle";
+        await tween(REST, 600);
+        hand(null, null);
+      }],
+      [3, () => walkTo(station(), 140)],                  // переходит к другому месту стойки
+      [2, () => shake(rnd(1400, 2000))],                  // трясёт шейкер
+      [2, async () => {                                   // поправляет бутылку на полке
+        await tween(Math.random() < .5 ? P.reachL : P.reachR, 600);
+        await wait(rnd(600, 1100));
+        await tween(REST, 600);
+      }],
+      [2, async () => {                                   // опирается на стойку
+        await tween(P.lean, 700);
+        await wait(rnd(1800, 3200));
+        await tween(REST, 700);
+      }],
+      [2, async () => {                                   // оглядывает зал
+        await tween({ look: -1 }, 500); await wait(rnd(500, 900));
+        await tween({ look: 1 }, 700); await wait(rnd(500, 900));
+        await tween({ look: 0 }, 500);
+      }]
+    ];
+    async function life() {
+      const total = ROUTINES.reduce((s, r) => s + r[0], 0);
+      for (;;) {
+        try {
+          if (hold || !active) { await park(); continue; }
+          await wait(rnd(900, 2600));
+          let n = Math.random() * total;
+          await ROUTINES.find(([wt]) => (n -= wt) < 0)[1]();
+        } catch (e) {
+          if (e !== CANCEL) { console.error(e); await new Promise(r => setTimeout(r, 1000)); }
+        }
+      }
+    }
+
+    // клик по бутылке: идёт к ней и тянется к полке; возвращает, сколько это займёт
+    function serve(targetX) {
+      if (still) return 0;
+      hold = true; serving = true;
+      cancelAll(); hand(null, null);
+      const x = clampX(targetX), d = Math.abs(x - pose.x);
+      const walkMs = d < 8 ? 0 : Math.min(900, Math.max(300, d / 520 * 1000));
+      const reach = targetX >= x - 1 ? P.reachR : P.reachL;
+      (async () => {
+        if (walkMs) {
+          mode = "walk";
+          await tween({ ...REST, x, look: Math.sign(x - pose.x) }, walkMs);
+          mode = "idle";
+        }
+        await tween(reach, 380);
+      })().catch(swallow);
+      return walkMs + 380;
+    }
+    // карточку закрыли: опускает руку, взбалтывает коктейль и возвращается к делам
+    async function release() {
+      if (!serving) return;
+      serving = false;
+      cancelAll();
+      try {
+        await tween(REST, 450);
+        await shake(1300);
+      } catch (e) { swallow(e); }
+      if (!serving) { hold = false; wake(); }
+    }
+    function setActive(on) {
+      if (on === active) return;
+      active = on;
+      if (!on) {
+        cancelAll();
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      } else if (!still) {
+        Object.assign(pose, REST); hand(null, null);
+        if (!raf) raf = requestAnimationFrame(frame);
+        wake();
+      }
+    }
+
+    hand(null, null);
+    measure();
+    new ResizeObserver(measure).observe(service);
+    if (!still) { raf = requestAnimationFrame(frame); setTimeout(life, 3800); }
+    return { serve, release, setActive };
+  })();
+
+  /* ---------- атмосфера: пыль в красном свете и мигающий неон ---------- */
+  const Ambience = (() => {
+    const cv = document.getElementById("dust"), c = cv.getContext("2d"), neon = document.querySelector(".neon");
+    let parts = [], raf = 0, W = 0, H = 0, neonTimer = 0, on = false;
+    function size() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = cv.clientWidth; H = cv.clientHeight;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+      c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (!parts.length && W) parts = Array.from({ length: Math.round(Math.min(70, W * H / 16000)) }, () => ({
+        x: Math.random() * W, y: Math.random() * H, r: .5 + Math.random() * 1.6,
+        vx: (Math.random() - .5) * .08, vy: -.04 - Math.random() * .1, a: .08 + Math.random() * .28, ph: Math.random() * 6.28
+      }));
+    }
+    function frame(t) {
+      c.clearRect(0, 0, W, H);
+      for (const p of parts) {
+        p.x += p.vx + Math.sin(t / 3000 + p.ph) * .05;
+        p.y += p.vy;
+        if (p.y < -5) { p.y = H + 5; p.x = Math.random() * W; }
+        if (p.x < -5) p.x = W + 5; else if (p.x > W + 5) p.x = -5;
+        c.fillStyle = `rgba(255,200,190,${(p.a * (.6 + .4 * Math.sin(t / 900 + p.ph))).toFixed(3)})`;
+        c.beginPath(); c.arc(p.x, p.y, p.r, 0, 6.283); c.fill();
+      }
+      raf = requestAnimationFrame(frame);
+    }
+    function blink() {
+      neon.classList.remove("blink");
+      void neon.offsetWidth;
+      neon.classList.add("blink");
+      neonTimer = setTimeout(blink, rnd(7000, 16000));
+    }
+    function setActive(want) {
+      if (reduceMotion.matches || want === on) return;
+      on = want;
+      if (on) {
+        raf = requestAnimationFrame(frame);
+        neonTimer = setTimeout(blink, rnd(5000, 9000));
+      } else {
+        cancelAnimationFrame(raf); raf = 0;
+        clearTimeout(neonTimer); neonTimer = 0;
+      }
+    }
+    new ResizeObserver(size).observe(cv);
+    return { setActive };
+  })();
+
   /* ---------- переходы между комнатами ---------- */
   const app = document.getElementById("app");
   const rooms = [...document.querySelectorAll(".room")];
@@ -1025,6 +1434,8 @@
     cur = Math.max(0, Math.min(2, i));
     app.dataset.room = cur;
     Music.room(cur);
+    Bartender.setActive(cur === 1);
+    Ambience.setActive(cur === 1);
     rooms.forEach((r, n) => r.toggleAttribute("inert", n !== cur));
     goL.classList.toggle("off", cur === 0);
     goR.classList.toggle("off", cur === 2);

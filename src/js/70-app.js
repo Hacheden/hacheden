@@ -385,9 +385,14 @@ renderZoneUI(1);
 requestAnimationFrame(tick);
 /* ---------- часы работы: открыто с 17:00 до 3:00 ---------- */
 const introText = document.getElementById("intro-text"), statusEl = document.getElementById("status"), introTitle = intro.querySelector("h1");
+const ownerOut = document.getElementById("owner-out");
+ownerOut.addEventListener("click", () => {
+  try { localStorage.removeItem("hacheden-owner"); } catch (e) {}
+  location.reload();
+});
 const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
 function applyTime() {
-  const d = nowDate(), sky = skyLight(d), late = lateness(d);
+  const d = sceneDate(), sky = skyLight(d), late = lateness(d);
   rainMat.uniforms.uSky.value = sky;
   LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
   for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late);
@@ -408,7 +413,10 @@ function showOpen() {
   introTitle.classList.remove("off");
   const left = minutesUntil(CLOSE_H);
   introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
-  statusEl.textContent = left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
+  statusEl.textContent = OWNER
+    ? (openByClock() ? "Режим хозяина. Для гостей открыто до 3:00" : "Режим хозяина: для тебя открыто. Гостей ждём с 17:00")
+    : left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
+  ownerOut.hidden = !OWNER;
   statusEl.hidden = false;
   enter.hidden = false;
   enter.disabled = false;
@@ -428,7 +436,7 @@ setInterval(() => {
     return;
   }
   const h = hoursOf(nowDate());
-  if (open && h >= LAST_CALL && h < CLOSE_H && !lastCallShown) {
+  if (!OWNER && open && h >= LAST_CALL && h < CLOSE_H && !lastCallShown) {
     lastCallShown = true;
     ZONES.forEach(z => { z.hint = `Последний заказ: в 3:00 бар закрывается. ${z.hint}`; });
     if (!busy && !mixDlg.open) hintEl.textContent = ZONES[curZone].hint;

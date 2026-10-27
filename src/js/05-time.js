@@ -12,7 +12,41 @@ if (/^\d{1,2}(:\d{2})?$/.test(QS.get("time") || "")) {
 }
 const nowDate = () => new Date(fakeBase != null ? fakeBase + (Date.now() - T0) : Date.now());
 const hoursOf = d => d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
-const isOpen = (d = nowDate()) => { const h = hoursOf(d); return h >= OPEN_H || h < CLOSE_H; };
+const openByClock = (d = nowDate()) => { const h = hoursOf(d); return h >= OPEN_H || h < CLOSE_H; };
+
+/* ---------- хозяин: по секретной ссылке ?key=… бар для него открыт всегда ----------
+   В коде хранится только отпечаток ключа (SHA-256), сам ключ здесь не лежит.
+   Ключ запоминается в этом браузере; ?key=off выключает режим. */
+const OWNER_HASH = "1686acf455c86b54c038f99671ad5929f387fc9dd80815147edac6174314f3d5";
+let OWNER = false;
+try { OWNER = localStorage.getItem("hacheden-owner") === OWNER_HASH; } catch (e) {}
+{
+  const key = QS.get("key");
+  if (key) {
+    if (key === "off") {
+      OWNER = false;
+      try { localStorage.removeItem("hacheden-owner"); } catch (e) {}
+    } else if (crypto.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+      const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+      if (hex === OWNER_HASH) {
+        OWNER = true;
+        try { localStorage.setItem("hacheden-owner", OWNER_HASH); } catch (e) {}
+      }
+    }
+    // убираем ключ из адресной строки, чтобы он не попал на скриншот или в историю
+    QS.delete("key");
+    const q = QS.toString();
+    history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
+  }
+}
+const isOpen = (d = nowDate()) => OWNER || openByClock(d);
+/* хозяин в закрытые часы видит бар таким, каким он бывает в половине девятого вечера */
+const sceneDate = () => {
+  const d = nowDate();
+  if (!OWNER || openByClock(d)) return d;
+  const e = new Date(d); e.setHours(20, 30, 0, 0); return e;
+};
 function minutesUntil(target, d = nowDate()) { let diff = target - hoursOf(d); if (diff <= 0) diff += 24; return Math.ceil(diff * 60); }
 function spell(min) {
   const h = Math.floor(min / 60), m = min % 60;

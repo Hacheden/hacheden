@@ -340,6 +340,10 @@
     text-align: center; background: radial-gradient(ellipse at 50% 45%, rgba(40,8,14,.75), rgba(5,1,2,.97) 70%);
     transition: opacity 1.1s ease, visibility 1.1s; }
   .intro.closed { background: radial-gradient(ellipse at 50% 45%, rgba(26,6,10,.96), rgba(5,1,2,1) 70%); }
+  .owner-out { appearance: none; border: 0; background: none; color: var(--muted); font: 400 13.5px/1.3 var(--font-text);
+    text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 6px; }
+  .owner-out:hover { color: var(--brass); }
+  .owner-out:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   .intro.gone { opacity: 0; visibility: hidden; pointer-events: none; }
   .intro h1 { margin: 0; font: 400 clamp(56px, 11vw, 120px)/1 var(--font-display); letter-spacing: .06em; color: #ffe9ee;
     text-shadow: 0 0 6px #fff, 0 0 18px #ff4d6d, 0 0 44px #ff2450, 0 0 90px #ff2450; animation: flicker 2.4s .3s both; }
@@ -420,6 +424,7 @@
   <div class="load" aria-hidden="true"><i id="load"></i></div>
   <p class="status" id="status" hidden></p>
   <button class="enter" id="enter" type="button" disabled>Войти</button>
+  <button class="owner-out" id="owner-out" type="button" hidden>Выйти из режима хозяина</button>
 </div>
 
 <dialog class="card" id="card" aria-labelledby="card-title"></dialog>
@@ -2439,7 +2444,41 @@ if (/^\d{1,2}(:\d{2})?$/.test(QS.get("time") || "")) {
 }
 const nowDate = () => new Date(fakeBase != null ? fakeBase + (Date.now() - T0) : Date.now());
 const hoursOf = d => d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
-const isOpen = (d = nowDate()) => { const h = hoursOf(d); return h >= OPEN_H || h < CLOSE_H; };
+const openByClock = (d = nowDate()) => { const h = hoursOf(d); return h >= OPEN_H || h < CLOSE_H; };
+
+/* ---------- хозяин: по секретной ссылке ?key=… бар для него открыт всегда ----------
+   В коде хранится только отпечаток ключа (SHA-256), сам ключ здесь не лежит.
+   Ключ запоминается в этом браузере; ?key=off выключает режим. */
+const OWNER_HASH = "1686acf455c86b54c038f99671ad5929f387fc9dd80815147edac6174314f3d5";
+let OWNER = false;
+try { OWNER = localStorage.getItem("hacheden-owner") === OWNER_HASH; } catch (e) {}
+{
+  const key = QS.get("key");
+  if (key) {
+    if (key === "off") {
+      OWNER = false;
+      try { localStorage.removeItem("hacheden-owner"); } catch (e) {}
+    } else if (crypto.subtle) {
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key));
+      const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+      if (hex === OWNER_HASH) {
+        OWNER = true;
+        try { localStorage.setItem("hacheden-owner", OWNER_HASH); } catch (e) {}
+      }
+    }
+    // убираем ключ из адресной строки, чтобы он не попал на скриншот или в историю
+    QS.delete("key");
+    const q = QS.toString();
+    history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
+  }
+}
+const isOpen = (d = nowDate()) => OWNER || openByClock(d);
+/* хозяин в закрытые часы видит бар таким, каким он бывает в половине девятого вечера */
+const sceneDate = () => {
+  const d = nowDate();
+  if (!OWNER || openByClock(d)) return d;
+  const e = new Date(d); e.setHours(20, 30, 0, 0); return e;
+};
 function minutesUntil(target, d = nowDate()) { let diff = target - hoursOf(d); if (diff <= 0) diff += 24; return Math.ceil(diff * 60); }
 function spell(min) {
   const h = Math.floor(min / 60), m = min % 60;
@@ -4745,9 +4784,14 @@ renderZoneUI(1);
 requestAnimationFrame(tick);
 /* ---------- часы работы: открыто с 17:00 до 3:00 ---------- */
 const introText = document.getElementById("intro-text"), statusEl = document.getElementById("status"), introTitle = intro.querySelector("h1");
+const ownerOut = document.getElementById("owner-out");
+ownerOut.addEventListener("click", () => {
+  try { localStorage.removeItem("hacheden-owner"); } catch (e) {}
+  location.reload();
+});
 const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
 function applyTime() {
-  const d = nowDate(), sky = skyLight(d), late = lateness(d);
+  const d = sceneDate(), sky = skyLight(d), late = lateness(d);
   rainMat.uniforms.uSky.value = sky;
   LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
   for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late);
@@ -4768,7 +4812,10 @@ function showOpen() {
   introTitle.classList.remove("off");
   const left = minutesUntil(CLOSE_H);
   introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
-  statusEl.textContent = left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
+  statusEl.textContent = OWNER
+    ? (openByClock() ? "Режим хозяина. Для гостей открыто до 3:00" : "Режим хозяина: для тебя открыто. Гостей ждём с 17:00")
+    : left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
+  ownerOut.hidden = !OWNER;
   statusEl.hidden = false;
   enter.hidden = false;
   enter.disabled = false;
@@ -4788,7 +4835,7 @@ setInterval(() => {
     return;
   }
   const h = hoursOf(nowDate());
-  if (open && h >= LAST_CALL && h < CLOSE_H && !lastCallShown) {
+  if (!OWNER && open && h >= LAST_CALL && h < CLOSE_H && !lastCallShown) {
     lastCallShown = true;
     ZONES.forEach(z => { z.hint = `Последний заказ: в 3:00 бар закрывается. ${z.hint}`; });
     if (!busy && !mixDlg.open) hintEl.textContent = ZONES[curZone].hint;

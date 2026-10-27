@@ -56,6 +56,19 @@
   .bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #f3e8d2; }
   .bubble.show { opacity: 1; }
 
+  /* за стойкой: ответы бармену вместо подсказок */
+  .app.seated .spots, .app.seated .hint { display: none; }
+  .app.seated .zone-title { opacity: 0; }
+  .talk { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 680px; }
+  .talk[hidden] { display: none; }
+  .talk button { appearance: none; border: 1px solid rgba(214,170,92,.6); background: rgba(14,5,8,.74); color: var(--cream);
+    font: 400 17px/1 var(--font-display); letter-spacing: .02em; padding: 11px 18px; border-radius: 999px; cursor: pointer;
+    opacity: 0; transform: translateY(6px); animation: talk-in .45s cubic-bezier(.2,.7,.3,1) forwards; transition: background .2s, border-color .2s; }
+  .talk button:hover { background: rgba(214,170,92,.2); border-color: var(--brass); }
+  .talk button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .talk button.quiet { border-color: rgba(214,170,92,.28); color: var(--muted); }
+  @keyframes talk-in { to { opacity: 1; transform: none; } }
+
   /* вход */
   .intro { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 24px;
     text-align: center; background: radial-gradient(ellipse at 50% 45%, rgba(40,8,14,.75), rgba(5,1,2,.97) 70%);
@@ -86,10 +99,13 @@
     .zone-title { top: 74px; }
     .nav button { padding: 10px 14px; font-size: 16px; }
     .hint { font-size: 13.5px; }
+    .talk { gap: 6px; }
+    .talk button { font-size: 15.5px; padding: 10px 14px; }
   }
   @media (prefers-reduced-motion: reduce) {
     #gl, .zone-title, .intro { transition: none; }
     .intro h1 { animation: none; }
+    .talk button { animation: none; opacity: 1; transform: none; }
   }
 </style>
 <script type="importmap">
@@ -105,7 +121,8 @@
   <div class="vignette"></div>
   <h2 class="zone-title" id="zone-title" aria-live="polite">Бар<span class="zone-sub" id="zone-sub"></span></h2>
   <div class="hud">
-    <p class="hint" id="hint">Нажми на бутылку, чтобы узнать её историю. Коктейли — в барной карте.</p>
+    <p class="hint" id="hint">Нажми на бутылку или сядь за стойку: бармен подберёт коктейль под настроение.</p>
+    <div class="talk" id="talk" role="group" aria-label="Ответ бармену" hidden></div>
     <div class="spots" id="spots" role="group" aria-label="Что есть в этой комнате"></div>
     <nav class="nav" id="nav" aria-label="Комнаты">
       <button type="button" data-zone="0">Читальня</button>

@@ -356,7 +356,9 @@ let servedGlass = null;
 function placeServed(c) {
   if (servedGlass) world.remove(servedGlass);
   servedGlass = makeGlass(c.cup, c.pour, { garnish: c.garnish, ice: c.cup === "rocks" || c.cup === "highball", op: c.pourOp || .88 });
-  servedGlass.position.set(clamp(BT.x - .25, -2.6, 2.6), CT.top, -2.25);
+  // сидящему гостю — прямо перед ним
+  if (SEAT.on) servedGlass.position.set(SEAT_X + .08, CT.top, -2.12);
+  else servedGlass.position.set(clamp(BT.x - .25, -2.6, 2.6), CT.top, -2.25);
   world.add(servedGlass);
   servedGlass.scale.setScalar(.001);
   tween(servedGlass.scale, { x: 1.35, y: 1.35, z: 1.35 }, .5, ease.out);

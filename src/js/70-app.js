@@ -3,7 +3,7 @@ const ZONES = [
   { name: "Читальня", sub: "Книги до потолка, дождь за окном, письмо на столе", pos: [-2.5, 1.6, 1.25], tgt: [-6.3, 1.3, -3.1], span: 5.4, pull: 2.6,
     hint: "Открой книгу рецептов на кафедре, прочти письмо или задуй свечу." },
   { name: "Бар", sub: "Бармен на месте, лёд уже в ведёрке", pos: [0, 1.95, 1.45], tgt: [0, 1.48, -4.6], span: 7.0, pull: 3.0,
-    hint: "Нажми на бутылку, чтобы узнать её историю. Коктейли — в барной карте." },
+    hint: "Нажми на бутылку или сядь за стойку: бармен подберёт коктейль под настроение." },
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
     hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." }
 ];
@@ -83,6 +83,7 @@ function renderZoneUI(i) {
 }
 function goZone(i, dur = 1.9) {
   i = clamp(i, 0, 2);
+  leaveSeat();
   const same = i === curZone;
   curZone = i; cur = i;
   Music.room(i);
@@ -109,6 +110,7 @@ async function activate(root) {
   const h = root.userData.hot;
   if (modalOpen()) return;
   if (busy && h.zone !== 1) return;
+  if (SEAT.on && !h.noChip) return;   // сидя у стойки, можно только перекинуться словом с соседом
   if (h.zone !== curZone) await goZone(h.zone);
   h.act();
 }
@@ -184,12 +186,15 @@ window.makeCocktail = async id => {
   pendingCocktail = COCKTAIL_BY_ID[id];
   await baseMake(id);
 };
-H3D.prep = () => { if (!STILL) { flyTo(framed(1, .9), 1.2, 0); prepCocktail(); } };
+H3D.prep = () => { if (!STILL) { if (!SEAT.on) flyTo(framed(1, .9), 1.2, 0); prepCocktail(); } };
 H3D.done = () => {
   if (pendingCocktail) placeServed(pendingCocktail);
   if (STILL) return;
   presentCocktail();
-  dlg.addEventListener("close", () => { flyTo(framed(1), 1.3, 0); relax(); }, { once: true });
+  dlg.addEventListener("close", () => {
+    if (SEAT.on) { flyTo(seatShot(true), 1.3, 0); relax().then(afterServe); }
+    else { flyTo(framed(1), 1.3, 0); relax(); }
+  }, { once: true });
 };
 H3D.pause = on => { PAUSED = on; };
 H3D.go = i => goZone(i);
@@ -360,7 +365,7 @@ function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
-  if (started && !flight) setCam(framed(curZone, nudge));
+  if (started && !flight) setCam(SEAT.on ? seatShot() : framed(curZone, nudge));
 }
 addEventListener("resize", resize);
 

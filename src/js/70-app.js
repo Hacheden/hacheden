@@ -7,6 +7,8 @@ const ZONES = [
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
     hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." }
 ];
+ZONES[0].sub = SEASON_INFO[SEASON].nook;
+if (SEASON === "summer") ZONES[2].hint = "Постучи в дверь или заведи граммофон. Летом камин не топят: в нём горят свечи.";
 const INTRO_CAM = { pos: [0, 1.8, 5.5], tgt: [0, 1.5, -4.6], span: 8, pull: 1 };
 const TEST = location.hash.includes("test");
 let curZone = 1, PAUSED = false, flight = null, nudge = 0;
@@ -220,7 +222,7 @@ function tick(now) {
   requestAnimationFrame(tick);
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
-  if (PAUSED || document.hidden) return;
+  if (PAUSED || document.hidden || (closedNow && !started)) return;
   NOW = now;
   const t = now / 1000;
   runTweens();
@@ -316,7 +318,8 @@ function tick(now) {
   rainMat.uniforms.uTime.value = t;
   NOOK.flash = Math.max(0, NOOK.flash - dt * 2.2);
   rainMat.uniforms.uFlash.value = NOOK.flash;
-  LIGHTS.window.intensity = LIGHTS.window.userData.base + NOOK.flash * 30;
+  const sky = rainMat.uniforms.uSky.value;
+  LIGHTS.window.intensity = LIGHTS.window.userData.base * (1 + sky * 2.5) + NOOK.flash * 30;
   LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
@@ -326,7 +329,7 @@ function tick(now) {
   moth.position.set(-6.5 + Math.cos(t * 2.4) * .16, 1.13 + Math.sin(t * 3.1) * .05, -4.3 + Math.sin(t * 2.4) * .16);
   moth.rotation.y = -t * 2.4; moth.scale.x = .6 + .4 * Math.abs(Math.sin(t * 30));
   flashT -= dt;
-  if (flashT < 0) { flashT = 9 + Math.random() * 12; if (curZone === 0) lightning(); }
+  if (flashT < 0) { flashT = 9 + Math.random() * 12; if (curZone === 0 && WEATHER.storm) lightning(); }
   // неон иногда мигает
   neonT -= dt;
   let nb = 1;
@@ -380,10 +383,72 @@ H3D.render = () => renderer.render(scene, camera);
 H3D.info = () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, dpr: DPR, zone: curZone, busy, btBusy: BT.busy });
 renderZoneUI(1);
 requestAnimationFrame(tick);
-enter.disabled = false;
-enter.focus({ preventScroll: true });
+/* ---------- часы работы: открыто с 17:00 до 3:00 ---------- */
+const introText = document.getElementById("intro-text"), statusEl = document.getElementById("status"), introTitle = intro.querySelector("h1");
+const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
+function applyTime() {
+  const d = nowDate(), sky = skyLight(d), late = lateness(d);
+  rainMat.uniforms.uSky.value = sky;
+  LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
+  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late);
+}
+function showClosed(afterVisit) {
+  intro.classList.add("closed");
+  const min = minutesUntil(OPEN_H);
+  introTitle.classList.add("off");
+  introText.textContent = afterVisit
+    ? "Бар закрылся. Спасибо, что заглянул! Ждём тебя снова."
+    : "Сейчас закрыто. Бар открывается каждый день в 17:00 и работает до 3:00 ночи.";
+  statusEl.textContent = `Откроемся в 17:00, через ${spell(min)}`;
+  statusEl.hidden = false;
+  enter.hidden = true;
+}
+function showOpen() {
+  intro.classList.remove("closed");
+  introTitle.classList.remove("off");
+  const left = minutesUntil(CLOSE_H);
+  introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
+  statusEl.textContent = left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
+  statusEl.hidden = false;
+  enter.hidden = false;
+  enter.disabled = false;
+}
+let closedNow = !isOpen();
+if (closedNow) showClosed(false); else showOpen();
+applyTime();
+if (!closedNow) enter.focus({ preventScroll: true });
+let lastCallShown = false, visited = false;
+setInterval(() => {
+  const open = isOpen();
+  applyTime();
+  if (!started) {
+    if (open && closedNow) { closedNow = false; showOpen(); introTitle.style.animation = "none"; void introTitle.offsetWidth; introTitle.style.animation = ""; }
+    else if (!open) { closedNow = true; showClosed(visited); }
+    else showOpen();
+    return;
+  }
+  const h = hoursOf(nowDate());
+  if (open && h >= LAST_CALL && h < CLOSE_H && !lastCallShown) {
+    lastCallShown = true;
+    ZONES.forEach(z => { z.hint = `Последний заказ: в 3:00 бар закрывается. ${z.hint}`; });
+    if (!busy && !mixDlg.open) hintEl.textContent = ZONES[curZone].hint;
+  }
+  if (!open) closeBar();
+}, 15000);
+function closeBar() {
+  if (closedNow) return;
+  closedNow = true;
+  if (dlg.open) dlg.close();
+  if (mixDlg.open) mixDlg.close();
+  if (Book.isOpen) document.getElementById("book").close();
+  if (Music.on) Music.stop();
+  started = false;
+  visited = true;
+  showClosed(true);
+  intro.classList.remove("gone");
+}
 enter.addEventListener("click", async () => {
-  if (started) return;
+  if (started || !isOpen()) return;
   started = true;
   intro.classList.add("gone");
   let pref = null;
@@ -391,6 +456,8 @@ enter.addEventListener("click", async () => {
   if (pref !== "off" && !Music.on) setMusic(true);
   renderer.toneMappingExposure = STILL ? 1.2 : .15;
   if (!STILL) tween(renderer, { toneMappingExposure: 1.2 }, 2.2, ease.out);
+  setCam(framed(INTRO_CAM));
   await flyTo(framed(1), 3.2, .4);
-  idleLife();
+  if (!idleStarted) { idleStarted = true; idleLife(); }
 });
+let idleStarted = false;

@@ -69,32 +69,39 @@ merged(caseBacks, std({ color: 0x120a07, roughness: .9 }));
 const WIN = { x: -6.0, sill: 1.08, w: 1.5, rect: 1.42, r: .75 };
 const winH = WIN.rect + WIN.r;
 const rainMat = new THREE.ShaderMaterial({
-  uniforms: { uTime: { value: 0 }, uFlash: { value: 0 } },
+  uniforms: { uTime: { value: 0 }, uFlash: { value: 0 }, uSky: { value: 0 }, uRain: { value: 1 }, uSnow: { value: 0 }, uStars: { value: 0 }, uLeaves: { value: 0 }, uFrost: { value: 0 } },
   vertexShader: VERT_UV,
-  fragmentShader: `uniform float uTime, uFlash; varying vec2 vUv; ${NOISE_GLSL}
+  fragmentShader: `uniform float uTime, uFlash, uSky, uRain, uSnow, uStars, uLeaves, uFrost; varying vec2 vUv; ${NOISE_GLSL}
     void main(){
       vec2 p = vUv * vec2(${WIN.w.toFixed(2)}, ${winH.toFixed(2)});
       vec2 a = vec2(p.x - ${(WIN.w / 2).toFixed(3)}, p.y - ${WIN.rect.toFixed(3)});
       if (p.y > ${WIN.rect.toFixed(3)} && length(a) > ${WIN.r.toFixed(3)}) discard;
-      vec3 col = mix(vec3(.13, .1, .15), vec3(.035, .05, .1), smoothstep(.2, 2., p.y));
-      col += vec3(.35, .16, .06) * smoothstep(.9, 0., p.y) * .5;
+      // небо: ночь или вечерние сумерки
+      vec3 night = mix(vec3(.13, .1, .15), vec3(.035, .05, .1), smoothstep(.2, 2., p.y));
+      night += vec3(.35, .16, .06) * smoothstep(.9, 0., p.y) * .5;
+      vec3 dusk = mix(vec3(1., .52, .28), vec3(.3, .36, .66), smoothstep(.15, 1.9, p.y));
+      dusk = mix(dusk, vec3(1., .78, .52), smoothstep(.7, 0., p.y) * .45);
+      vec3 col = mix(night, dusk * .8, uSky);
+      // звёзды
+      vec2 sq = p * 42.; vec2 sid = floor(sq); float sh = hash(sid * 1.31);
+      col += uStars * (1. - uSky) * step(.982, sh) * smoothstep(.32, 0., length(fract(sq) - .5)) * (.55 + .45 * sin(uTime * 2. + sh * 40.)) * smoothstep(.7, 1.3, p.y) * vec3(1., .95, .85);
       // дальние огни
       for (int i = 0; i < 2; i++) {
         float fi = float(i);
         vec2 q = p * (5. + fi * 3.) + vec2(fi * 7.3, 0.);
         vec2 id = floor(q), f = fract(q) - .5;
-        float h = hash(id + fi);
-        float on = step(.78, h) * step(p.y, .9 - fi * .2);
-        col += on * vec3(1., .7, .35) * smoothstep(.45, 0., length(f)) * .25;
+        float on = step(.78, hash(id + fi)) * step(p.y, .9 - fi * .2);
+        col += on * vec3(1., .7, .35) * smoothstep(.45, 0., length(f)) * .25 * (1. - uSky * .7);
       }
-      // силуэты домов с окнами
+      // силуэты домов с окнами и снегом на крышах
       float bx = floor(p.x * 5.);
       float bh = .3 + hash(vec2(bx, 3.)) * .55;
       if (p.y < bh) {
-        col = vec3(.02, .022, .035);
+        col = mix(vec3(.02, .022, .035), vec3(.13, .11, .16), uSky);
         vec2 g = vec2(p.x * 26., p.y * 20.), gi = floor(g), gf = fract(g);
-        float lit = step(.7, hash(gi + bx));
+        float lit = step(.7 + uSky * .15, hash(gi + bx));
         col += lit * vec3(1., .72, .38) * .5 * step(.25, gf.x) * step(gf.x, .7) * step(.3, gf.y) * step(gf.y, .75);
+        col = mix(col, vec3(.72, .76, .84) * (.45 + .4 * uSky), uSnow * smoothstep(bh - .035, bh - .01, p.y));
       }
       // струи дождя
       float r = 0.;
@@ -102,20 +109,47 @@ const rainMat = new THREE.ShaderMaterial({
         float fi = float(i);
         float k = 38. + fi * 22.;
         float cx = p.x * k + p.y * 1.2;
-        float id = floor(cx);
-        float h = hash(vec2(id, fi));
+        float h = hash(vec2(floor(cx), fi));
         float y = fract(p.y * (.5 + h * .4) + uTime * (1.6 + h + fi * .6) + h * 9.);
-        float streak = smoothstep(.13, 0., y) * smoothstep(.0, .02, y) * smoothstep(.5, .1, abs(fract(cx) - .5));
-        r += streak * step(.45, h) * (.55 - fi * .12);
+        r += smoothstep(.13, 0., y) * smoothstep(.0, .02, y) * smoothstep(.5, .1, abs(fract(cx) - .5)) * step(.45, h) * (.55 - fi * .12);
       }
-      col += vec3(.55, .62, .8) * r * .55;
+      col += vec3(.55, .62, .8) * r * .55 * uRain;
+      // снег
+      float sn = 0.;
+      for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        vec2 q = p * (6. + fi * 4.);
+        q.y += uTime * (.35 + fi * .15);
+        q.x += sin(q.y * .7 + fi * 3. + uTime * .6) * .4;
+        vec2 id = floor(q), f = fract(q) - .5;
+        vec2 o = vec2(hash(id + 2.) - .5, hash(id + 7.) - .5) * .6;
+        sn += step(.5, hash(id + fi * 11.)) * smoothstep(.1 - fi * .02, 0., length(f - o));
+      }
+      col += vec3(.9, .92, 1.) * min(sn, 1.) * uSnow * .85;
+      // листопад
+      for (int i = 0; i < 2; i++) {
+        float fi = float(i);
+        vec2 q = p * vec2(3., 2.4) + vec2(fi * 1.7, 0.);
+        q.y += uTime * (.2 + fi * .08);
+        q.x += sin(uTime * .9 + q.y * 1.3 + fi) * .3;
+        vec2 id = floor(q), f = fract(q) - .5;
+        float h = hash(id + fi * 5.);
+        vec2 d = f - vec2(hash(id + 3.) - .5, hash(id + 9.) - .5) * .4;
+        float an = uTime * 1.6 + h * 6.;
+        d = mat2(cos(an), -sin(an), sin(an), cos(an)) * d;
+        float leaf = step(.72, h) * smoothstep(.01, -.01, length(d * vec2(1., 2.3)) - .075);
+        col = mix(col, mix(vec3(.8, .36, .07), vec3(.55, .12, .05), hash(id + 1.)) * (.5 + .5 * uSky + .3), leaf * uLeaves);
+      }
       // капли на стекле
       vec2 dq = p * vec2(14., 10.);
       vec2 did = floor(dq), df = fract(dq) - .5;
       float dh = hash(did * 1.7);
       vec2 off = vec2(hash(did + 3.) - .5, hash(did + 5.) - .5) * .5;
-      float drop = smoothstep(.16 * dh, .06 * dh, length(df - off)) * step(.55, dh);
-      col += drop * vec3(.5, .55, .7) * .35;
+      col += smoothstep(.16 * dh, .06 * dh, length(df - off)) * step(.55, dh) * vec3(.5, .55, .7) * .35 * uRain;
+      // иней по краям стекла
+      float e = length((vUv - .5) * vec2(1.25, 1.));
+      float frost = smoothstep(.36, .62, e + (fbm(p * 14.) - .5) * .18);
+      col = mix(col, vec3(.78, .85, .93), frost * uFrost * .6);
       col += uFlash * vec3(.7, .75, .95) * (1.2 - p.y * .25);
       gl_FragColor = vec4(col, 1.);
     }`

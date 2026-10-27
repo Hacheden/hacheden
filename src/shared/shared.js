@@ -316,7 +316,9 @@
 
   const Music = (() => {
     const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null;
+    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
+    // погода за окном: громкость дождя, сверчков, ветра и камина; меняется по сезону
+    const WX = { rain: .32, crickets: 0, wind: 0, fire: .5 };
     const roomFreq = () => roomIdx === 1 ? 3400 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -342,7 +344,7 @@
       band = createBand(ctx, tone);
       band.crackle();
       // треск камина: слышен только в курилке
-      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? .5 : 0;
+      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? WX.fire : 0;
       const fb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), fd = fb.getChannelData(0);
       let env = 0;
       for (let i = 0; i < fd.length; i++) {
@@ -354,12 +356,30 @@
       fsrc.buffer = fb; fsrc.loop = true; flp.type = "lowpass"; flp.frequency.value = 3200;
       fsrc.connect(flp).connect(fire).connect(master); fsrc.start();
       // дождь за окном читальни
-      rain = ctx.createGain(); rain.gain.value = roomIdx === 0 ? .32 : 0;
+      rain = ctx.createGain(); rain.gain.value = roomIdx === 0 ? WX.rain : 0;
       const rb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), rd = rb.getChannelData(0);
       for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07);
       const rsrc = ctx.createBufferSource(), rbp = ctx.createBiquadFilter();
       rsrc.buffer = rb; rsrc.loop = true; rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
       rsrc.connect(rbp).connect(rain).connect(master); rsrc.start();
+      // сверчки летней ночью
+      crick = ctx.createGain(); crick.gain.value = roomIdx === 0 ? WX.crickets : 0;
+      const cb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), cd = cb.getChannelData(0), sr = ctx.sampleRate;
+      for (const [f, per, off, amp] of [[4400, .62, .05, .5], [4950, .81, .31, .35], [3900, 1.13, .6, .25]]) {
+        for (let t0 = off; t0 < 3.9; t0 += per) for (let k = 0; k < 3; k++) {
+          const st = Math.floor((t0 + k * .045) * sr), n = Math.floor(.022 * sr);
+          for (let i = 0; i < n && st + i < cd.length; i++) cd[st + i] += Math.sin(2 * Math.PI * f * i / sr) * Math.sin(Math.PI * i / n) * amp;
+        }
+      }
+      const csrc = ctx.createBufferSource(); csrc.buffer = cb; csrc.loop = true;
+      csrc.connect(crick).connect(master); csrc.start();
+      // зимний ветер
+      wind = ctx.createGain(); wind.gain.value = roomIdx === 0 ? WX.wind : 0;
+      const wb = ctx.createBuffer(1, ctx.sampleRate * 8, ctx.sampleRate), wd = wb.getChannelData(0);
+      let lp = 0;
+      for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
+      const wsrc = ctx.createBufferSource(); wsrc.buffer = wb; wsrc.loop = true;
+      wsrc.connect(wind).connect(master); wsrc.start();
       return true;
     }
     function tick() {
@@ -396,10 +416,13 @@
       roomIdx = i;
       if (ctx) {
         tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
-        fire.gain.setTargetAtTime(roomIdx === 2 ? .5 : 0, ctx.currentTime, .6);
-        rain.gain.setTargetAtTime(roomIdx === 0 ? .32 : 0, ctx.currentTime, .6);
+        fire.gain.setTargetAtTime(roomIdx === 2 ? WX.fire : 0, ctx.currentTime, .6);
+        rain.gain.setTargetAtTime(roomIdx === 0 ? WX.rain : 0, ctx.currentTime, .6);
+        crick.gain.setTargetAtTime(roomIdx === 0 ? WX.crickets : 0, ctx.currentTime, .6);
+        wind.gain.setTargetAtTime(roomIdx === 0 ? WX.wind : 0, ctx.currentTime, .6);
       }
     }
+    function weather(o) { Object.assign(WX, o); room(roomIdx); }
     document.addEventListener("visibilitychange", () => {
       if (!ctx || !on) return;
       if (document.hidden) { clearInterval(timer); ctx.suspend(); }
@@ -444,7 +467,7 @@
       src.buffer = b; lp.type = "lowpass"; lp.frequency.value = 260; g.gain.value = 1.4;
       src.connect(lp).connect(g).connect(master); src.start();
     }
-    return { start, stop, room, beat, shake, thunder, get on() { return on; } };
+    return { start, stop, room, weather, beat, shake, thunder, get on() { return on; } };
   })();
 
   const musicBtn = document.getElementById("music");

@@ -339,9 +339,12 @@
   .intro { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 24px;
     text-align: center; background: radial-gradient(ellipse at 50% 45%, rgba(40,8,14,.75), rgba(5,1,2,.97) 70%);
     transition: opacity 1.1s ease, visibility 1.1s; }
+  .intro.closed { background: radial-gradient(ellipse at 50% 45%, rgba(26,6,10,.96), rgba(5,1,2,1) 70%); }
   .intro.gone { opacity: 0; visibility: hidden; pointer-events: none; }
   .intro h1 { margin: 0; font: 400 clamp(56px, 11vw, 120px)/1 var(--font-display); letter-spacing: .06em; color: #ffe9ee;
     text-shadow: 0 0 6px #fff, 0 0 18px #ff4d6d, 0 0 44px #ff2450, 0 0 90px #ff2450; animation: flicker 2.4s .3s both; }
+  .intro h1.off { color: #4a2a30; text-shadow: 0 0 2px rgba(255,80,110,.25); animation: none; }
+  .status { padding: 8px 16px; border: 1px solid rgba(214,170,92,.45); border-radius: 999px; color: var(--cream) !important; font: 400 17px/1.3 var(--font-display) !important; letter-spacing: .02em; }
   .intro p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 36ch; }
   .enter { appearance: none; margin-top: 8px; padding: 14px 30px; border-radius: 999px; border: 1px solid var(--brass);
     background: rgba(214,170,92,.14); color: var(--cream); font: 400 21px/1 var(--font-display); letter-spacing: .04em; cursor: pointer;
@@ -415,6 +418,7 @@
   <h1>Hacheden</h1>
   <p id="intro-text">Бар в трёх комнатах: стойка с барменом, курилка у камина и читальня под дождём.</p>
   <div class="load" aria-hidden="true"><i id="load"></i></div>
+  <p class="status" id="status" hidden></p>
   <button class="enter" id="enter" type="button" disabled>Войти</button>
 </div>
 
@@ -844,7 +848,9 @@
 
   const Music = (() => {
     const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null;
+    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
+    // погода за окном: громкость дождя, сверчков, ветра и камина; меняется по сезону
+    const WX = { rain: .32, crickets: 0, wind: 0, fire: .5 };
     const roomFreq = () => roomIdx === 1 ? 3400 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -870,7 +876,7 @@
       band = createBand(ctx, tone);
       band.crackle();
       // треск камина: слышен только в курилке
-      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? .5 : 0;
+      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? WX.fire : 0;
       const fb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), fd = fb.getChannelData(0);
       let env = 0;
       for (let i = 0; i < fd.length; i++) {
@@ -882,12 +888,30 @@
       fsrc.buffer = fb; fsrc.loop = true; flp.type = "lowpass"; flp.frequency.value = 3200;
       fsrc.connect(flp).connect(fire).connect(master); fsrc.start();
       // дождь за окном читальни
-      rain = ctx.createGain(); rain.gain.value = roomIdx === 0 ? .32 : 0;
+      rain = ctx.createGain(); rain.gain.value = roomIdx === 0 ? WX.rain : 0;
       const rb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), rd = rb.getChannelData(0);
       for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07);
       const rsrc = ctx.createBufferSource(), rbp = ctx.createBiquadFilter();
       rsrc.buffer = rb; rsrc.loop = true; rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
       rsrc.connect(rbp).connect(rain).connect(master); rsrc.start();
+      // сверчки летней ночью
+      crick = ctx.createGain(); crick.gain.value = roomIdx === 0 ? WX.crickets : 0;
+      const cb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), cd = cb.getChannelData(0), sr = ctx.sampleRate;
+      for (const [f, per, off, amp] of [[4400, .62, .05, .5], [4950, .81, .31, .35], [3900, 1.13, .6, .25]]) {
+        for (let t0 = off; t0 < 3.9; t0 += per) for (let k = 0; k < 3; k++) {
+          const st = Math.floor((t0 + k * .045) * sr), n = Math.floor(.022 * sr);
+          for (let i = 0; i < n && st + i < cd.length; i++) cd[st + i] += Math.sin(2 * Math.PI * f * i / sr) * Math.sin(Math.PI * i / n) * amp;
+        }
+      }
+      const csrc = ctx.createBufferSource(); csrc.buffer = cb; csrc.loop = true;
+      csrc.connect(crick).connect(master); csrc.start();
+      // зимний ветер
+      wind = ctx.createGain(); wind.gain.value = roomIdx === 0 ? WX.wind : 0;
+      const wb = ctx.createBuffer(1, ctx.sampleRate * 8, ctx.sampleRate), wd = wb.getChannelData(0);
+      let lp = 0;
+      for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
+      const wsrc = ctx.createBufferSource(); wsrc.buffer = wb; wsrc.loop = true;
+      wsrc.connect(wind).connect(master); wsrc.start();
       return true;
     }
     function tick() {
@@ -924,10 +948,13 @@
       roomIdx = i;
       if (ctx) {
         tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
-        fire.gain.setTargetAtTime(roomIdx === 2 ? .5 : 0, ctx.currentTime, .6);
-        rain.gain.setTargetAtTime(roomIdx === 0 ? .32 : 0, ctx.currentTime, .6);
+        fire.gain.setTargetAtTime(roomIdx === 2 ? WX.fire : 0, ctx.currentTime, .6);
+        rain.gain.setTargetAtTime(roomIdx === 0 ? WX.rain : 0, ctx.currentTime, .6);
+        crick.gain.setTargetAtTime(roomIdx === 0 ? WX.crickets : 0, ctx.currentTime, .6);
+        wind.gain.setTargetAtTime(roomIdx === 0 ? WX.wind : 0, ctx.currentTime, .6);
       }
     }
+    function weather(o) { Object.assign(WX, o); room(roomIdx); }
     document.addEventListener("visibilitychange", () => {
       if (!ctx || !on) return;
       if (document.hidden) { clearInterval(timer); ctx.suspend(); }
@@ -972,7 +999,7 @@
       src.buffer = b; lp.type = "lowpass"; lp.frequency.value = 260; g.gain.value = 1.4;
       src.connect(lp).connect(g).connect(master); src.start();
     }
-    return { start, stop, room, beat, shake, thunder, get on() { return on; } };
+    return { start, stop, room, weather, beat, shake, thunder, get on() { return on; } };
   })();
 
   const musicBtn = document.getElementById("music");
@@ -2398,6 +2425,96 @@ await Promise.race([
   new Promise(r => setTimeout(r, 2500))
 ]).catch(() => {});
 
+/* ================= реальное время и сезоны ================= */
+/* Бар живёт по часам того, кто зашёл: открыт с 17:00 до 3:00, сезон — по дате.
+   Для проверки можно подменить: ?time=21:30&season=winter */
+const QS = new URLSearchParams(location.search);
+const OPEN_H = 17, CLOSE_H = 3, LAST_CALL = 2.5;
+const T0 = Date.now();
+let fakeBase = null;
+if (/^\d{1,2}(:\d{2})?$/.test(QS.get("time") || "")) {
+  const [h, m] = QS.get("time").split(":").map(Number);
+  const d = new Date(); d.setHours(h, m || 0, 0, 0);
+  fakeBase = d.getTime();
+}
+const nowDate = () => new Date(fakeBase != null ? fakeBase + (Date.now() - T0) : Date.now());
+const hoursOf = d => d.getHours() + d.getMinutes() / 60 + d.getSeconds() / 3600;
+const isOpen = (d = nowDate()) => { const h = hoursOf(d); return h >= OPEN_H || h < CLOSE_H; };
+function minutesUntil(target, d = nowDate()) { let diff = target - hoursOf(d); if (diff <= 0) diff += 24; return Math.ceil(diff * 60); }
+function spell(min) {
+  const h = Math.floor(min / 60), m = min % 60;
+  const w = (n, a, b, c) => n % 10 === 1 && n % 100 !== 11 ? a : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? b : c;
+  const parts = [];
+  if (h) parts.push(`${h} ${w(h, "час", "часа", "часов")}`);
+  if (m || !h) parts.push(`${m} ${w(m, "минуту", "минуты", "минут")}`);
+  return parts.join(" ");
+}
+
+const SEASONS = ["winter", "spring", "summer", "autumn"];
+const seasonOf = d => { const m = d.getMonth(); return m === 11 || m < 2 ? "winter" : m < 5 ? "spring" : m < 8 ? "summer" : "autumn"; };
+const SEASON = SEASONS.includes(QS.get("season")) ? QS.get("season") : seasonOf(nowDate());
+const FESTIVE = (() => {
+  if (QS.get("season")) return SEASON === "winter";
+  const d = nowDate();
+  return d.getMonth() === 11 || (d.getMonth() === 0 && d.getDate() <= 14);
+})();
+/* когда садится солнце (примерно, для наших широт) */
+const SUNSET = { winter: 17, spring: 19.4, summer: 21, autumn: 18.2 }[SEASON];
+/* 1 — за окном ещё светлое вечернее небо, 0 — ночь */
+function skyLight(d = nowDate()) {
+  let h = hoursOf(d);
+  if (h < 12) h += 24;
+  return clamp((SUNSET + .9 - h) / 1.5, 0, 1);
+}
+/* после часа ночи свет потихоньку приглушают */
+function lateness(d = nowDate()) { const h = hoursOf(d); return h < CLOSE_H ? clamp((h - 1) / 2, 0, 1) : 0; }
+
+const SEASON_INFO = {
+  winter: { name: "Зима", nook: "Книги до потолка, снег за окном, письмо на столе", line: "Зима: за окном метёт, в камине трещат дрова." },
+  spring: { name: "Весна", nook: "Книги до потолка, весенний дождь, письмо на столе", line: "Весна: за окном тёплый дождь, на стойке свежие цветы." },
+  summer: { name: "Лето", nook: "Книги до потолка, звёзды и сверчки за окном", line: "Лето: за окном звёзды и сверчки, в камине вместо огня свечи." },
+  autumn: { name: "Осень", nook: "Книги до потолка, дождь и листопад за окном", line: "Осень: дождь с листопадом, тыквы на каминной полке." }
+};
+/* сезонный напиток на меловой доске у стойки */
+const SEASON_DRINK = {
+  winter: {
+    name: "Глинтвейн", tagline: "Сезонное предложение: горячее вино со специями",
+    facts: [["Сезон", "зима"], ["Подают", "горячим, 70–80 °C"]],
+    sections: [
+      ["История", "Горячее вино со специями пили ещё в Древнем Риме. Немецкое название Glühwein происходит от слова glühen — «пылать, раскаляться». Сегодня глинтвейн — главный напиток рождественских ярмарок Германии и Австрии."],
+      ["Рецепт", "750 мл сухого красного вина, 1 апельсин дольками, 2 палочки корицы, 4–5 бутонов гвоздики, 1 звёздочка бадьяна, 2–3 столовые ложки сахара или мёда."],
+      ["Как готовить", "Нагрейте вино со специями и апельсином на слабом огне до 70–80 °C, не доводя до кипения, иначе уйдёт аромат. Добавьте сахар или мёд, дайте настояться 10 минут и разлейте по кружкам."]
+    ]
+  },
+  spring: {
+    name: "Френч 75", tagline: "Сезонное предложение: джин, лимон и шампанское",
+    facts: [["Сезон", "весна"], ["Бокал", "флюте"]],
+    sections: [
+      ["История", "Коктейль появился после Первой мировой войны и назван в честь французской 75-миллиметровой пушки: говорили, что он бьёт так же метко. Классический рецепт с джином, лимоном и шампанским вошёл в «Савойскую книгу коктейлей» 1930 года."],
+      ["Рецепт", "30 мл джина, 15 мл лимонного сока, 15 мл сахарного сиропа, 60–90 мл холодного шампанского, спираль лимонной цедры."],
+      ["Как готовить", "Встряхните джин, сок и сироп со льдом, процедите в бокал-флюте и долейте шампанским. Украсьте цедрой."]
+    ]
+  },
+  summer: {
+    name: "Апероль шприц", tagline: "Сезонное предложение: итальянский летний аперитив",
+    facts: [["Сезон", "лето"], ["Бокал", "винный, со льдом"]],
+    sections: [
+      ["История", "Аперитив Aperol придумали братья Барбьери в Падуе и представили в 1919 году. Традиция «шприца» старше: по распространённой версии, австрийские солдаты в области Венето в XIX веке разбавляли местное вино водой, а название пришло от немецкого spritzen — «брызгать»."],
+      ["Рецепт", "Правило 3–2–1: 90 мл просекко, 60 мл апероля, 30 мл содовой, много льда, долька апельсина."],
+      ["Как готовить", "Наполните бокал льдом, налейте просекко, затем апероль и долейте содовой. Аккуратно размешайте и украсьте долькой апельсина."]
+    ]
+  },
+  autumn: {
+    name: "Горячий тодди", tagline: "Сезонное предложение: виски, мёд и лимон",
+    facts: [["Сезон", "осень"], ["Подают", "горячим, в кружке"]],
+    sections: [
+      ["История", "Горячий тодди пьют в Шотландии и Ирландии холодными сырыми вечерами, а ещё им по старинке лечат простуду. По одной из версий, название пришло из Индии XVII века, где «тодди» называли напиток из сока пальмы."],
+      ["Рецепт", "45 мл виски, 1 столовая ложка мёда, 15 мл лимонного сока, 120 мл горячей воды, палочка корицы или пара бутонов гвоздики."],
+      ["Как готовить", "Подогрейте кружку кипятком. Положите мёд, влейте лимонный сок и виски, долейте горячей водой и размешайте до растворения мёда. Добавьте корицу."]
+    ]
+  }
+};
+
 /* ================= текстуры: всё рисуется в браузере, без чужих картинок ================= */
 function canvasTex(w, h, draw, { color = true, repeat = null } = {}) {
   const c = document.createElement("canvas");
@@ -3307,7 +3424,7 @@ const FP = { x: 7.98, z: -1.7 };
   eg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const embers = new THREE.Points(eg, new THREE.PointsMaterial({ color: 0xffa040, size: .018, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, map: TEX.glow }));
   world.add(embers);
-  FIRE.embers = { pos, life, N, eg };
+  FIRE.embers = { pos, life, N, eg, pts: embers };
   // картина в раме
   box(7.93, 7.99, 1.62, 2.52, z - .72, z + .72, M.brass, world, 0);
   const pic = mesh(new THREE.PlaneGeometry(1.32, .82), std({ map: TEX.painting, roughness: .8 }), 7.925, 2.07, z);
@@ -3625,32 +3742,39 @@ merged(caseBacks, std({ color: 0x120a07, roughness: .9 }));
 const WIN = { x: -6.0, sill: 1.08, w: 1.5, rect: 1.42, r: .75 };
 const winH = WIN.rect + WIN.r;
 const rainMat = new THREE.ShaderMaterial({
-  uniforms: { uTime: { value: 0 }, uFlash: { value: 0 } },
+  uniforms: { uTime: { value: 0 }, uFlash: { value: 0 }, uSky: { value: 0 }, uRain: { value: 1 }, uSnow: { value: 0 }, uStars: { value: 0 }, uLeaves: { value: 0 }, uFrost: { value: 0 } },
   vertexShader: VERT_UV,
-  fragmentShader: `uniform float uTime, uFlash; varying vec2 vUv; ${NOISE_GLSL}
+  fragmentShader: `uniform float uTime, uFlash, uSky, uRain, uSnow, uStars, uLeaves, uFrost; varying vec2 vUv; ${NOISE_GLSL}
     void main(){
       vec2 p = vUv * vec2(${WIN.w.toFixed(2)}, ${winH.toFixed(2)});
       vec2 a = vec2(p.x - ${(WIN.w / 2).toFixed(3)}, p.y - ${WIN.rect.toFixed(3)});
       if (p.y > ${WIN.rect.toFixed(3)} && length(a) > ${WIN.r.toFixed(3)}) discard;
-      vec3 col = mix(vec3(.13, .1, .15), vec3(.035, .05, .1), smoothstep(.2, 2., p.y));
-      col += vec3(.35, .16, .06) * smoothstep(.9, 0., p.y) * .5;
+      // небо: ночь или вечерние сумерки
+      vec3 night = mix(vec3(.13, .1, .15), vec3(.035, .05, .1), smoothstep(.2, 2., p.y));
+      night += vec3(.35, .16, .06) * smoothstep(.9, 0., p.y) * .5;
+      vec3 dusk = mix(vec3(1., .52, .28), vec3(.3, .36, .66), smoothstep(.15, 1.9, p.y));
+      dusk = mix(dusk, vec3(1., .78, .52), smoothstep(.7, 0., p.y) * .45);
+      vec3 col = mix(night, dusk * .8, uSky);
+      // звёзды
+      vec2 sq = p * 42.; vec2 sid = floor(sq); float sh = hash(sid * 1.31);
+      col += uStars * (1. - uSky) * step(.982, sh) * smoothstep(.32, 0., length(fract(sq) - .5)) * (.55 + .45 * sin(uTime * 2. + sh * 40.)) * smoothstep(.7, 1.3, p.y) * vec3(1., .95, .85);
       // дальние огни
       for (int i = 0; i < 2; i++) {
         float fi = float(i);
         vec2 q = p * (5. + fi * 3.) + vec2(fi * 7.3, 0.);
         vec2 id = floor(q), f = fract(q) - .5;
-        float h = hash(id + fi);
-        float on = step(.78, h) * step(p.y, .9 - fi * .2);
-        col += on * vec3(1., .7, .35) * smoothstep(.45, 0., length(f)) * .25;
+        float on = step(.78, hash(id + fi)) * step(p.y, .9 - fi * .2);
+        col += on * vec3(1., .7, .35) * smoothstep(.45, 0., length(f)) * .25 * (1. - uSky * .7);
       }
-      // силуэты домов с окнами
+      // силуэты домов с окнами и снегом на крышах
       float bx = floor(p.x * 5.);
       float bh = .3 + hash(vec2(bx, 3.)) * .55;
       if (p.y < bh) {
-        col = vec3(.02, .022, .035);
+        col = mix(vec3(.02, .022, .035), vec3(.13, .11, .16), uSky);
         vec2 g = vec2(p.x * 26., p.y * 20.), gi = floor(g), gf = fract(g);
-        float lit = step(.7, hash(gi + bx));
+        float lit = step(.7 + uSky * .15, hash(gi + bx));
         col += lit * vec3(1., .72, .38) * .5 * step(.25, gf.x) * step(gf.x, .7) * step(.3, gf.y) * step(gf.y, .75);
+        col = mix(col, vec3(.72, .76, .84) * (.45 + .4 * uSky), uSnow * smoothstep(bh - .035, bh - .01, p.y));
       }
       // струи дождя
       float r = 0.;
@@ -3658,20 +3782,47 @@ const rainMat = new THREE.ShaderMaterial({
         float fi = float(i);
         float k = 38. + fi * 22.;
         float cx = p.x * k + p.y * 1.2;
-        float id = floor(cx);
-        float h = hash(vec2(id, fi));
+        float h = hash(vec2(floor(cx), fi));
         float y = fract(p.y * (.5 + h * .4) + uTime * (1.6 + h + fi * .6) + h * 9.);
-        float streak = smoothstep(.13, 0., y) * smoothstep(.0, .02, y) * smoothstep(.5, .1, abs(fract(cx) - .5));
-        r += streak * step(.45, h) * (.55 - fi * .12);
+        r += smoothstep(.13, 0., y) * smoothstep(.0, .02, y) * smoothstep(.5, .1, abs(fract(cx) - .5)) * step(.45, h) * (.55 - fi * .12);
       }
-      col += vec3(.55, .62, .8) * r * .55;
+      col += vec3(.55, .62, .8) * r * .55 * uRain;
+      // снег
+      float sn = 0.;
+      for (int i = 0; i < 3; i++) {
+        float fi = float(i);
+        vec2 q = p * (6. + fi * 4.);
+        q.y += uTime * (.35 + fi * .15);
+        q.x += sin(q.y * .7 + fi * 3. + uTime * .6) * .4;
+        vec2 id = floor(q), f = fract(q) - .5;
+        vec2 o = vec2(hash(id + 2.) - .5, hash(id + 7.) - .5) * .6;
+        sn += step(.5, hash(id + fi * 11.)) * smoothstep(.1 - fi * .02, 0., length(f - o));
+      }
+      col += vec3(.9, .92, 1.) * min(sn, 1.) * uSnow * .85;
+      // листопад
+      for (int i = 0; i < 2; i++) {
+        float fi = float(i);
+        vec2 q = p * vec2(3., 2.4) + vec2(fi * 1.7, 0.);
+        q.y += uTime * (.2 + fi * .08);
+        q.x += sin(uTime * .9 + q.y * 1.3 + fi) * .3;
+        vec2 id = floor(q), f = fract(q) - .5;
+        float h = hash(id + fi * 5.);
+        vec2 d = f - vec2(hash(id + 3.) - .5, hash(id + 9.) - .5) * .4;
+        float an = uTime * 1.6 + h * 6.;
+        d = mat2(cos(an), -sin(an), sin(an), cos(an)) * d;
+        float leaf = step(.72, h) * smoothstep(.01, -.01, length(d * vec2(1., 2.3)) - .075);
+        col = mix(col, mix(vec3(.8, .36, .07), vec3(.55, .12, .05), hash(id + 1.)) * (.5 + .5 * uSky + .3), leaf * uLeaves);
+      }
       // капли на стекле
       vec2 dq = p * vec2(14., 10.);
       vec2 did = floor(dq), df = fract(dq) - .5;
       float dh = hash(did * 1.7);
       vec2 off = vec2(hash(did + 3.) - .5, hash(did + 5.) - .5) * .5;
-      float drop = smoothstep(.16 * dh, .06 * dh, length(df - off)) * step(.55, dh);
-      col += drop * vec3(.5, .55, .7) * .35;
+      col += smoothstep(.16 * dh, .06 * dh, length(df - off)) * step(.55, dh) * vec3(.5, .55, .7) * .35 * uRain;
+      // иней по краям стекла
+      float e = length((vUv - .5) * vec2(1.25, 1.));
+      float frost = smoothstep(.36, .62, e + (fbm(p * 14.) - .5) * .18);
+      col = mix(col, vec3(.78, .85, .93), frost * uFrost * .6);
       col += uFlash * vec3(.7, .75, .95) * (1.2 - p.y * .25);
       gl_FragColor = vec4(col, 1.);
     }`
@@ -3866,6 +4017,192 @@ rug2.rotation.set(-Math.PI / 2, 0, .1);
 const moth = mesh(new THREE.PlaneGeometry(.025, .015), basic({ color: 0xc8b8a0, side: THREE.DoubleSide, transparent: true, opacity: .85 }), 0, 0, 0);
 moth.userData.noHit = true;
 
+/* ================= сезоны: погода за окном, звук и убранство бара ================= */
+const WEATHER = {
+  winter: { rain: 0, snow: 1, stars: .3, leaves: 0, frost: 1, storm: false, sound: { rain: 0, wind: .5, crickets: 0, fire: .6 } },
+  spring: { rain: .6, snow: 0, stars: 0, leaves: 0, frost: 0, storm: true, sound: { rain: .24, wind: 0, crickets: 0, fire: .45 } },
+  summer: { rain: 0, snow: 0, stars: 1, leaves: 0, frost: 0, storm: false, sound: { rain: 0, wind: 0, crickets: .35, fire: 0 } },
+  autumn: { rain: 1, snow: 0, stars: 0, leaves: 1, frost: 0, storm: true, sound: { rain: .32, wind: .12, crickets: 0, fire: .5 } }
+}[SEASON];
+rainMat.uniforms.uRain.value = WEATHER.rain;
+rainMat.uniforms.uSnow.value = WEATHER.snow;
+rainMat.uniforms.uStars.value = WEATHER.stars;
+rainMat.uniforms.uLeaves.value = WEATHER.leaves;
+rainMat.uniforms.uFrost.value = WEATHER.frost;
+Music.weather(WEATHER.sound);
+
+/* летом камин не топят: в нём стоят свечи */
+const SUMMER_FIRE = SEASON === "summer";
+if (SUMMER_FIRE) {
+  FIRE.flames.forEach(f => { f.visible = false; });
+  FIRE.glow.visible = false;
+  FIRE.logMat.emissiveIntensity = 0;
+  FIRE.logMat.emissive.setHex(0x000000);
+  FIRE.embers.pts.visible = false;
+  LIGHTS.fire.userData.base = 1.6;
+  LIGHTS.fire.color.setHex(0xffb060);
+  for (const [dz, h] of [[-.28, .18], [-.14, .26], [0, .32], [.13, .22], [.27, .16]]) {
+    mesh(new THREE.CylinderGeometry(.03, .03, h, 14), M.candle, 7.84, .06 + h / 2, FP.z + dz);
+    mesh(new THREE.SphereGeometry(.011, 8, 6), basic({ color: 0xffd890, toneMapped: false }), 7.84, .08 + h, FP.z + dz).scale.set(1, 1.8, 1);
+    FIRE.candles.push(glowSprite(0xffa050, .3, 7.84, .08 + h, FP.z + dz, world, .7));
+  }
+  const fpHot = HOT.find(h => h.userData.hot.label === "Подбросить дров");
+  if (fpHot) { fpHot.userData.hot.label = "Свечи в камине"; fpHot.userData.hot.act = () => { FIRE.boost = 1.5; }; }
+}
+if (SEASON === "winter") LIGHTS.fire.userData.base *= 1.15;
+
+/* ---------- убранство по сезону ---------- */
+const SEASONAL = [];
+// гирлянда: лампочки провисают дугами между точками
+function garland(points, sag = .07, per = .09, colors = [0xffc860, 0xff5a5a, 0x7ad0ff, 0xa0ff8a]) {
+  const pos = [];
+  for (let k = 0; k < points.length - 1; k++) {
+    const a = points[k], b = points[k + 1], n = Math.max(2, Math.round(a.distanceTo(b) / per));
+    for (let i = 0; i < n; i++) { const t = i / n; pos.push(V3().lerpVectors(a, b, t).add(V3(0, -Math.sin(Math.PI * t) * sag, 0))); }
+  }
+  const im = new THREE.InstancedMesh(new THREE.SphereGeometry(.014, 8, 6), basic({ toneMapped: false }), pos.length);
+  const m4 = new THREE.Matrix4(), col = new THREE.Color();
+  pos.forEach((p, i) => { m4.makeTranslation(p.x, p.y, p.z); im.setMatrixAt(i, m4); im.setColorAt(i, col.setHex(colors[i % colors.length])); });
+  world.add(im);
+  const cord = new THREE.CatmullRomCurve3(pos);
+  mesh(new THREE.TubeGeometry(cord, pos.length * 2, .003, 4), std({ color: 0x0e1a0e }), 0, 0, 0);
+  SEASONAL.push({ garland: im, n: pos.length, colors });
+  return im;
+}
+if (FESTIVE) {
+  // по карнизу бара и по каминной полке
+  const pts = [];
+  for (let x = -3.3; x <= 3.31; x += .66) pts.push(V3(x, 2.97, BB.z0 + .46));
+  garland(pts, .08);
+  const mp = [];
+  for (let z = FP.z - 1.1; z <= FP.z + 1.11; z += .55) mp.push(V3(7.5, 1.3, z));
+  garland(mp, .06);
+  // ёлка в углу курилки
+  const t = group(4.45, 0, -3.55);
+  mesh(new THREE.CylinderGeometry(.05, .06, .3, 8), M.darkwood, 0, .15, 0, t);
+  mesh(new THREE.CylinderGeometry(.2, .24, .18, 16), std({ color: 0x5a1414, roughness: .6 }), 0, .09, 0, t);
+  const pine = std({ color: 0x173a22, roughness: .9 });
+  [[.62, .7, .55], [.5, .6, .95], [.38, .5, 1.3], [.24, .4, 1.6]].forEach(([r, h, y]) => mesh(new THREE.ConeGeometry(r, h, 18), pine, 0, y, 0, t));
+  const star = mesh(new THREE.OctahedronGeometry(.07), basic({ color: 0xffd060, toneMapped: false }), 0, 1.86, 0, t);
+  star.scale.set(1, 1.3, .4);
+  glowSprite(0xffd060, .6, 0, 1.86, 0, t, .7);
+  const balls = [], m4 = new THREE.Matrix4(), col = new THREE.Color();
+  for (let i = 0; i < 26; i++) {
+    const y = R(.4, 1.55), r = (1.75 - y) * .42 + .04, a = R(0, 6.3);
+    balls.push([Math.cos(a) * r, y, Math.sin(a) * r]);
+  }
+  const bi = new THREE.InstancedMesh(new THREE.SphereGeometry(.032, 12, 8), std({ roughness: .15, metalness: .6, envMapIntensity: 1.5 }), balls.length);
+  balls.forEach((b, i) => { m4.makeTranslation(...b); bi.setMatrixAt(i, m4); bi.setColorAt(i, col.setHex([0xb01820, 0xd4a040, 0x2050a0, 0xe8e0d0][i % 4])); });
+  t.add(bi);
+  const lights = [];
+  for (let i = 0; i < 40; i++) { const y = .35 + i / 40 * 1.25, r = (1.75 - y) * .44 + .03, a = i * 2.4; lights.push(V3(Math.cos(a) * r, y, Math.sin(a) * r).add(t.position)); }
+  const li = new THREE.InstancedMesh(new THREE.SphereGeometry(.012, 6, 5), basic({ toneMapped: false }), lights.length);
+  lights.forEach((p, i) => { m4.makeTranslation(p.x, p.y, p.z); li.setMatrixAt(i, m4); li.setColorAt(i, col.setHex(0xffc860)); });
+  world.add(li);
+  SEASONAL.push({ garland: li, n: lights.length, colors: [0xffc860, 0xffe0a0] });
+  glowSprite(0xffb050, 1.6, 4.45, 1.0, -3.55, world, .25);
+  // подарки
+  [[.25, .2, .22, .18, .1, 0xb01820], [-.22, .16, .18, .16, .08, 0x1f4a7a], [.05, .14, .14, .14, .3, 0xd4a040]].forEach(([x, w, h, d, z, c]) => {
+    const g = mesh(new THREE.BoxGeometry(w, h, d), std({ color: c, roughness: .5 }), x, h / 2, z, t);
+    mesh(new THREE.BoxGeometry(w + .004, h + .004, .025), std({ color: 0xf0e0b0, roughness: .4 }), 0, 0, 0, g);
+  });
+  hot(t, 2, "Ёлка", () => { for (const s of SEASONAL) s.boost = 1; }, { grow: .02 });
+}
+if (SEASON === "winter") {
+  // кружки с глинтвейном на стойке
+  for (const [x, z] of [[-2.3, -2.3], [-2.15, -2.42]]) {
+    const g = group(x, CT.top, z);
+    mesh(lathe([[0, 0], [.035, 0], [.038, .09], [.04, .1]], 18), std({ color: 0xf0e8dc, roughness: .3 }), 0, 0, 0, g);
+    mesh(new THREE.CylinderGeometry(.034, .034, .004, 18), std({ color: 0x5a0a14, roughness: .15, emissive: 0x2a0408 }), 0, .085, 0, g);
+    const h = mesh(new THREE.TorusGeometry(.025, .006, 6, 12, Math.PI), std({ color: 0xf0e8dc }), .04, .05, 0, g);
+    h.rotation.z = -Math.PI / 2;
+  }
+}
+if (SEASON === "spring") {
+  // ваза с цветами на стойке и веточка на столе писателя
+  const vase = (x, y, z, s = 1) => {
+    const g = group(x, y, z); g.scale.setScalar(s);
+    mesh(lathe([[0, 0], [.04, 0], [.05, .06], [.03, .16], [.035, .2]], 18), std({ color: 0xcfe6e0, transparent: true, opacity: .45, roughness: .05 }), 0, 0, 0, g);
+    const stem = std({ color: 0x3a6a2a });
+    for (let i = 0; i < 7; i++) {
+      const a = i / 7 * 6.28, l = R(.22, .34), tilt = R(.12, .3);
+      const st = mesh(new THREE.CylinderGeometry(.003, .003, l, 4), stem, Math.cos(a) * tilt * l / 2, .14 + l / 2, Math.sin(a) * tilt * l / 2, g);
+      st.rotation.set(Math.sin(a) * tilt, 0, -Math.cos(a) * tilt);
+      const top = V3(Math.cos(a) * tilt * l, .14 + l, Math.sin(a) * tilt * l);
+      for (let k = 0; k < 4; k++) mesh(new THREE.SphereGeometry(.018, 8, 6), std({ color: [0xf2b8c8, 0xfff0f4, 0xe890a8][i % 3], roughness: .7 }), top.x + R(-.015, .015), top.y + R(-.015, .015), top.z + R(-.015, .015), g);
+    }
+  };
+  vase(2.35, CT.top, -2.35, 1.1);
+  vase(WIN.x - .65, .785, -4.2, .8);
+}
+if (SEASON === "summer") {
+  // ведёрко со льдом и шампанским, фрукты
+  const g = group(-2.35, CT.top, -2.4);
+  mesh(lathe([[0, 0], [.09, 0], [.11, .2], [.115, .21]], 24), M.chrome, 0, 0, 0, g);
+  const ice = [];
+  for (let i = 0; i < 12; i++) { const c = new RoundedBoxGeometry(.03, .03, .03, 1, .006); c.rotateY(R(0, 3)); c.translate(R(-.07, .07), .2 + R(-.01, .01), R(-.07, .07)); ice.push(c); }
+  merged(ice, std({ color: 0xe8f4ff, transparent: true, opacity: .5, roughness: .05 }), g);
+  const bot = mesh(BGEO.bordeaux, std({ color: 0x1a2a14, roughness: .1, metalness: .2, envMapIntensity: 1.6 }), .01, .05, 0, g);
+  bot.rotation.z = .25; bot.scale.setScalar(1.05);
+  for (let i = 0; i < 4; i++) mesh(new THREE.SphereGeometry(.032, 12, 10), std({ color: [0xf0a020, 0xf2d24a][i % 2], roughness: .5 }), -1.25 + Math.cos(i * 1.6) * .05, CT.top + .075, -2.45 + Math.sin(i * 1.6) * .05);
+}
+if (SEASON === "autumn") {
+  // тыквы на каминной полке и у камина
+  const pumpkin = (x, y, z, s, c = 0xd2701a) => {
+    const g = group(x, y, z); g.scale.setScalar(s);
+    const m = std({ color: c, roughness: .6 });
+    for (let i = 0; i < 8; i++) { const a = i / 8 * 6.28; const p = mesh(new THREE.SphereGeometry(.06, 14, 10), m, Math.cos(a) * .045, .055, Math.sin(a) * .045, g); p.scale.set(.75, .9, .75); }
+    mesh(new THREE.CylinderGeometry(.008, .012, .04, 6), std({ color: 0x4a3a1a }), 0, .12, 0, g).rotation.z = .3;
+  };
+  pumpkin(7.72, 1.32, FP.z - .6, 1);
+  pumpkin(7.72, 1.32, FP.z + .55, .75, 0xb8851e);
+  pumpkin(7.4, .04, FP.z - 1.25, 1.6);
+  pumpkin(7.55, .04, FP.z - 1.0, 1.1, 0xc06018);
+  // кленовые листья на подоконнике
+  for (let i = 0; i < 5; i++) { const l = mesh(new THREE.CircleGeometry(.03, 5), std({ color: [0xc04a10, 0x9a2a0a, 0xd08a1a][i % 3], side: THREE.DoubleSide }), WIN.x + R(-.7, .7), WIN.sill + .003, -4.88 + R(-.05, .05)); l.rotation.set(-Math.PI / 2, 0, R(0, 6)); }
+}
+
+/* ---------- меловая доска с сезонным напитком ---------- */
+(() => {
+  const dr = SEASON_DRINK[SEASON];
+  const board = group(2.75, CT.top, -2.18);
+  board.rotation.y = -.25;
+  const tex = canvasTex(256, 320, (g, w, h) => {
+    g.fillStyle = "#1a1f1c"; g.fillRect(0, 0, w, h);
+    speckle(g, w, h, 1500, .08, "#fff", "#000");
+    g.fillStyle = "#e8e2d4"; g.textAlign = "center";
+    g.font = "26px Forum, Georgia, serif"; g.globalAlpha = .75; g.fillText(SEASON_INFO[SEASON].name.toUpperCase(), w / 2, 52);
+    g.globalAlpha = 1; g.font = "40px Forum, Georgia, serif";
+    const words = dr.name.split(" ");
+    words.forEach((t, i) => g.fillText(t, w / 2, 124 + i * 46 - (words.length - 1) * 23));
+    g.strokeStyle = "rgba(232,226,212,.6)"; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(60, 200); g.quadraticCurveTo(128, 214, 196, 200); g.stroke();
+    g.font = "20px Literata, Georgia, serif"; g.globalAlpha = .8; g.fillText("сезонное предложение", w / 2, 250);
+  });
+  const frame = mesh(new THREE.BoxGeometry(.26, .32, .02), M.oak, 0, .2, 0, board);
+  frame.rotation.x = -.18;
+  const face = mesh(new THREE.PlaneGeometry(.22, .28), std({ map: tex, roughness: .95 }), 0, .2, .011, board);
+  face.rotation.x = -.18;
+  face.position.z = .011 * Math.cos(.18); face.position.y = .2 - .011 * Math.sin(.18);
+  hot(board, 1, `Сезонное: ${dr.name}`, () => openCard(dr), { grow: .08 });
+})();
+
+/* каждый кадр: огоньки гирлянд переливаются */
+const _gc = new THREE.Color();
+onTick((t, dt) => {
+  const col = _gc;
+  for (const s of SEASONAL) {
+    if (!s.garland) continue;
+    s.boost = Math.max(0, (s.boost || 0) - dt * .3);
+    s.ph = (s.ph || 0) + dt * (2.2 + s.boost * 9);
+    for (let i = 0; i < s.n; i++) {
+      const k = .45 + .55 * Math.max(0, Math.sin(s.ph + i * .9));
+      s.garland.setColorAt(i, col.setHex(s.colors[i % s.colors.length]).multiplyScalar(k));
+    }
+    s.garland.instanceColor.needsUpdate = true;
+  }
+});
+
 /* ================= бармен: протирает бокал, ходит, достаёт бутылки с полки ================= */
 const bt = makePerson({ vest: 0x2a0d13, shirt: 0xe6dfd0, trousers: 0x121012, skin: 0xb07a5a, hair: 0x140d09, mustache: true, bowtie: 0x7a0f22, apron: true, rolled: true });
 const BT_Z = -3.4;
@@ -4030,6 +4367,8 @@ const ZONES = [
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
     hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." }
 ];
+ZONES[0].sub = SEASON_INFO[SEASON].nook;
+if (SEASON === "summer") ZONES[2].hint = "Постучи в дверь или заведи граммофон. Летом камин не топят: в нём горят свечи.";
 const INTRO_CAM = { pos: [0, 1.8, 5.5], tgt: [0, 1.5, -4.6], span: 8, pull: 1 };
 const TEST = location.hash.includes("test");
 let curZone = 1, PAUSED = false, flight = null, nudge = 0;
@@ -4243,7 +4582,7 @@ function tick(now) {
   requestAnimationFrame(tick);
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
-  if (PAUSED || document.hidden) return;
+  if (PAUSED || document.hidden || (closedNow && !started)) return;
   NOW = now;
   const t = now / 1000;
   runTweens();
@@ -4339,7 +4678,8 @@ function tick(now) {
   rainMat.uniforms.uTime.value = t;
   NOOK.flash = Math.max(0, NOOK.flash - dt * 2.2);
   rainMat.uniforms.uFlash.value = NOOK.flash;
-  LIGHTS.window.intensity = LIGHTS.window.userData.base + NOOK.flash * 30;
+  const sky = rainMat.uniforms.uSky.value;
+  LIGHTS.window.intensity = LIGHTS.window.userData.base * (1 + sky * 2.5) + NOOK.flash * 30;
   LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
@@ -4349,7 +4689,7 @@ function tick(now) {
   moth.position.set(-6.5 + Math.cos(t * 2.4) * .16, 1.13 + Math.sin(t * 3.1) * .05, -4.3 + Math.sin(t * 2.4) * .16);
   moth.rotation.y = -t * 2.4; moth.scale.x = .6 + .4 * Math.abs(Math.sin(t * 30));
   flashT -= dt;
-  if (flashT < 0) { flashT = 9 + Math.random() * 12; if (curZone === 0) lightning(); }
+  if (flashT < 0) { flashT = 9 + Math.random() * 12; if (curZone === 0 && WEATHER.storm) lightning(); }
   // неон иногда мигает
   neonT -= dt;
   let nb = 1;
@@ -4403,10 +4743,72 @@ H3D.render = () => renderer.render(scene, camera);
 H3D.info = () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, dpr: DPR, zone: curZone, busy, btBusy: BT.busy });
 renderZoneUI(1);
 requestAnimationFrame(tick);
-enter.disabled = false;
-enter.focus({ preventScroll: true });
+/* ---------- часы работы: открыто с 17:00 до 3:00 ---------- */
+const introText = document.getElementById("intro-text"), statusEl = document.getElementById("status"), introTitle = intro.querySelector("h1");
+const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
+function applyTime() {
+  const d = nowDate(), sky = skyLight(d), late = lateness(d);
+  rainMat.uniforms.uSky.value = sky;
+  LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
+  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late);
+}
+function showClosed(afterVisit) {
+  intro.classList.add("closed");
+  const min = minutesUntil(OPEN_H);
+  introTitle.classList.add("off");
+  introText.textContent = afterVisit
+    ? "Бар закрылся. Спасибо, что заглянул! Ждём тебя снова."
+    : "Сейчас закрыто. Бар открывается каждый день в 17:00 и работает до 3:00 ночи.";
+  statusEl.textContent = `Откроемся в 17:00, через ${spell(min)}`;
+  statusEl.hidden = false;
+  enter.hidden = true;
+}
+function showOpen() {
+  intro.classList.remove("closed");
+  introTitle.classList.remove("off");
+  const left = minutesUntil(CLOSE_H);
+  introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
+  statusEl.textContent = left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
+  statusEl.hidden = false;
+  enter.hidden = false;
+  enter.disabled = false;
+}
+let closedNow = !isOpen();
+if (closedNow) showClosed(false); else showOpen();
+applyTime();
+if (!closedNow) enter.focus({ preventScroll: true });
+let lastCallShown = false, visited = false;
+setInterval(() => {
+  const open = isOpen();
+  applyTime();
+  if (!started) {
+    if (open && closedNow) { closedNow = false; showOpen(); introTitle.style.animation = "none"; void introTitle.offsetWidth; introTitle.style.animation = ""; }
+    else if (!open) { closedNow = true; showClosed(visited); }
+    else showOpen();
+    return;
+  }
+  const h = hoursOf(nowDate());
+  if (open && h >= LAST_CALL && h < CLOSE_H && !lastCallShown) {
+    lastCallShown = true;
+    ZONES.forEach(z => { z.hint = `Последний заказ: в 3:00 бар закрывается. ${z.hint}`; });
+    if (!busy && !mixDlg.open) hintEl.textContent = ZONES[curZone].hint;
+  }
+  if (!open) closeBar();
+}, 15000);
+function closeBar() {
+  if (closedNow) return;
+  closedNow = true;
+  if (dlg.open) dlg.close();
+  if (mixDlg.open) mixDlg.close();
+  if (Book.isOpen) document.getElementById("book").close();
+  if (Music.on) Music.stop();
+  started = false;
+  visited = true;
+  showClosed(true);
+  intro.classList.remove("gone");
+}
 enter.addEventListener("click", async () => {
-  if (started) return;
+  if (started || !isOpen()) return;
   started = true;
   intro.classList.add("gone");
   let pref = null;
@@ -4414,9 +4816,11 @@ enter.addEventListener("click", async () => {
   if (pref !== "off" && !Music.on) setMusic(true);
   renderer.toneMappingExposure = STILL ? 1.2 : .15;
   if (!STILL) tween(renderer, { toneMappingExposure: 1.2 }, 2.2, ease.out);
+  setCam(framed(INTRO_CAM));
   await flyTo(framed(1), 3.2, .4);
-  idleLife();
+  if (!idleStarted) { idleStarted = true; idleLife(); }
 });
+let idleStarted = false;
 
 </script>
 </body>

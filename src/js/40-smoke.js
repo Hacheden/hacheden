@@ -74,7 +74,7 @@ const FP = { x: 7.98, z: -1.7 };
   eg.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const embers = new THREE.Points(eg, new THREE.PointsMaterial({ color: 0xffa040, size: .018, transparent: true, opacity: .9, blending: THREE.AdditiveBlending, depthWrite: false, map: TEX.glow }));
   world.add(embers);
-  FIRE.embers = { pos, life, N, eg };
+  FIRE.embers = { pos, life, N, eg, pts: embers };
   // картина в раме
   box(7.93, 7.99, 1.62, 2.52, z - .72, z + .72, M.brass, world, 0);
   const pic = mesh(new THREE.PlaneGeometry(1.32, .82), std({ map: TEX.painting, roughness: .8 }), 7.925, 2.07, z);

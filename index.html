@@ -180,6 +180,51 @@
   .music.on .disc { animation: spin 3.2s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  .order { left: 18px; right: auto; }
+  .served { position: absolute; bottom: calc(100% - 14px); width: 40px; transform: translateX(-50%); pointer-events: none; }
+  .served svg { display: block; width: 100%; height: auto; }
+  .app.mixing .bottle.in svg { filter: drop-shadow(0 0 10px rgba(255,210,122,.95)); }
+  .app.mixing .bottle.in .name { color: var(--brass); }
+
+  /* ---------- барная карта ---------- */
+  dialog.mix { position: fixed; inset: 0 0 0 auto; z-index: 8; margin: 0; padding: 0; border: 0;
+    border-left: 1px solid rgba(214,170,92,.35); width: min(440px, 100%); height: 100%; max-height: 100%; overflow: auto;
+    background: linear-gradient(180deg, rgba(38,12,19,.97), rgba(20,8,11,.98)); color: var(--cream);
+    box-shadow: -20px 0 50px rgba(0,0,0,.5); }
+  dialog.mix[open] { animation: slide-in .35s cubic-bezier(.2,.8,.2,1); }
+  .mix-inner { padding: 22px 24px calc(40px + env(safe-area-inset-bottom, 0px)); }
+  .mix-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .mix-top h2 { margin: 0; font: 400 34px/1.1 var(--font-display); }
+  .mix-top .close { top: 0; }
+  .tabs { display: flex; gap: 4px; width: fit-content; margin: 16px 0 4px; padding: 4px;
+    border: 1px solid rgba(214,170,92,.3); border-radius: 999px; }
+  .tab { appearance: none; border: 0; background: none; color: var(--muted); font: 400 17px/1 var(--font-display);
+    padding: 9px 18px; border-radius: 999px; cursor: pointer; }
+  .tab[aria-selected="true"] { background: rgba(214,170,92,.2); color: var(--cream); }
+  .mix h3 { margin: 24px 0 10px; font: 400 20px/1.2 var(--font-display); color: var(--brass); }
+  .mix-note { margin: 12px 0 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { appearance: none; border: 1px solid rgba(214,170,92,.35); background: rgba(255,255,255,.03); color: var(--cream);
+    font: 400 15px/1 var(--font-text); padding: 9px 13px; border-radius: 999px; cursor: pointer; transition: background .2s, border-color .2s; }
+  .chip:hover { border-color: var(--brass); }
+  .chip[aria-pressed="true"] { background: rgba(214,170,92,.24); border-color: var(--brass); }
+  .chip:focus-visible, .tab:focus-visible, .make:focus-visible, .clear:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .drinks { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .drink { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px; padding: 10px 12px;
+    border-radius: 10px; background: rgba(255,255,255,.035); }
+  .drink > svg { width: 30px; height: 43px; }
+  .drink b { display: block; font: 400 19px/1.2 var(--font-display); }
+  .drink span { display: block; margin-top: 3px; color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+  .drink .miss { color: #eab0bc; }
+  .make { appearance: none; border: 1px solid var(--brass); background: rgba(214,170,92,.14); color: var(--cream);
+    font: 400 15px/1 var(--font-display); padding: 9px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+  .make:hover { background: rgba(214,170,92,.3); }
+  .make.ghost { border-color: rgba(214,170,92,.45); background: none; }
+  .empty { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.5; }
+  .clear { appearance: none; border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px;
+    text-decoration: underline; cursor: pointer; padding: 6px 0; margin-top: 16px; }
+  .recipe li b { color: var(--brass); font-weight: 600; }
+
   /* ---------- вход: двери ---------- */
   .blackout { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: #070204; opacity: .95;
     animation: blackout 3.6s ease-out forwards; }
@@ -239,6 +284,11 @@
     .prop.glasses { display: none; }
     .music { padding: 8px; }
     .patron { display: none; }
+    dialog.mix { inset: auto 0 0 0; width: 100%; height: auto; max-height: 72svh; border-left: 0;
+      border-top: 1px solid rgba(214,170,92,.35); border-radius: 18px 18px 0 0; }
+    dialog.mix[open] { animation-name: slide-up; }
+    .mix-inner { padding: 18px 18px calc(32px + env(safe-area-inset-bottom, 0px)); }
+    .mix-top h2 { font-size: 28px; }
     .prop.limes { left: 4%; }
     .prop.bucket { left: 76%; }
     .music .label { display: none; }
@@ -283,6 +333,7 @@
     .bottle svg { transition: none; }
     .pa-head, .pb-arm, .pb-head, .neon.blink { animation: none; }
     .dust { display: none; }
+    dialog.mix[open] { animation: none; }
     .music { opacity: 1; animation: none; }
     .music.on .disc { animation: none; }
   }
@@ -425,6 +476,17 @@
                         <rect x="4" y="-2" width="3" height="40" fill="#fff" opacity=".35"/>
                       </g>
                       <path id="bt-rag" d="M-12 -2L12 -6L16 26Q4 32 -8 28Z" fill="#d9ccb0" opacity=".9"/>
+                      <g id="bt-spoon">
+                        <path d="M0 -4V58" stroke="#d4d8dc" stroke-width="2.2"/>
+                        <path d="M-1 6L1 12L-1 18L1 24L-1 30L1 36" stroke="#9aa0a5" stroke-width="1.4" fill="none"/>
+                        <ellipse cx="0" cy="61" rx="3.5" ry="5" fill="#d4d8dc"/>
+                      </g>
+                      <g id="bt-bottle">
+                        <rect x="-8" y="-16" width="16" height="34" rx="5" fill="#4a1a10" stroke="rgba(255,200,200,.35)"/>
+                        <rect x="-3.5" y="17" width="7" height="18" rx="2" fill="#4a1a10"/>
+                        <rect x="-4.5" y="33" width="9" height="5" rx="1" fill="#b48a44"/>
+                        <rect x="-6" y="-8" width="12" height="12" fill="#e8dcc0" opacity=".8"/>
+                      </g>
                       <ellipse cx="0" cy="2" rx="9" ry="10" fill="url(#bt-skin)"/>
                     </g>
                   </g></g>
@@ -436,6 +498,7 @@
 
         <div class="counter">
           <div class="counter-top">
+            <div class="served" id="served" aria-hidden="true"></div>
             <svg class="prop limes" viewBox="0 0 100 52" aria-hidden="true">
               <path d="M6 22H94C94 42 76 50 50 50C24 50 6 42 6 22Z" fill="#1a0d0f" stroke="rgba(255,150,170,.35)"/>
               <g fill="#a7c53a"><circle cx="24" cy="16" r="11"/><circle cx="46" cy="12" r="11" fill="#c9d94a"/><circle cx="68" cy="14" r="11"/><circle cx="82" cy="19" r="9" fill="#c9d94a"/><circle cx="35" cy="26" r="10" fill="#8fb12f"/><circle cx="58" cy="26" r="10" fill="#a7c53a"/></g>
@@ -478,7 +541,7 @@
             <path d="M84 107Q100 120 116 107" fill="none" stroke="rgba(230,215,200,.55)" stroke-width="2.5" stroke-dasharray="1 3" stroke-linecap="round"/>
           </svg>
           <div class="counter-front">
-            <p class="hint">Выбери бутылку на полке, и мы расскажем, что внутри.</p>
+            <p class="hint" id="hint">Нажми на бутылку, чтобы узнать её историю. Коктейли — в барной карте.</p>
           </div>
         </div>
 
@@ -557,6 +620,15 @@
     <span class="label">Курилка</span>
   </button>
 
+  <button class="music order" id="order" type="button" aria-label="Барная карта" aria-haspopup="dialog">
+    <svg class="disc" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
+      <circle cx="15" cy="15" r="14" fill="#120a0b" stroke="rgba(214,170,92,.6)"/>
+      <path d="M8 9H22L15 17Z" fill="#b3263e" stroke="#f1e4cc" stroke-width="1" stroke-linejoin="round"/>
+      <path d="M15 17V23M11.5 23H18.5" stroke="#f1e4cc" stroke-width="1.2" stroke-linecap="round"/>
+      <circle cx="19.5" cy="9.5" r="1.7" fill="#ffd27a"/>
+    </svg>
+    <span class="label">Барная карта</span>
+  </button>
   <button class="music" id="music" type="button" aria-label="Включить музыку">
     <svg class="disc" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
       <circle cx="15" cy="15" r="14" fill="#120a0b" stroke="rgba(214,170,92,.6)"/>
@@ -574,6 +646,25 @@
 </main>
 
 <dialog class="card" id="card" aria-labelledby="card-title"></dialog>
+<dialog class="mix" id="mix" aria-labelledby="mix-title">
+  <div class="mix-inner">
+    <div class="mix-top">
+      <h2 id="mix-title">Барная карта</h2>
+      <button class="close" type="button" aria-label="Закрыть барную карту" data-mix-close>×</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" type="button" role="tab" id="tab-mix" aria-controls="panel-mix" aria-selected="true" data-tab="mix">Смешать</button>
+      <button class="tab" type="button" role="tab" id="tab-menu" aria-controls="panel-menu" aria-selected="false" data-tab="menu">Меню</button>
+    </div>
+    <section id="panel-mix" role="tabpanel" aria-labelledby="tab-mix">
+      <p class="mix-note" id="mix-summary"></p>
+      <div id="mix-results" aria-live="polite"></div>
+      <div id="mix-chips"></div>
+      <button class="clear" type="button" data-clear>Очистить шейкер</button>
+    </section>
+    <section id="panel-menu" role="tabpanel" aria-labelledby="tab-menu" hidden></section>
+  </div>
+</dialog>
 
 <script>
   /* ---------- формы бутылок ---------- */
@@ -636,7 +727,7 @@
       id: "gin", name: "Джин", shape: "square", cap: "#c9ced1",
       glass: "#9cc4cf", glassOp: .35, liquid: "#d6e8ec", liquidOp: .35, level: 56,
       labelBg: "#20505c", labelInk: "#f1e4cc", labelY: 100, labelH: 60,
-      cup: "highball", pour: "#cfe6ea", pourLevel: 48, pourOp: .55, glassLabel: "Джин-тоник с долькой лайма",
+      cup: "highball", pour: "#cfe6ea", pourLevel: 48, pourOp: .55, garnish: "wheel", glassLabel: "Джин-тоник с долькой лайма",
       tagline: "Крепкий напиток с ароматом можжевельника",
       facts: [["Родина", "Нидерланды, Англия"], ["Крепость", "37,5–47%"], ["Подача", "с тоником и льдом"]],
       history: "Джин родился в Нидерландах в XVI–XVII веках как можжевеловая настойка, которую считали лекарством. Голландцы называли её женевер, от слова «можжевельник». Англичане упростили рецепт, и в XVIII веке джин стал самым дешёвым напитком Лондона: это время зовут «джиновой лихорадкой». Британцы в Индии пили хинный тоник от малярии и добавляли в него джин, так появился джин-тоник.",
@@ -647,7 +738,7 @@
       id: "tequila", name: "Текила", shape: "round", cap: "#b07c48",
       glass: "#d8c48f", glassOp: .25, liquid: "#e8cf86", liquidOp: .55, level: 58,
       labelBg: "#3f6b2f", labelInk: "#f6efd8", labelY: 108, labelH: 58,
-      cup: "shot", pour: "#e6cf85", pourLevel: 70, pourOp: .85, glassLabel: "Рюмка текилы с долькой лайма",
+      cup: "shot", pour: "#e6cf85", pourLevel: 70, pourOp: .85, garnish: "wedge", glassLabel: "Рюмка текилы с долькой лайма",
       tagline: "Мексиканский напиток из голубой агавы",
       facts: [["Родина", "Мексика, Халиско"], ["Крепость", "35–55%, обычно 38–40%"], ["Подача", "в узкой рюмке"]],
       history: "Текилу делают вокруг города Текила в штате Халиско. Ещё ацтеки готовили из агавы слабый напиток пульке, а после прихода испанцев в XVI веке научились его перегонять. Одну из первых лицензий на промышленное производство получила семья Куэрво в конце XVIII века.",
@@ -710,27 +801,53 @@
       shine: "M45 28L47 130",
       after: `<g transform="rotate(-6 52 70)"><rect x="46" y="58" width="22" height="22" rx="4" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.4)"/></g>
               <g transform="rotate(8 66 104)"><rect x="56" y="94" width="20" height="20" rx="4" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.4)"/></g>
-              <g fill="#fff" fill-opacity=".5"><circle cx="52" cy="118" r="1.6"/><circle cx="70" cy="92" r="1.4"/><circle cx="60" cy="132" r="1.8"/><circle cx="72" cy="124" r="1.3"/></g>
-              <g transform="translate(84 17)"><circle r="15" fill="#8fb12f"/><circle r="12.5" fill="#d3e57c"/>
-                <path d="M0 0L0 -12.5M0 0L10.8 -6.2M0 0L10.8 6.2M0 0L0 12.5M0 0L-10.8 6.2M0 0L-10.8 -6.2" stroke="#8fb12f" stroke-width="1.2"/><circle r="2" fill="#8fb12f"/></g>`
+              <g fill="#fff" fill-opacity=".5"><circle cx="52" cy="118" r="1.6"/><circle cx="70" cy="92" r="1.4"/><circle cx="60" cy="132" r="1.8"/><circle cx="72" cy="124" r="1.3"/></g>`,
+      gx: 84, gy: 17
     },
     shot: {
       body: "M42 54H78L74 134Q73 142 65 142H55Q47 142 46 134Z", before: "",
-      shine: "M50 70L52 124",
-      after: `<g transform="translate(70 40)"><path d="M0 14C6 -4 30 -2 34 18C26 8 12 8 0 14Z" fill="#8fb12f"/><path d="M4 14C9 2 26 2 29 15C22 9 12 9 4 14Z" fill="#d3e57c"/></g>`
+      shine: "M50 70L52 124", after: "", gx: 70, gy: 40
+    },
+    coupe: {
+      body: "M24 34H96Q94 72 60 76Q26 72 24 34Z",
+      before: `<rect x="58" y="74" width="4" height="62" fill="rgba(255,235,200,.35)"/><ellipse cx="60" cy="140" rx="24" ry="5" fill="rgba(255,235,200,.22)" stroke="rgba(255,235,200,.5)"/>`,
+      shine: "M32 42Q36 60 48 68", after: "", gx: 92, gy: 34
+    },
+    martini: {
+      body: "M20 26H100L62 80H58Z",
+      before: `<rect x="58" y="78" width="4" height="58" fill="rgba(255,235,200,.35)"/><ellipse cx="60" cy="140" rx="24" ry="5" fill="rgba(255,235,200,.22)" stroke="rgba(255,235,200,.5)"/>`,
+      shine: "M30 32L52 62", after: "", gx: 94, gy: 26, ox: 60, oy: 46
     }
   };
-  function glassSVG(d) {
-    const g = GLASSES[d.cup], id = "pour-" + d.id;
+  GLASSES.wine.gx = 86; GLASSES.wine.gy = 14;
+  GLASSES.snifter.gx = 80; GLASSES.snifter.gy = 22;
+  GLASSES.rocks.gx = 92; GLASSES.rocks.gy = 40;
+  const GARNISH = {
+    wheel: `<circle r="15" fill="#8fb12f"/><circle r="12.5" fill="#d3e57c"/><path d="M0 0L0 -12.5M0 0L10.8 -6.2M0 0L10.8 6.2M0 0L0 12.5M0 0L-10.8 6.2M0 0L-10.8 -6.2" stroke="#8fb12f" stroke-width="1.2"/><circle r="2" fill="#8fb12f"/>`,
+    wedge: `<path d="M0 14C6 -4 30 -2 34 18C26 8 12 8 0 14Z" fill="#8fb12f"/><path d="M4 14C9 2 26 2 29 15C22 9 12 9 4 14Z" fill="#d3e57c"/>`,
+    orange: `<circle r="14" fill="#e98a1a"/><circle r="11.5" fill="#f6b54a"/><path d="M0 0L0 -11.5M0 0L10 -5.7M0 0L10 5.7M0 0L0 11.5M0 0L-10 5.7M0 0L-10 -5.7" stroke="#e98a1a" stroke-width="1.2"/>`,
+    lemon: `<path d="M-14 -2C-6 -14 6 8 16 -4" stroke="#f2d14a" stroke-width="4" fill="none" stroke-linecap="round"/>`,
+    mint: `<g transform="translate(0 9)"><path d="M0 0C-10 -6 -12 -18 -4 -24C2 -16 4 -6 0 0Z" fill="#3f8f3a"/><path d="M2 -2C10 -10 20 -10 24 -4C16 0 8 2 2 -2Z" fill="#4fa548"/><path d="M-2 -2C-12 -6 -20 -2 -22 4C-14 6 -6 4 -2 -2Z" fill="#357d31"/></g>`,
+    cherry: `<path d="M0 -4C4 -14 10 -20 16 -24" stroke="#5a3a1a" stroke-width="1.6" fill="none"/><circle r="7" fill="#a3122a"/><circle cx="-2.5" cy="-2.5" r="1.8" fill="#ff8a9a"/>`,
+    pineapple: `<g transform="translate(0 12)"><path d="M-12 2L12 2L0 -16Z" fill="#f2c94c"/><path d="M0 -16L-6 -27M0 -16V-29M0 -16L6 -27" stroke="#3f8f3a" stroke-width="3" stroke-linecap="round"/></g>`,
+    olive: `<path d="M-16 -22L12 20" stroke="#c9b48a" stroke-width="1.6"/><ellipse cy="4" rx="6.5" ry="8.5" fill="#7a8a2a"/><circle cy="0" r="2.2" fill="#b3263e"/>`
+  };
+  function glassSVG(d, opt = {}) {
+    const g = GLASSES[d.cup], id = (opt.pre || "pour-") + d.id;
+    const pour = opt.still ? "" : ' class="pour"', late = opt.still ? "" : ' class="late"';
+    const grad = d.grad ? `<linearGradient id="${id}-g" x1="0" y1="0" x2="0" y2="1"><stop offset=".3" stop-color="${d.grad[0]}"/><stop offset="1" stop-color="${d.grad[1]}"/></linearGradient>` : "";
+    const fill = d.grad ? `url(#${id}-g)` : d.pour;
+    const garnish = d.garnish
+      ? `<g transform="translate(${d.garnish === "olive" && g.ox ? g.ox + " " + g.oy : g.gx + " " + g.gy})">${GARNISH[d.garnish]}</g>` : "";
     return `<svg viewBox="0 0 120 170" role="img" aria-label="${d.glassLabel}">
-      <defs><clipPath id="${id}"><path d="${g.body}"/></clipPath></defs>
+      <defs><clipPath id="${id}"><path d="${g.body}"/></clipPath>${grad}</defs>
       ${g.before}
       <path d="${g.body}" fill="rgba(255,255,255,.06)"/>
-      <g clip-path="url(#${id})"><rect class="pour" x="0" y="${d.pourLevel}" width="120" height="170" fill="${d.pour}" fill-opacity="${d.pourOp || .9}"/></g>
-      <g class="late">${d.ice ? ICE : ""}</g>
+      <g clip-path="url(#${id})"><rect${pour} x="0" y="${d.pourLevel}" width="120" height="170" fill="${fill}" fill-opacity="${d.pourOp || .9}"/></g>
+      <g${late}>${d.ice ? ICE : ""}</g>
       <path d="${g.body}" fill="none" stroke="rgba(255,235,200,.6)" stroke-width="1.5"/>
       <path d="${g.shine}" stroke="rgba(255,255,255,.35)" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <g class="late">${g.after}</g>
+      <g${late}>${g.after}${garnish}</g>
     </svg>`;
   }
 
@@ -792,6 +909,7 @@
       const b = document.createElement("button");
       b.type = "button";
       b.className = "bottle";
+      b.dataset.id = id;
       b.setAttribute("aria-label", "Открыть: " + d.name);
       b.innerHTML = bottleSVG(d) + `<span class="name">${d.name}</span>`;
       b.addEventListener("click", () => pick(b, d));
@@ -852,6 +970,20 @@
   function cardHTML(d) {
     const head = `<div class="close-wrap"><button class="close" type="button" aria-label="Закрыть" data-close>×</button></div>`;
     const facts = `<dl class="facts">${d.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+    if (d.recipe) {
+      return head + `<div class="card-inner">
+        <div class="stage">${glassSVG(d)}</div>
+        <h2 class="title" id="card-title">${d.name}</h2>
+        <p class="tagline">${d.tagline}</p>
+        ${facts}
+        <h3>История</h3>
+        <p>${d.history}</p>
+        <h3>Рецепт</h3>
+        <ul class="recipe">${d.recipe.map(([a, b]) => `<li><b>${a}</b> ${b}</li>`).join("")}</ul>
+        <h3>Как готовить</h3>
+        <p>${d.steps}</p>
+      </div>`;
+    }
     if (d.sections) {
       return head + `<div class="card-inner">
         <h2 class="title" id="card-title">${d.name}</h2>
@@ -888,6 +1020,7 @@
   let busy = false, pickedSvg = null;
   function pick(btn, d) {
     if (busy) return;
+    if (mixDlg.open) { toggleIng(d.id); return; }
     if (reduceMotion.matches) { openCard(d); return; }
     busy = true;
     const svg = btn.querySelector("svg");
@@ -1146,7 +1279,7 @@
     const root = el("bt-root"), head = el("bt-head"), eyes = el("bt-eyes");
     const arm = side => { const g = el("bt-arm" + side); return { up: g.querySelector(".up"), fo: g.querySelector(".fo") }; };
     const L = arm("L"), R = arm("R");
-    const items = { shaker: el("bt-shaker"), rag: el("bt-rag"), glass: el("bt-glass"), shoulder: el("bt-rag-shoulder") };
+    const items = { shaker: el("bt-shaker"), rag: el("bt-rag"), glass: el("bt-glass"), shoulder: el("bt-rag-shoulder"), spoon: el("bt-spoon"), bottle: el("bt-bottle") };
     // углы рук в градусах: плечо (up) и локоть (fo)
     const REST = { bob: 0, head: 0, look: 0, eyesY: 0, lUp: 8, lFo: -6, rUp: -8, rFo: 6 };
     const P = {
@@ -1154,7 +1287,8 @@
       shake:  { bob: 0, look: 0, head: 2, eyesY: 0, lUp: 8, lFo: -6, rUp: -50, rFo: -155 },
       reachR: { look: 0, head: 4, eyesY: -3, lUp: 8, lFo: -6, rUp: -168, rFo: -6 },
       reachL: { look: 0, head: -4, eyesY: -3, lUp: 168, lFo: 6, rUp: -8, rFo: 6 },
-      lean:   { look: 0, head: 0, eyesY: 1, bob: 10, lUp: 30, lFo: -26, rUp: -30, rFo: 26 }
+      lean:   { look: 0, head: 0, eyesY: 1, bob: 10, lUp: 30, lFo: -26, rUp: -30, rFo: 26 },
+      pour:   { look: 0, head: 6, eyesY: 3, bob: 2, lUp: 8, lFo: -6, rUp: 10, rFo: 35 }
     };
     const pose = { x: 0, ...REST };
     const CANCEL = Symbol("cancel"), waits = new Set();
@@ -1186,6 +1320,8 @@
 
     function hand(right, left) {
       items.shaker.style.display = right === "shaker" ? "" : "none";
+      items.spoon.style.display = right === "spoon" ? "" : "none";
+      items.bottle.style.display = right === "bottle" ? "" : "none";
       items.rag.style.display = right === "rag" ? "" : "none";
       items.shoulder.style.display = right === "rag" ? "none" : "";
       items.glass.style.display = left === "glass" ? "" : "none";
@@ -1199,6 +1335,9 @@
       } else if (mode === "wipe") {
         const a = t * 2 * Math.PI * 1.1;
         o.rFo += Math.sin(a) * 14; o.rUp += Math.cos(a) * 6;
+      } else if (mode === "stir") {
+        const a = t * 2 * Math.PI * 2.2;
+        o.rFo += Math.sin(a) * 9; o.rUp += Math.cos(a) * 4;
       } else if (mode === "shake") {
         const a = t * 2 * Math.PI * 4.2;
         o.rUp += Math.sin(a) * 8; o.rFo += Math.sin(a) * 12; o.bob += Math.abs(Math.sin(a)) * 1.5; o.head += Math.sin(a) * .8;
@@ -1357,6 +1496,46 @@
       } catch (e) { swallow(e); }
       if (!serving) { hold = false; wake(); }
     }
+    // готовит коктейль: берёт бутылки с полки, смешивает и наливает
+    async function make(c, stops, onPour) {
+      if (still) { onPour(); return; }
+      hold = true; serving = false;
+      cancelAll(); hand(null, null);
+      let poured = false;
+      const pourNow = () => { if (!poured) { poured = true; onPour(); } };
+      try {
+        for (const sx of stops) {
+          await walkTo(sx, 420);
+          await tween(sx >= pose.x - 1 ? P.reachR : P.reachL, 380);
+          await wait(160);
+          await tween(REST, 280);
+        }
+        await walkTo(w / 2, 420);
+        if (c.method === "shake") {
+          hand("shaker", null);
+          await tween(P.shake, 450);
+          mode = "shake"; Music.shake(1400);
+          await wait(1400);
+          mode = "idle";
+        } else if (c.method === "stir") {
+          hand("spoon", "glass");
+          await tween(P.wipe, 450);
+          mode = "stir";
+          await wait(1500);
+          mode = "idle";
+        }
+        hand(c.method === "build" ? "bottle" : "shaker", null);
+        await tween(P.pour, 500);
+        pourNow();
+        await wait(800);
+        await tween(REST, 450);
+        hand(null, null);
+      } catch (e) { swallow(e); }
+      pourNow();
+      if (!serving) { hold = false; wake(); }
+    }
+    const glassX = () => pose.x - bw * .1;
+
     function setActive(on) {
       if (on === active) return;
       active = on;
@@ -1374,7 +1553,7 @@
     measure();
     new ResizeObserver(measure).observe(service);
     if (!still) { raf = requestAnimationFrame(frame); setTimeout(life, 3800); }
-    return { serve, release, setActive };
+    return { serve, release, setActive, make, glassX };
   })();
 
   /* ---------- атмосфера: пыль в красном свете и мигающий неон ---------- */
@@ -1424,6 +1603,231 @@
     return { setActive };
   })();
 
+  /* ---------- коктейли ---------- */
+  const ING = [
+    ["Крепкое", [["wine", "Вино"], ["cognac", "Коньяк"], ["rum", "Ром"], ["whisky", "Виски"], ["gin", "Джин"], ["tequila", "Текила"]]],
+    ["Ликёры и вермуты", [["triple", "Апельсиновый ликёр"], ["campari", "Кампари"], ["vermouthR", "Красный вермут"], ["vermouthD", "Сухой вермут"], ["bitters", "Ангостура"]]],
+    ["Соки и газировка", [["tonic", "Тоник"], ["soda", "Содовая"], ["cola", "Кола"], ["oj", "Апельсиновый сок"], ["pineapple", "Ананасовый сок"], ["coconut", "Кокосовые сливки"]]],
+    ["Свежее и сиропы", [["lime", "Лайм"], ["lemon", "Лимон"], ["mint", "Мята"], ["syrup", "Сахарный сироп"], ["grenadine", "Гренадин"]]]
+  ];
+  const ING_NAME = Object.fromEntries(ING.flatMap(([, items]) => items));
+  const low = id => ING_NAME[id].toLowerCase();
+  const METHOD = { shake: "встряхнуть в шейкере", stir: "размешать со льдом", build: "собрать прямо в бокале" };
+  const GLASS_NAME = { highball: "высокий стакан", rocks: "рокс", coupe: "шампанское блюдце", martini: "коктейльный бокал", wine: "винный бокал" };
+  const BASES = [["rum", "С ромом"], ["tequila", "С текилой"], ["gin", "С джином"], ["whisky", "С виски"], ["cognac", "С коньяком"], ["wine", "С вином"], ["none", "Без алкоголя"]];
+  const COCKTAILS = [
+    { id: "c-mojito", name: "Мохито", base: "rum", origin: "Куба", method: "build", need: ["rum", "lime", "syrup", "mint", "soda"],
+      cup: "highball", pour: "#dfeccb", pourOp: .55, pourLevel: 30, garnish: "mint",
+      tagline: "Освежающий ром с мятой и лаймом",
+      history: "Мохито родом с Кубы. Похожий напиток из тростниковой водки, мяты и лайма, «Эль Драке», пили там ещё несколько веков назад. В XX веке мохито прославили бары Гаваны, и сейчас это один из самых известных коктейлей в мире.",
+      recipe: [["45 мл", "белого рома"], ["20 мл", "сока лайма"], ["15 мл", "сахарного сиропа"], ["6–8", "листиков мяты"], ["до верха", "содовой"]],
+      steps: "Слегка разомни мяту с соком лайма и сиропом на дне стакана, чтобы она отдала аромат, но не порвалась. Добавь ром, засыпь стакан колотым льдом и долей содовую. Аккуратно перемешай и укрась веточкой мяты." },
+    { id: "c-daiquiri", name: "Дайкири", base: "rum", origin: "Куба", method: "shake", need: ["rum", "lime", "syrup"],
+      cup: "coupe", pour: "#f2ecc8", pourOp: .75, pourLevel: 40, garnish: "wheel",
+      tagline: "Ром, лайм и сахар: три ингредиента и идеальный баланс",
+      history: "Назван в честь пляжа и рудника Дайкири на востоке Кубы. По популярной версии, рецепт около 1900 года придумал американский инженер Дженнингс Кокс, который работал там на шахтах.",
+      recipe: [["60 мл", "белого рома"], ["20 мл", "сока лайма"], ["15 мл", "сахарного сиропа"]],
+      steps: "Налей всё в шейкер, наполни его льдом и встряхивай 10–15 секунд. Процеди в охлаждённое шампанское блюдце и укрась кружком лайма." },
+    { id: "c-cubalibre", name: "Куба либре", base: "rum", origin: "Куба", method: "build", need: ["rum", "cola", "lime"],
+      cup: "highball", pour: "#3b1608", pourOp: .92, pourLevel: 30, garnish: "wedge",
+      tagline: "Ром с колой и долькой лайма",
+      history: "Название переводится как «Свободная Куба». Напиток появился в Гаване около 1900 года, вскоре после испано-американской войны, когда на остров завезли колу.",
+      recipe: [["50 мл", "рома"], ["120 мл", "колы"], ["10 мл", "сока лайма"]],
+      steps: "Наполни высокий стакан льдом, выжми в него лайм, налей ром и долей колу. Легко перемешай и укрась долькой лайма." },
+    { id: "c-pinacolada", name: "Пина колада", base: "rum", origin: "Пуэрто-Рико", method: "shake", need: ["rum", "pineapple", "coconut"],
+      cup: "highball", pour: "#f5ecd2", pourOp: .95, pourLevel: 28, garnish: "pineapple",
+      tagline: "Сливочный тропический коктейль с ананасом и кокосом",
+      history: "С 1978 года — официальный напиток Пуэрто-Рико. Сразу несколько баров Сан-Хуана называют себя его родиной, а самая известная версия относит рецепт к 1954 году. Название по-испански значит «процеженный ананас».",
+      recipe: [["50 мл", "белого рома"], ["30 мл", "кокосовых сливок"], ["50 мл", "ананасового сока"]],
+      steps: "Хорошо встряхни всё в шейкере со льдом или взбей в блендере с колотым льдом. Перелей в высокий стакан и укрась долькой ананаса." },
+    { id: "c-margarita", name: "Маргарита", base: "tequila", origin: "Мексика", method: "shake", need: ["tequila", "triple", "lime"],
+      cup: "coupe", pour: "#e6e8a8", pourOp: .7, pourLevel: 40, garnish: "wheel",
+      tagline: "Текила, апельсиновый ликёр и лайм",
+      history: "Кто придумал маргариту, точно неизвестно: есть несколько историй о барменах из Мексики и Калифорнии 1930–40-х годов. Ободок бокала часто обмакивают в соль, она подчёркивает вкус лайма.",
+      recipe: [["50 мл", "текилы"], ["20 мл", "апельсинового ликёра"], ["15 мл", "сока лайма"]],
+      steps: "По желанию сделай солёный ободок: смочи край бокала лаймом и обмакни в соль. Встряхни всё в шейкере со льдом и процеди в бокал." },
+    { id: "c-sunrise", name: "Текила санрайз", base: "tequila", origin: "США", method: "build", need: ["tequila", "oj", "grenadine"],
+      cup: "highball", pour: "#f6a623", grad: ["#f6a623", "#c8102e"], pourOp: .92, pourLevel: 30, garnish: "orange",
+      tagline: "Коктейль, похожий на рассвет в стакане",
+      history: "Современный рецепт появился в начале 1970-х в баре в Саусалито, Калифорния. Знаменитым его сделала группа The Rolling Stones, которая пила этот коктейль во время американского тура 1972 года.",
+      recipe: [["45 мл", "текилы"], ["90 мл", "апельсинового сока"], ["15 мл", "гренадина"]],
+      steps: "Наполни стакан льдом, налей текилу и апельсиновый сок, перемешай. Медленно влей гренадин по краю: он тяжелее и опустится на дно, получится переход от красного к оранжевому. Не перемешивай." },
+    { id: "c-gintonic", name: "Джин-тоник", base: "gin", origin: "Великобритания", method: "build", need: ["gin", "tonic", "lime"],
+      cup: "highball", pour: "#e3f0f2", pourOp: .5, pourLevel: 30, garnish: "wheel",
+      tagline: "Самый простой и самый популярный коктейль с джином",
+      history: "Британцы в Индии пили хинный тоник как средство от малярии, а чтобы горечь было легче терпеть, добавляли в него джин, сахар и лайм. Так привычка стала классикой.",
+      recipe: [["50 мл", "джина"], ["100–150 мл", "тоника"], ["1", "долька лайма"]],
+      steps: "Наполни стакан льдом доверху, налей джин и долей холодный тоник. Выжми лайм и опусти дольку в стакан." },
+    { id: "c-negroni", name: "Негрони", base: "gin", origin: "Италия", method: "stir", need: ["gin", "campari", "vermouthR"],
+      cup: "rocks", ice: true, pour: "#b0122c", pourOp: .9, pourLevel: 62, garnish: "orange",
+      tagline: "Горько-сладкий итальянский аперитив в равных долях",
+      history: "По популярной версии, около 1919 года во Флоренции граф Камилло Негрони попросил бармена сделать коктейль «Американо» покрепче и заменить в нём содовую на джин.",
+      recipe: [["30 мл", "джина"], ["30 мл", "кампари"], ["30 мл", "красного вермута"]],
+      steps: "Налей всё в стакан со льдом и размешивай 20–30 секунд, чтобы напиток охладился. Укрась кружком или цедрой апельсина." },
+    { id: "c-martini", name: "Мартини", base: "gin", origin: "США", method: "stir", need: ["gin", "vermouthD"],
+      cup: "martini", pour: "#eef2e6", pourOp: .4, pourLevel: 32, garnish: "olive",
+      tagline: "Джин и сухой вермут: строгая классика",
+      history: "Точное происхождение неизвестно, коктейль появился в США в конце XIX века. Чем меньше в нём вермута, тем мартини называют «суше».",
+      recipe: [["60 мл", "джина"], ["10 мл", "сухого вермута"], ["1", "оливка"]],
+      steps: "Размешай джин и вермут со льдом в стакане для смешивания 20–30 секунд. Процеди в охлаждённый коктейльный бокал и укрась оливкой на шпажке." },
+    { id: "c-collins", name: "Том Коллинз", base: "gin", origin: "США", method: "build", need: ["gin", "lemon", "syrup", "soda"],
+      cup: "highball", pour: "#efeed6", pourOp: .55, pourLevel: 30, garnish: "lemon",
+      tagline: "Лимонад с джином и пузырьками",
+      history: "Известен с 1870-х годов. Название связывают с розыгрышем 1874 года в Нью-Йорке: людям говорили, что некий Том Коллинз распускает о них слухи в соседнем баре, и они шли его искать.",
+      recipe: [["45 мл", "джина"], ["30 мл", "лимонного сока"], ["15 мл", "сахарного сиропа"], ["60 мл", "содовой"]],
+      steps: "Смешай джин, лимонный сок и сироп в высоком стакане со льдом, долей содовую и легко перемешай. Укрась цедрой лимона." },
+    { id: "c-oldfashioned", name: "Олд фэшн", base: "whisky", origin: "США", method: "stir", need: ["whisky", "syrup", "bitters"],
+      cup: "rocks", ice: true, pour: "#b8641a", pourOp: .9, pourLevel: 62, garnish: "orange",
+      tagline: "Виски, сахар и биттер: коктейль «по-старому»",
+      history: "Один из старейших коктейлей. В XIX веке посетители, уставшие от новых сложных рецептов, просили сделать коктейль «по-старому»: просто спирт, сахар, вода и биттер. Отсюда и название.",
+      recipe: [["45 мл", "бурбона или ржаного виски"], ["5–10 мл", "сахарного сиропа"], ["2 капли", "ангостуры"]],
+      steps: "Смешай сироп и биттер в стакане, добавь виски и крупный кусок льда. Размешивай около 30 секунд и укрась апельсиновой цедрой." },
+    { id: "c-manhattan", name: "Манхэттен", base: "whisky", origin: "США", method: "stir", need: ["whisky", "vermouthR", "bitters"],
+      cup: "coupe", pour: "#8a2614", pourOp: .9, pourLevel: 40, garnish: "cherry",
+      tagline: "Виски и красный вермут с вишней",
+      history: "Появился в Нью-Йорке в 1870–80-х годах. Известную легенду о том, что его придумали на приёме Дженни Черчилль в Манхэттенском клубе, историки считают выдумкой: в те дни она была в Англии.",
+      recipe: [["50 мл", "ржаного виски"], ["20 мл", "красного вермута"], ["1 капля", "ангостуры"]],
+      steps: "Размешай всё со льдом в стакане для смешивания, процеди в охлаждённый бокал и укрась коктейльной вишней." },
+    { id: "c-sour", name: "Виски сауэр", base: "whisky", origin: "США", method: "shake", need: ["whisky", "lemon", "syrup"],
+      cup: "rocks", ice: true, pour: "#e3bd62", pourOp: .85, pourLevel: 62, garnish: "cherry",
+      tagline: "Кисло-сладкий виски с лимоном",
+      history: "Сауэры — целое семейство коктейлей: крепкий напиток, кислый сок и сладкое. Рецепт виски сауэр напечатан уже в книге знаменитого бармена Джерри Томаса 1862 года.",
+      recipe: [["45 мл", "виски"], ["25 мл", "лимонного сока"], ["20 мл", "сахарного сиропа"]],
+      steps: "Хорошо встряхни всё в шейкере со льдом. Процеди в рокс со свежим льдом и укрась вишней. Иногда добавляют яичный белок для пышной пены." },
+    { id: "c-sidecar", name: "Сайдкар", base: "cognac", origin: "Франция или Англия", method: "shake", need: ["cognac", "triple", "lemon"],
+      cup: "coupe", pour: "#dea04a", pourOp: .85, pourLevel: 40, garnish: "lemon",
+      tagline: "Коньяк с апельсиновым ликёром и лимоном",
+      history: "Появился во время Первой мировой войны или сразу после неё; на родство претендуют бары Парижа и Лондона. Название означает мотоциклетную коляску.",
+      recipe: [["50 мл", "коньяка"], ["20 мл", "апельсинового ликёра"], ["20 мл", "лимонного сока"]],
+      steps: "Встряхни всё в шейкере со льдом и процеди в охлаждённое блюдце. Ободок можно обсыпать сахаром." },
+    { id: "c-sangria", name: "Сангрия", base: "wine", origin: "Испания", method: "build", need: ["wine", "oj", "soda"],
+      cup: "wine", pour: "#7a0f24", pourOp: .88, pourLevel: 40, garnish: "orange",
+      tagline: "Вино с фруктами для большой компании",
+      history: "Испанский напиток из красного вина, нарезанных фруктов и сока. Название связывают с испанским словом sangre — «кровь» — из-за цвета.",
+      recipe: [["150 мл", "красного вина"], ["50 мл", "апельсинового сока"], ["50 мл", "содовой"], ["по вкусу", "нарезанные апельсин и яблоко, немного коньяка"]],
+      steps: "Смешай вино, сок и нарезанные фрукты, по желанию добавь немного коньяка и дай постоять в холодильнике хотя бы час. Перед подачей добавь лёд и содовую." },
+    { id: "c-nojito", name: "Мохито без алкоголя", base: "none", origin: "Куба", method: "build", need: ["lime", "syrup", "mint", "soda"],
+      cup: "highball", pour: "#e6f2da", pourOp: .5, pourLevel: 30, garnish: "mint",
+      tagline: "Вся свежесть мохито, только без рома",
+      history: "Безалкогольная версия знаменитого кубинского коктейля. Мята, лайм и пузырьки освежают не хуже оригинала.",
+      recipe: [["20 мл", "сока лайма"], ["15 мл", "сахарного сиропа"], ["6–8", "листиков мяты"], ["до верха", "содовой"]],
+      steps: "Разомни мяту с лаймом и сиропом, засыпь стакан колотым льдом и долей содовую. Перемешай и укрась мятой." }
+  ];
+  COCKTAILS.forEach(c => {
+    c.glassLabel = `${c.name}: ${GLASS_NAME[c.cup]}`;
+    c.facts = [["Родина", c.origin], ["Бокал", GLASS_NAME[c.cup]], ["Как делают", METHOD[c.method]]];
+  });
+  const COCKTAIL_BY_ID = Object.fromEntries(COCKTAILS.map(c => [c.id, c]));
+
+  /* ---------- барная карта ---------- */
+  const mixDlg = document.getElementById("mix"), orderBtn = document.getElementById("order");
+  const hintEl = document.getElementById("hint"), HINT = hintEl.textContent, served = document.getElementById("served");
+  const inShaker = new Set();
+  let mixN = 0;
+
+  function drinkRow(c, side, btn) {
+    mixN++;
+    return `<li class="drink">${glassSVG(c, { pre: "m" + mixN + "-", still: true })}
+      <div><b>${c.name}</b><span>${c.need.map(low).join(", ")}</span>${side || ""}</div>${btn}</li>`;
+  }
+  const makeBtn = c => `<button class="make" type="button" data-make="${c.id}" aria-label="Приготовить: ${c.name}">Приготовить</button>`;
+
+  function renderMix() {
+    mixN = 0;
+    const picked = [...inShaker];
+    document.getElementById("mix-summary").textContent = picked.length
+      ? "В шейкере: " + picked.map(low).join(", ") + "."
+      : "Шейкер пока пуст. Отмечай ингредиенты ниже или бери бутылки прямо с полки.";
+    const can = [], almost = [];
+    COCKTAILS.forEach(c => {
+      const miss = c.need.filter(i => !inShaker.has(i));
+      if (!miss.length) can.push(c);
+      else if (miss.length === 1 && c.need.length > 1) almost.push([c, miss[0]]);
+    });
+    let html = "";
+    if (picked.length) {
+      html += `<h3>Можно приготовить</h3>` + (can.length
+        ? `<ul class="drinks">${can.map(c => drinkRow(c, "", makeBtn(c))).join("")}</ul>`
+        : `<p class="empty">Пока ничего. Добавь ещё ингредиентов.</p>`);
+      if (almost.length) html += `<h3>Не хватает одного</h3><ul class="drinks">${almost.map(([c, m]) =>
+        drinkRow(c, `<span class="miss">Не хватает: ${low(m)}</span>`,
+          `<button class="make ghost" type="button" data-add="${m}" aria-label="Добавить ${low(m)} в шейкер">+ ${low(m)}</button>`)).join("")}</ul>`;
+    }
+    document.getElementById("mix-results").innerHTML = html;
+    document.getElementById("mix-chips").innerHTML = ING.map(([title, items]) =>
+      `<h3>${title}</h3><div class="chips">${items.map(([id, name]) =>
+        `<button class="chip" type="button" data-ing="${id}" aria-pressed="${inShaker.has(id)}">${name}</button>`).join("")}</div>`).join("");
+    document.querySelectorAll(".bottle").forEach(b => b.classList.toggle("in", inShaker.has(b.dataset.id)));
+  }
+  function renderMenu() {
+    mixN = 100;
+    document.getElementById("panel-menu").innerHTML = BASES.map(([base, title]) => {
+      const list = COCKTAILS.filter(c => c.base === base);
+      return list.length ? `<h3>${title}</h3><ul class="drinks">${list.map(c => drinkRow(c, "", makeBtn(c))).join("")}</ul>` : "";
+    }).join("");
+  }
+  function toggleIng(id) {
+    inShaker.has(id) ? inShaker.delete(id) : inShaker.add(id);
+    const keepFocus = document.activeElement && document.activeElement.dataset.ing;
+    renderMix();
+    if (keepFocus) { const f = mixDlg.querySelector(`[data-ing="${keepFocus}"]`); if (f) f.focus(); }
+  }
+  function setTab(name) {
+    mixDlg.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", String(t.dataset.tab === name)));
+    document.getElementById("panel-mix").hidden = name !== "mix";
+    document.getElementById("panel-menu").hidden = name !== "menu";
+  }
+  function openMix(tab) {
+    if (busy) return;
+    if (cur !== 1) setRoom(1);
+    renderMix(); renderMenu(); setTab(tab || "mix");
+    mixDlg.show();
+    app.classList.add("mixing");
+    hintEl.textContent = "Кликай по бутылкам на полке, чтобы положить их в шейкер.";
+    mixDlg.querySelector(".tab").focus();
+  }
+  mixDlg.addEventListener("close", () => {
+    app.classList.remove("mixing");
+    if (!busy) hintEl.textContent = HINT;
+  });
+  orderBtn.addEventListener("click", () => mixDlg.open ? mixDlg.close() : openMix());
+  mixDlg.addEventListener("click", e => {
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.ing) toggleIng(t.dataset.ing);
+    else if (t.dataset.add) { inShaker.add(t.dataset.add); renderMix(); }
+    else if (t.dataset.make) makeCocktail(t.dataset.make);
+    else if (t.dataset.tab) setTab(t.dataset.tab);
+    else if ("clear" in t.dataset) { inShaker.clear(); renderMix(); }
+    else if ("mixClose" in t.dataset) { mixDlg.close(); orderBtn.focus(); }
+  });
+
+  function bottleX(id) {
+    const b = document.querySelector(`.bottle[data-id="${id}"]`);
+    if (!b) return null;
+    const br = b.getBoundingClientRect(), sr = document.querySelector(".service").getBoundingClientRect();
+    return br.left + br.width / 2 - sr.left;
+  }
+  async function makeCocktail(id) {
+    if (busy) return;
+    const c = COCKTAIL_BY_ID[id];
+    c.need.forEach(i => inShaker.add(i));
+    busy = true;
+    mixDlg.close();
+    hintEl.textContent = `Бармен готовит: ${c.name}`;
+    const stops = c.need.map(bottleX).filter(x => x !== null).slice(0, 2);
+    await Bartender.make(c, stops, () => {
+      served.innerHTML = glassSVG(c, { pre: "sv-" });
+      served.style.left = Bartender.glassX() + "px";
+    });
+    hintEl.textContent = HINT;
+    busy = false;
+    openCard(c);
+  }
+  addEventListener("keydown", e => {
+    if (e.key === "Escape" && mixDlg.open && !dlg.open) { mixDlg.close(); orderBtn.focus(); }
+  });
+
   /* ---------- переходы между комнатами ---------- */
   const app = document.getElementById("app");
   const rooms = [...document.querySelectorAll(".room")];
@@ -1432,6 +1836,7 @@
   let cur = 1;
   function setRoom(i) {
     cur = Math.max(0, Math.min(2, i));
+    if (mixDlg.open && cur !== 1) mixDlg.close();
     app.dataset.room = cur;
     Music.room(cur);
     Bartender.setActive(cur === 1);
@@ -1447,14 +1852,14 @@
   goL.addEventListener("click", () => setRoom(cur - 1));
   goR.addEventListener("click", () => setRoom(cur + 1));
   addEventListener("keydown", e => {
-    if (dlg.open) return;
+    if (dlg.open || mixDlg.open) return;
     if (e.key === "ArrowLeft") setRoom(cur - 1);
     if (e.key === "ArrowRight") setRoom(cur + 1);
   });
   let touchX = null;
   app.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; }, { passive: true });
   app.addEventListener("touchend", e => {
-    if (touchX === null || dlg.open) return;
+    if (touchX === null || dlg.open || mixDlg.open) return;
     const dx = e.changedTouches[0].clientX - touchX;
     touchX = null;
     if (dx > 70) setRoom(cur - 1);

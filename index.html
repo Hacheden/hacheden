@@ -251,6 +251,68 @@
     .cu-title { top: 76px; padding: 0 16px; font-size: 28px; }
   }
 
+  /* ---------- курилка оживает ---------- */
+  .smoke-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .art-box, .table-ext, .pendant, .pool { pointer-events: none; }
+  .art-box button { pointer-events: auto; }
+  .smoke-bg { pointer-events: none; }
+  .smoke-bg .hot { pointer-events: auto; }
+  .room[inert] * { animation-play-state: paused !important; }
+  .sm-fl { transform-box: fill-box; transform-origin: 50% 100%; }
+  .sm-fl.f1 { animation: sm-flame 1.3s ease-in-out infinite alternate; }
+  .sm-fl.f2 { animation: sm-flame 1s ease-in-out -.4s infinite alternate-reverse; }
+  .sm-fl.f3 { animation: sm-flame .8s ease-in-out -.2s infinite alternate; }
+  .sm-glow, .sm-sconce { animation: sm-glow 2.3s ease-in-out infinite; }
+  .sm-sconce { animation-duration: 3.4s; }
+  .sm-ember { opacity: 0; animation: sm-ember 3s ease-out infinite; }
+  .sm-pend { transform-box: fill-box; transform-origin: 50% 0; animation: sm-pend 1s ease-in-out infinite alternate; }
+  .sm-cat-body { transform-box: fill-box; transform-origin: 50% 100%; animation: sm-breathe 3.4s ease-in-out infinite; }
+  .sm-tail { transform-box: fill-box; transform-origin: 100% 50%; animation: sm-tail 8s ease-in-out infinite; }
+  .sm-ear { transform-box: fill-box; transform-origin: 50% 100%; animation: sm-ear 9s ease-in-out infinite; }
+  .pp-paper { transform-box: fill-box; transform-origin: 50% 100%; animation: pp-paper 17s ease-in-out infinite; }
+  .pp-shin { transform-box: fill-box; transform-origin: 12% 4%; animation: pp-foot 2.8s ease-in-out infinite alternate; }
+  .pp-puff circle { opacity: 0; transform-box: fill-box; transform-origin: 50% 50%; animation: pp-puff 17s ease-out infinite; }
+  .pp-puff circle:nth-child(2) { animation-delay: .35s; }
+  .pp-puff circle:nth-child(3) { animation-delay: .7s; }
+  .pp-ember { animation: sm-glow 1.6s ease-in-out infinite; }
+  .sm-haze { animation: sm-haze 46s ease-in-out infinite alternate; }
+  .sm-haze.h2 { animation-duration: 63s; animation-delay: -20s; }
+  .sm-haze.h3 { animation-duration: 54s; animation-delay: -35s; }
+  .sm-disc { transform-box: fill-box; transform-origin: 50% 50%; }
+  body.music-on .sm-disc { animation: spin 1.8s linear infinite; }
+  .sm-note { opacity: 0; }
+  body.music-on .sm-note { animation: sm-note 4.5s ease-out infinite; }
+  .sm-sec { transform-box: fill-box; transform-origin: 50% 100%; animation: spin 60s steps(60) infinite; }
+  .hot { cursor: pointer; outline: none; }
+  .sm-actions { display: none; position: absolute; top: 112px; left: 0; right: 0; z-index: 3; justify-content: center; gap: 8px; padding: 0 16px; }
+  .sm-act { appearance: none; border: 1px solid rgba(214,170,92,.5); border-radius: 999px; background: rgba(14,5,8,.72); color: var(--cream);
+    font: 400 15px/1 var(--font-display); padding: 10px 14px; cursor: pointer; }
+  .sm-act:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  @media (max-width: 640px) {
+    .sm-actions { display: flex; }
+    .room-smoke .room-note { top: 76px; }
+  }
+  .hot .hl { opacity: 0; transition: opacity .25s; }
+  .hot:hover .hl, .hot:focus-visible .hl { opacity: .9; }
+  .sm-cover { transition: transform .5s cubic-bezier(.5,0,.2,1); }
+  .room-smoke.peek .sm-cover { transform: translateX(64px); }
+  .sm-eyes { opacity: 0; transition: opacity .3s .25s; }
+  .room-smoke.peek .sm-eyes { opacity: 1; }
+  .sm-eyes .eye { transform-box: fill-box; transform-origin: 50% 50%; animation: sm-blink 3.2s infinite; }
+  @keyframes sm-flame { 0% { transform: scale(1, 1) skewX(0); } 35% { transform: scale(.94, 1.08) skewX(-3deg); } 70% { transform: scale(1.05, .93) skewX(2.5deg); } 100% { transform: scale(.97, 1.04) skewX(-1deg); } }
+  @keyframes sm-glow { 0%, 100% { opacity: 1; } 20% { opacity: .8; } 45% { opacity: .95; } 60% { opacity: .76; } 80% { opacity: .92; } }
+  @keyframes sm-ember { 0% { opacity: 0; transform: translate(0, 0); } 12% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), -160px); } }
+  @keyframes sm-pend { from { transform: rotate(14deg); } to { transform: rotate(-14deg); } }
+  @keyframes sm-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.06); } }
+  @keyframes sm-tail { 0%, 78%, 100% { transform: rotate(0); } 84% { transform: rotate(-12deg); } 90% { transform: rotate(5deg); } }
+  @keyframes sm-ear { 0%, 92%, 100% { transform: rotate(0); } 94% { transform: rotate(-20deg); } 96% { transform: rotate(5deg); } }
+  @keyframes pp-paper { 0%, 60%, 100% { transform: none; } 66%, 88% { transform: translateY(66px) rotate(6deg); } }
+  @keyframes pp-foot { from { transform: rotate(-5deg); } to { transform: rotate(8deg); } }
+  @keyframes pp-puff { 0%, 71% { opacity: 0; transform: translate(0, 0) scale(.6); } 74% { opacity: .55; } 90%, 100% { opacity: 0; transform: translate(-14px, -90px) scale(2.6); } }
+  @keyframes sm-haze { from { transform: translateX(-260px); } to { transform: translateX(260px); } }
+  @keyframes sm-note { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate(-80px, -130px) rotate(-20deg); } }
+  @keyframes sm-blink { 0%, 88%, 100% { transform: scaleY(1); } 92% { transform: scaleY(.1); } }
+
   /* ---------- вход: двери ---------- */
   .blackout { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: #070204; opacity: .95;
     animation: blackout 3.6s ease-out forwards; }
@@ -359,6 +421,8 @@
     .bottle svg { transition: none; }
     .pa-head, .pb-arm, .pb-head, .neon.blink { animation: none; }
     .dust { display: none; }
+    .sm-fl, .sm-glow, .sm-sconce, .sm-ember, .sm-pend, .sm-cat-body, .sm-tail, .sm-ear, .pp-paper, .pp-shin, .pp-puff circle,
+    .pp-ember, .sm-haze, body.music-on .sm-disc, body.music-on .sm-note, .sm-sec, .sm-eyes .eye { animation: none !important; }
     dialog.mix[open] { animation: none; }
     .music { opacity: 1; animation: none; }
     .music.on .disc { animation: none; }
@@ -578,7 +642,190 @@
 
     <!-- ===== Курилка ===== -->
     <section class="room room-smoke" id="room-smoke" aria-label="Курилка">
-      <div class="smoke-wall"></div>
+      <svg class="smoke-bg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <pattern id="sm-damask" width="60" height="80" patternUnits="userSpaceOnUse">
+            <rect width="60" height="80" fill="#2a0d12"/>
+            <path d="M30 6C38 18 46 22 46 34C46 44 38 48 30 58C22 48 14 44 14 34C14 22 22 18 30 6Z" fill="#3a1219"/>
+            <path d="M30 20C34 26 38 28 38 34C38 40 34 42 30 46C26 42 22 40 22 34C22 28 26 26 30 20Z" fill="#2a0d12"/>
+            <circle cx="0" cy="70" r="5" fill="#331016"/><circle cx="60" cy="70" r="5" fill="#331016"/>
+          </pattern>
+          <linearGradient id="sm-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1f12"/><stop offset="1" stop-color="#170a05"/></linearGradient>
+          <linearGradient id="sm-stone" x1="0" x2="1"><stop offset="0" stop-color="#2a2220"/><stop offset=".5" stop-color="#4a3e3a"/><stop offset="1" stop-color="#262020"/></linearGradient>
+          <radialGradient id="sm-fireglow"><stop offset="0" stop-color="#ffb35a" stop-opacity=".5"/><stop offset=".45" stop-color="#ff7a2a" stop-opacity=".16"/><stop offset="1" stop-color="#ff5a1a" stop-opacity="0"/></radialGradient>
+          <linearGradient id="sm-brass" x1="0" x2="1"><stop offset="0" stop-color="#7a5524"/><stop offset=".45" stop-color="#e2b866"/><stop offset="1" stop-color="#6a4a1e"/></linearGradient>
+          <linearGradient id="sm-leather" x1="0" x2="1"><stop offset="0" stop-color="#2e0e0b"/><stop offset=".55" stop-color="#5e1e16"/><stop offset="1" stop-color="#7a2a1c"/></linearGradient>
+          <linearGradient id="sm-plank" x1="0" x2="1"><stop offset="0" stop-color="#2e170c"/><stop offset=".5" stop-color="#4a2814"/><stop offset="1" stop-color="#2a150a"/></linearGradient>
+          <radialGradient id="sm-haze"><stop offset="0" stop-color="#e8dccf" stop-opacity=".13"/><stop offset="1" stop-color="#e8dccf" stop-opacity="0"/></radialGradient>
+          <radialGradient id="sm-sconce"><stop offset="0" stop-color="#ffcf8a" stop-opacity=".5"/><stop offset="1" stop-color="#ffb060" stop-opacity="0"/></radialGradient>
+          <linearGradient id="sm-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e1626"/><stop offset=".6" stop-color="#26354a"/><stop offset="1" stop-color="#3a3a48"/></linearGradient>
+        </defs>
+
+        <!-- стены: обои и деревянные панели -->
+        <rect width="1600" height="900" fill="url(#sm-damask)"/>
+        <rect width="1600" height="900" fill="#000" opacity=".28"/>
+        <rect width="1600" height="26" fill="#1a0c06"/><rect y="26" width="1600" height="6" fill="#5a3a1e"/>
+        <rect y="430" width="1600" height="470" fill="url(#sm-wood)"/>
+        <g fill="none" stroke="#000" stroke-opacity=".38" stroke-width="3"><rect x="14" y="466" width="132" height="196" rx="5"/><rect x="174" y="466" width="132" height="196" rx="5"/><rect x="334" y="466" width="132" height="196" rx="5"/><rect x="494" y="466" width="132" height="196" rx="5"/><rect x="654" y="466" width="132" height="196" rx="5"/><rect x="814" y="466" width="132" height="196" rx="5"/><rect x="974" y="466" width="132" height="196" rx="5"/><rect x="1134" y="466" width="132" height="196" rx="5"/><rect x="1294" y="466" width="132" height="196" rx="5"/><rect x="1454" y="466" width="132" height="196" rx="5"/></g>
+        <g fill="none" stroke="#ffb070" stroke-opacity=".08" stroke-width="2"><path d="M16 660V468H144"/><path d="M176 660V468H304"/><path d="M336 660V468H464"/><path d="M496 660V468H624"/><path d="M656 660V468H784"/><path d="M816 660V468H944"/><path d="M976 660V468H1104"/><path d="M1136 660V468H1264"/><path d="M1296 660V468H1424"/><path d="M1456 660V468H1584"/></g>
+        <rect y="422" width="1600" height="12" fill="#5a3a1e"/><rect y="422" width="1600" height="2" fill="#c9993f" opacity=".4"/>
+
+        <!-- отсвет камина на стенах -->
+        <ellipse class="sm-glow" cx="800" cy="560" rx="560" ry="380" fill="url(#sm-fireglow)"/>
+
+        <!-- картина: ночное море -->
+        <g transform="translate(690 56)">
+          <rect width="220" height="196" rx="3" fill="url(#sm-brass)"/>
+          <rect x="10" y="10" width="200" height="176" fill="#3a2a14"/>
+          <rect x="16" y="16" width="188" height="164" fill="url(#sm-sea)"/>
+          <circle cx="152" cy="54" r="15" fill="#efe2b8" opacity=".92"/>
+          <path d="M16 122Q60 114 110 120T204 118V180H16Z" fill="#0c1420"/>
+          <path d="M152 124V176" stroke="#efe2b8" stroke-opacity=".35" stroke-width="7" stroke-dasharray="3 5"/>
+          <path d="M58 118H98L92 126H64Z" fill="#05080c"/><path d="M78 118V82L94 114Z" fill="#05080c"/><path d="M76 118V92L64 114Z" fill="#05080c"/>
+        </g>
+
+        <!-- бра -->
+        <g transform="translate(520 214)"><circle class="sm-sconce" r="92" fill="url(#sm-sconce)"/>
+          <rect x="-8" y="-6" width="16" height="30" rx="4" fill="url(#sm-brass)"/><path d="M0 18C-24 18 -30 4 -30 -10M0 18C24 18 30 4 30 -10" stroke="url(#sm-brass)" stroke-width="4" fill="none"/>
+          <rect x="-36" y="-24" width="12" height="16" fill="#efe2c4"/><rect x="24" y="-24" width="12" height="16" fill="#efe2c4"/>
+          <path class="flame" d="M-30 -24C-34 -30 -32 -36 -30 -42C-28 -36 -26 -30 -30 -24Z" fill="#ffd27a"/><path class="flame" d="M30 -24C26 -30 28 -36 30 -42C32 -36 34 -30 30 -24Z" fill="#ffd27a"/></g>
+        <g transform="translate(1080 214)"><circle class="sm-sconce" r="92" fill="url(#sm-sconce)" style="animation-delay:-1.3s"/>
+          <rect x="-8" y="-6" width="16" height="30" rx="4" fill="url(#sm-brass)"/><path d="M0 18C-24 18 -30 4 -30 -10M0 18C24 18 30 4 30 -10" stroke="url(#sm-brass)" stroke-width="4" fill="none"/>
+          <rect x="-36" y="-24" width="12" height="16" fill="#efe2c4"/><rect x="24" y="-24" width="12" height="16" fill="#efe2c4"/>
+          <path class="flame" d="M-30 -24C-34 -30 -32 -36 -30 -42C-28 -36 -26 -30 -30 -24Z" fill="#ffd27a"/><path class="flame" d="M30 -24C26 -30 28 -36 30 -42C32 -36 34 -30 30 -24Z" fill="#ffd27a"/></g>
+
+        <!-- камин -->
+        <g transform="translate(800 0)">
+          <path d="M-170 382H170V666H-170Z" fill="url(#sm-stone)"/>
+          <path d="M-150 400V650M150 400V650" stroke="#000" stroke-opacity=".3" stroke-width="3"/>
+          <rect x="-204" y="364" width="408" height="22" rx="3" fill="#4a2a16"/><rect x="-204" y="364" width="408" height="4" fill="#8a5a36"/>
+          <path d="M-104 652V500Q-104 448 0 448Q104 448 104 500V652Z" fill="#0b0504"/>
+          <path d="M-94 640V506Q-94 460 0 460Q94 460 94 506V640" fill="none" stroke="#3a1a10" stroke-width="2" stroke-dasharray="20 6"/>
+          <g transform="rotate(-6 0 628)"><rect x="-72" y="616" width="144" height="22" rx="10" fill="#3a2010"/></g>
+          <g transform="rotate(7 0 628)"><rect x="-64" y="612" width="128" height="20" rx="9" fill="#4a2a14"/></g>
+          <ellipse class="sm-glow" cx="0" cy="628" rx="62" ry="12" fill="#ff6a1a" opacity=".55"/>
+          <path class="sm-fl f1" d="M-62 632C-72 592 -42 562 -32 520C-22 560 -12 572 -8 600C0 560 10 540 20 498C32 548 52 570 62 632Z" fill="#ff7a1a"/>
+          <path class="sm-fl f2" d="M-42 632C-46 602 -26 582 -18 548C-8 580 4 592 6 612C12 586 22 570 30 546C40 586 46 602 40 632Z" fill="#ffb347"/>
+          <path class="sm-fl f3" d="M-22 634C-24 614 -12 602 -6 582C0 602 8 608 10 622C14 608 18 600 24 590C30 612 28 622 22 634Z" fill="#ffe7a3"/>
+          <g><circle class="sm-ember" cx="-9" cy="600" r="2" fill="#ffb347" style="--dx:-34px; animation-delay:0.00s"/><circle class="sm-ember" cx="-41" cy="622" r="2.4" fill="#ffb347" style="--dx:-28px; animation-delay:0.33s"/><circle class="sm-ember" cx="-4" cy="614" r="1.6" fill="#ffb347" style="--dx:24px; animation-delay:0.66s"/><circle class="sm-ember" cx="-23" cy="597" r="1.6" fill="#ffb347" style="--dx:15px; animation-delay:0.99s"/><circle class="sm-ember" cx="3" cy="598" r="1.6" fill="#ffb347" style="--dx:-29px; animation-delay:1.32s"/><circle class="sm-ember" cx="20" cy="609" r="1.6" fill="#ffb347" style="--dx:32px; animation-delay:1.65s"/><circle class="sm-ember" cx="-35" cy="603" r="2.4" fill="#ffb347" style="--dx:40px; animation-delay:1.98s"/><circle class="sm-ember" cx="24" cy="597" r="2.4" fill="#ffb347" style="--dx:34px; animation-delay:2.31s"/><circle class="sm-ember" cx="0" cy="597" r="1.6" fill="#ffb347" style="--dx:-35px; animation-delay:2.64s"/></g>
+          <rect x="-196" y="650" width="392" height="22" rx="3" fill="#3a302c"/><rect x="-196" y="650" width="392" height="3" fill="#6a5a52"/>
+          <!-- часы на каминной полке -->
+          <g transform="translate(-100 0)">
+            <path d="M-34 364V302Q-34 264 0 264Q34 264 34 302V364Z" fill="#4a2a16" stroke="#8a5a36" stroke-width="2"/>
+            <circle cx="0" cy="300" r="23" fill="#efe2c4" stroke="url(#sm-brass)" stroke-width="3"/>
+            <g transform="translate(0 300)" stroke="#2a1a10" stroke-width="1.6"><path d="M0 -21V-18" transform="rotate(0)"/><path d="M0 -21V-18" transform="rotate(30)"/><path d="M0 -21V-18" transform="rotate(60)"/><path d="M0 -21V-18" transform="rotate(90)"/><path d="M0 -21V-18" transform="rotate(120)"/><path d="M0 -21V-18" transform="rotate(150)"/><path d="M0 -21V-18" transform="rotate(180)"/><path d="M0 -21V-18" transform="rotate(210)"/><path d="M0 -21V-18" transform="rotate(240)"/><path d="M0 -21V-18" transform="rotate(270)"/><path d="M0 -21V-18" transform="rotate(300)"/><path d="M0 -21V-18" transform="rotate(330)"/></g>
+            <g transform="translate(0 300)"><path id="sm-hour" d="M0 2V-11" stroke="#2a1a10" stroke-width="3" stroke-linecap="round"/><path id="sm-min" d="M0 3V-18" stroke="#2a1a10" stroke-width="2" stroke-linecap="round"/><circle r="2.2" fill="#2a1a10"/></g>
+            <rect x="-14" y="328" width="28" height="30" rx="3" fill="#120a06" stroke="url(#sm-brass)"/>
+            <g class="sm-pend"><path d="M0 330V348" stroke="#c9993f" stroke-width="1.5"/><circle cx="0" cy="351" r="5" fill="url(#sm-brass)"/></g>
+          </g>
+          <!-- подсвечники -->
+          <g transform="translate(120 364)"><rect x="-10" y="-6" width="20" height="6" fill="url(#sm-brass)"/><rect x="-3" y="-34" width="6" height="28" fill="url(#sm-brass)"/><rect x="-6" y="-68" width="12" height="34" fill="#efe2c4"/><path class="flame" d="M0 -68C-5 -76 -3 -84 0 -92C3 -84 5 -76 0 -68Z" fill="#ffd27a"/></g>
+          <g transform="translate(160 364)"><rect x="-10" y="-6" width="20" height="6" fill="url(#sm-brass)"/><rect x="-3" y="-24" width="6" height="18" fill="url(#sm-brass)"/><rect x="-6" y="-50" width="12" height="26" fill="#efe2c4"/><path class="flame" d="M0 -50C-5 -58 -3 -66 0 -74C3 -66 5 -58 0 -50Z" fill="#ffd27a" style="animation-delay:-.9s"/></g>
+          <!-- кот спит у огня -->
+          <g transform="translate(-138 652)">
+            <path class="sm-tail" d="M-44 -4C-58 -2 -62 10 -48 13C-30 17 0 12 22 6" stroke="#1a1210" stroke-width="7" fill="none" stroke-linecap="round"/>
+            <g class="sm-cat-body"><path d="M-46 0C-50 -26 -26 -40 0 -38C22 -36 40 -26 42 -8C43 0 38 2 30 2H-40Z" fill="#1a1210"/>
+              <path d="M-28 -34C-8 -40 22 -34 38 -16" stroke="#ff9a4a" stroke-opacity=".35" stroke-width="2.5" fill="none"/></g>
+            <g transform="translate(36 -18)"><circle r="14" fill="#1a1210"/>
+              <path class="sm-ear" d="M-9 -9L-5 -23L1 -12Z" fill="#1a1210"/><path d="M4 -12L11 -22L13 -7Z" fill="#1a1210"/>
+              <path d="M2 0Q6 2 10 0" stroke="#ff9a4a" stroke-opacity=".6" stroke-width="1.2" fill="none"/>
+              <path d="M8 -8C12 -4 14 2 12 6" stroke="#ff9a4a" stroke-opacity=".4" stroke-width="2" fill="none"/></g>
+          </g>
+        </g>
+
+        <!-- вешалка: пальто и федора -->
+        <g transform="translate(140 0)">
+          <rect x="-5" y="190" width="10" height="500" fill="#2a160c"/>
+          <path d="M0 210L-30 230M0 210L30 230" stroke="#2a160c" stroke-width="5" stroke-linecap="round"/>
+          <path d="M-6 222C-40 232 -52 300 -50 420C-48 520 -40 600 -30 640H22C34 560 40 470 36 380C34 300 20 238 4 224Z" fill="#14100e" stroke="#ff8a4a" stroke-opacity=".14"/>
+          <path d="M-8 230L-2 330L6 232" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="2"/>
+          <ellipse cx="0" cy="188" rx="42" ry="8" fill="#0e0a0a"/><path d="M-23 188C-23 160 -12 152 0 152C12 152 23 160 23 188Z" fill="#130d0d"/><rect x="-23" y="175" width="46" height="6" fill="#4a0d1a"/>
+        </g>
+
+        <!-- кресло, гость с газетой и трубкой -->
+        <g transform="translate(470 0)">
+          <g transform="translate(-200 0)">
+            <ellipse cx="0" cy="560" rx="56" ry="12" fill="#3a1f12"/><rect x="-6" y="566" width="12" height="120" fill="#2a160c"/>
+            <path d="M-24 506Q-24 520 -12 528V556H12V528Q24 520 24 506Z" fill="#c27a1a" opacity=".85"/>
+            <path d="M-12 556V528Q-26 520 -26 500Q-26 480 -8 474V460H8V474Q26 480 26 500Q26 520 12 528V556Z" fill="#fff" fill-opacity=".1" stroke="#ffe6c8" stroke-opacity=".55"/>
+            <circle cx="0" cy="454" r="7" fill="#fff" fill-opacity=".22" stroke="#ffe6c8" stroke-opacity=".5"/>
+            <path d="M32 534H50L48 556H34Z" fill="#c27a1a" opacity=".8"/><path d="M30 524H52L49 556H33Z" fill="#fff" fill-opacity=".12" stroke="#ffe6c8" stroke-opacity=".5"/>
+          </g>
+          <path d="M-132 690V340Q-134 294 -96 288H-34Q2 294 -2 340L-8 690Z" fill="url(#sm-leather)" stroke="#ff8a5a" stroke-opacity=".2"/>
+          <g fill="#200806"><circle cx="-112" cy="320" r="2.6"/><circle cx="-86" cy="320" r="2.6"/><circle cx="-60" cy="320" r="2.6"/><circle cx="-34" cy="320" r="2.6"/><circle cx="-99" cy="350" r="2.6"/><circle cx="-73" cy="350" r="2.6"/><circle cx="-47" cy="350" r="2.6"/><circle cx="-21" cy="350" r="2.6"/><circle cx="-112" cy="380" r="2.6"/><circle cx="-86" cy="380" r="2.6"/><circle cx="-60" cy="380" r="2.6"/><circle cx="-34" cy="380" r="2.6"/><circle cx="-99" cy="410" r="2.6"/><circle cx="-73" cy="410" r="2.6"/><circle cx="-47" cy="410" r="2.6"/><circle cx="-21" cy="410" r="2.6"/><circle cx="-112" cy="440" r="2.6"/><circle cx="-86" cy="440" r="2.6"/><circle cx="-60" cy="440" r="2.6"/><circle cx="-34" cy="440" r="2.6"/><circle cx="-99" cy="470" r="2.6"/><circle cx="-73" cy="470" r="2.6"/><circle cx="-47" cy="470" r="2.6"/><circle cx="-21" cy="470" r="2.6"/><circle cx="-112" cy="500" r="2.6"/><circle cx="-86" cy="500" r="2.6"/><circle cx="-60" cy="500" r="2.6"/><circle cx="-34" cy="500" r="2.6"/><circle cx="-99" cy="530" r="2.6"/><circle cx="-73" cy="530" r="2.6"/><circle cx="-47" cy="530" r="2.6"/><circle cx="-21" cy="530" r="2.6"/></g>
+          <path d="M-126 566H98Q120 566 120 590V690H-126Z" fill="#4e1813"/>
+          <path d="M-88 442Q-86 410 -56 404H-12Q16 410 16 442L22 570H-82Z" fill="#17110f" stroke="#ff8a4a" stroke-opacity=".3"/>
+          <path d="M-44 404L-34 430L-24 404Z" fill="#d9ccb0"/><path d="M-36 412L-32 440L-28 412Z" fill="#6b0f22"/>
+          <g class="pp-head">
+            <rect x="-42" y="378" width="16" height="28" fill="#4a2c22"/>
+            <circle cx="-32" cy="364" r="26" fill="#5a3426" stroke="#ff8a4a" stroke-opacity=".4"/>
+            <path d="M-58 362Q-58 334 -32 334Q-6 334 -6 360Q-18 344 -34 344Q-48 344 -58 362Z" fill="#120a08"/>
+            <circle cx="-22" cy="360" r="2.2" fill="#120a08"/>
+            <path d="M-26 374Q-17 369 -8 375" stroke="#120a08" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+            <path d="M-12 378L14 386" stroke="#3a2010" stroke-width="3.6" stroke-linecap="round"/>
+            <path d="M10 376H24V392Q17 397 10 392Z" fill="#3a2010"/><circle class="pp-ember" cx="17" cy="377" r="2.4" fill="#ff7a2a"/>
+            <g class="pp-puff" fill="#d8d0c8"><circle cx="18" cy="366" r="6"/><circle cx="22" cy="352" r="7"/><circle cx="16" cy="338" r="8"/></g>
+          </g>
+          <path d="M-42 548L158 540Q170 544 168 560L-38 586Z" fill="#1d1614"/>
+          <path d="M128 560L150 690H118L106 566Z" fill="#1d1614"/>
+          <g class="pp-shin"><path d="M152 544L190 632Q192 642 182 644L170 646L140 562Z" fill="#1d1614"/><path d="M168 636Q196 632 210 642Q210 652 196 652H168Z" fill="#0a0606"/></g>
+          <path d="M-16 690V514Q-16 494 6 494H104Q128 494 128 516V690Z" fill="url(#sm-leather)"/>
+          <path d="M-18 500Q56 484 130 500" stroke="#8a3a2a" stroke-opacity=".6" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <g class="pp-paper">
+            <path d="M-68 336L70 324L80 472L-62 482Z" fill="#d9c8a0" stroke="#8a7a5a" stroke-opacity=".5"/>
+            <path d="M4 330L12 477" stroke="#8a7a5a" stroke-opacity=".6"/>
+            <rect x="-58" y="348" width="56" height="9" fill="#2a1d10" opacity=".7" transform="rotate(-4 -30 352)"/>
+            <rect x="16" y="344" width="50" height="9" fill="#2a1d10" opacity=".7" transform="rotate(-4 40 348)"/>
+            <g stroke="#2a1d10" stroke-opacity=".4" stroke-width="2"><path d="M-56 372L-6 368M-55 384L-5 380M-54 396L-4 392M-53 408L-3 404M-52 420L-2 416M18 366L66 362M19 378L67 374M20 390L68 386M21 402L69 398M22 414L70 410M23 426L71 422"/></g>
+            <rect x="24" y="436" width="44" height="26" fill="#6b5a45" opacity=".8" transform="rotate(-4 46 449)"/>
+            <ellipse cx="-64" cy="412" rx="10" ry="12" fill="#5a3426"/><ellipse cx="76" cy="400" rx="10" ry="12" fill="#5a3426"/>
+          </g>
+        </g>
+
+        <!-- граммофон -->
+        <g id="sm-gramo" class="hot" role="button" tabindex="0" aria-label="Граммофон: включить или выключить музыку" transform="translate(1110 0)">
+          <rect class="hl" x="-128" y="270" width="226" height="420" rx="8" fill="#000" fill-opacity="0" stroke="#e2b866" stroke-width="3"/>
+          <rect x="-82" y="522" width="164" height="168" fill="#3a1f12"/><rect x="-82" y="522" width="164" height="6" fill="#6a3a22"/>
+          <path d="M-70 540H-6V676H-70ZM6 540H70V676H6Z" fill="none" stroke="#000" stroke-opacity=".4" stroke-width="2"/>
+          <circle cx="-12" cy="608" r="3" fill="url(#sm-brass)"/><circle cx="12" cy="608" r="3" fill="url(#sm-brass)"/>
+          <rect x="-62" y="482" width="124" height="40" rx="3" fill="#4a2814"/><rect x="-62" y="482" width="124" height="4" fill="url(#sm-brass)"/>
+          <g transform="translate(0 480) scale(1 .26)"><g class="sm-disc">
+            <circle r="56" fill="#0e0a0a"/><circle r="44" fill="none" stroke="#2a2424" stroke-width="2"/><circle r="32" fill="none" stroke="#2a2424" stroke-width="2"/>
+            <circle r="16" fill="#a3122a"/><rect x="-3" y="-14" width="6" height="10" fill="#f2e8cf"/><circle r="2" fill="#e2b866"/>
+            <path d="M-50 -10A52 52 0 0 1 -20 -48" stroke="#fff" stroke-opacity=".25" stroke-width="3" fill="none"/></g></g>
+          <path d="M52 474L18 480" stroke="url(#sm-brass)" stroke-width="5" stroke-linecap="round"/>
+          <path d="M44 478C46 440 36 420 18 404" stroke="url(#sm-brass)" stroke-width="11" fill="none" stroke-linecap="round"/>
+          <path d="M18 404C-6 382 -58 332 -110 298C-132 332 -122 372 -98 394C-62 402 -22 410 8 414Z" fill="url(#sm-brass)"/>
+          <ellipse cx="-104" cy="346" rx="20" ry="50" transform="rotate(-38 -104 346)" fill="#3a2410"/>
+          <g fill="#e2b866" font-family="Georgia, serif" font-size="26"><text class="sm-note" x="-104" y="330">♪</text><text class="sm-note" x="-96" y="350" style="animation-delay:1.5s">♫</text><text class="sm-note" x="-112" y="340" style="animation-delay:3s">♪</text></g>
+        </g>
+
+        <!-- дверь с глазком -->
+        <g id="sm-door" class="hot" role="button" tabindex="0" aria-label="Постучать в дверь" transform="translate(1385 0)">
+          <rect class="hl" x="-110" y="160" width="220" height="532" fill="#000" fill-opacity="0" stroke="#e2b866" stroke-width="3"/>
+          <rect x="-104" y="166" width="208" height="526" fill="#140904"/>
+          <rect x="-88" y="180" width="44" height="512" fill="url(#sm-plank)"/><rect x="-44" y="180" width="44" height="512" fill="url(#sm-plank)"/>
+          <rect x="0" y="180" width="44" height="512" fill="url(#sm-plank)"/><rect x="44" y="180" width="44" height="512" fill="url(#sm-plank)"/>
+          <rect x="-88" y="240" width="176" height="12" fill="#2a2624"/><rect x="-88" y="600" width="176" height="12" fill="#2a2624"/>
+          <g fill="#4a4440"><circle cx="-78" cy="246" r="3.2"/><circle cx="-56" cy="246" r="3.2"/><circle cx="-34" cy="246" r="3.2"/><circle cx="-12" cy="246" r="3.2"/><circle cx="10" cy="246" r="3.2"/><circle cx="32" cy="246" r="3.2"/><circle cx="54" cy="246" r="3.2"/><circle cx="76" cy="246" r="3.2"/><circle cx="-78" cy="606" r="3.2"/><circle cx="-56" cy="606" r="3.2"/><circle cx="-34" cy="606" r="3.2"/><circle cx="-12" cy="606" r="3.2"/><circle cx="10" cy="606" r="3.2"/><circle cx="32" cy="606" r="3.2"/><circle cx="54" cy="606" r="3.2"/><circle cx="76" cy="606" r="3.2"/><circle cx="-78" cy="280" r="2.6"/><circle cx="-78" cy="320" r="2.6"/><circle cx="-78" cy="360" r="2.6"/><circle cx="-78" cy="400" r="2.6"/><circle cx="-78" cy="440" r="2.6"/><circle cx="-78" cy="480" r="2.6"/><circle cx="-78" cy="520" r="2.6"/><circle cx="-78" cy="560" r="2.6"/><circle cx="78" cy="280" r="2.6"/><circle cx="78" cy="320" r="2.6"/><circle cx="78" cy="360" r="2.6"/><circle cx="78" cy="400" r="2.6"/><circle cx="78" cy="440" r="2.6"/><circle cx="78" cy="480" r="2.6"/><circle cx="78" cy="520" r="2.6"/><circle cx="78" cy="560" r="2.6"/></g>
+          <circle cx="58" cy="462" r="15" fill="none" stroke="url(#sm-brass)" stroke-width="4.5"/><circle cx="58" cy="446" r="5" fill="url(#sm-brass)"/>
+          <rect x="-78" y="194" width="156" height="30" rx="3" fill="url(#sm-brass)"/>
+          <text x="0" y="214" text-anchor="middle" font-family="Forum, Georgia, serif" font-size="14" letter-spacing=".5" fill="#2a1a10" textLength="132" lengthAdjust="spacingAndGlyphs">ЧАСТНЫЙ КЛУБ</text>
+          <rect x="-40" y="300" width="80" height="42" rx="4" fill="url(#sm-brass)"/>
+          <rect x="-32" y="308" width="64" height="26" fill="#050202"/>
+          <g class="sm-eyes">
+            <path d="M-24 312Q-14 308 -4 312M4 312Q14 308 24 312" stroke="#3a2418" stroke-width="2.5" fill="none"/>
+            <g class="eye"><ellipse cx="-14" cy="322" rx="7" ry="4.5" fill="#efe2cc"/><circle cx="-12" cy="322" r="2.6" fill="#1a0c06"/></g>
+            <g class="eye"><ellipse cx="14" cy="322" rx="7" ry="4.5" fill="#efe2cc"/><circle cx="16" cy="322" r="2.6" fill="#1a0c06"/></g>
+          </g>
+          <g class="sm-cover"><rect x="-32" y="308" width="64" height="26" fill="url(#sm-brass)" stroke="#6a4a1e"/><circle cx="22" cy="321" r="3" fill="#6a4a1e"/></g>
+        </g>
+
+        <!-- дымка -->
+        <ellipse class="sm-haze" cx="500" cy="170" rx="460" ry="110" fill="url(#sm-haze)"/>
+        <ellipse class="sm-haze h2" cx="1100" cy="300" rx="520" ry="130" fill="url(#sm-haze)"/>
+        <ellipse class="sm-haze h3" cx="760" cy="440" rx="480" ry="100" fill="url(#sm-haze)"/>
+      </svg>
       <div class="cone"></div>
       <div class="pendant">
         <span class="cord"></span>
@@ -609,6 +856,20 @@
             <g fill="#2a2018"><circle cx="290" cy="486" r="9"/><rect x="280" y="494" width="20" height="30"/><circle cx="330" cy="482" r="9"/><rect x="320" y="490" width="20" height="34"/><circle cx="368" cy="488" r="9"/><rect x="358" y="496" width="20" height="28"/></g>
             <g id="paper-lines" stroke="rgba(42,29,16,.55)" stroke-width="1.3"></g>
           </g>
+          <g transform="translate(36 486)"><ellipse cx="0" cy="0" rx="17" ry="5.5" fill="#efe6d2" stroke="#8a1a1a" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-5" rx="17" ry="5.5" fill="#8a1a1a" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-10" rx="17" ry="5.5" fill="#efe6d2" stroke="#8a1a1a" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-15" rx="17" ry="5.5" fill="#8a1a1a" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-20" rx="17" ry="5.5" fill="#efe6d2" stroke="#8a1a1a" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-25" rx="17" ry="5.5" fill="#8a1a1a" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/></g>
+          <g transform="translate(64 504)"><ellipse cx="0" cy="0" rx="17" ry="5.5" fill="#1f4034" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-5" rx="17" ry="5.5" fill="#1f4034" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-10" rx="17" ry="5.5" fill="#1f4034" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/><ellipse cx="0" cy="-15" rx="17" ry="5.5" fill="#1f4034" stroke="#efe6d2" stroke-width="1.6" stroke-dasharray="3 3"/></g>
+          <g transform="translate(150 506) rotate(-6)">
+            <g transform="rotate(-20)"><rect x="-24" y="-34" width="48" height="66" rx="4" fill="#efe6d2" stroke="#8a7a5a"/><path d="M0 -12L9 0L0 12L-9 0Z" fill="#a3122a"/><text x="-17" y="-18" font-family="Georgia, serif" font-size="12" fill="#a3122a">A</text></g>
+            <g><rect x="-24" y="-34" width="48" height="66" rx="4" fill="#efe6d2" stroke="#8a7a5a"/><path d="M0 -13C-8 -4 -12 0 -12 5C-12 10 -5 12 -1 8L-4 16H4L1 8C5 12 12 10 12 5C12 0 8 -4 0 -13Z" fill="#1a1414"/><text x="-17" y="-18" font-family="Georgia, serif" font-size="12" fill="#1a1414">K</text></g>
+            <g transform="rotate(20)"><rect x="-24" y="-34" width="48" height="66" rx="4" fill="#efe6d2" stroke="#8a7a5a"/><path d="M0 12C-10 4 -13 -2 -13 -6C-13 -12 -5 -14 0 -7C5 -14 13 -12 13 -6C13 -2 10 4 0 12Z" fill="#a3122a"/><text x="-17" y="-18" font-family="Georgia, serif" font-size="12" fill="#a3122a">Q</text></g>
+          </g>
+          <path d="M586 494C560 486 556 466 570 456C584 448 600 462 590 474" fill="none" stroke="#c9993f" stroke-width="2" stroke-dasharray="3 2"/>
+          <g transform="translate(612 502)">
+            <circle r="24" fill="url(#sm-brass)"/><circle r="19" fill="#f3ead2"/><rect x="-4" y="-31" width="8" height="8" rx="2" fill="url(#sm-brass)"/>
+            <g stroke="#2a1a10" stroke-width="1.3"><path d="M0 -17V-14" transform="rotate(0)"/><path d="M0 -17V-14" transform="rotate(30)"/><path d="M0 -17V-14" transform="rotate(60)"/><path d="M0 -17V-14" transform="rotate(90)"/><path d="M0 -17V-14" transform="rotate(120)"/><path d="M0 -17V-14" transform="rotate(150)"/><path d="M0 -17V-14" transform="rotate(180)"/><path d="M0 -17V-14" transform="rotate(210)"/><path d="M0 -17V-14" transform="rotate(240)"/><path d="M0 -17V-14" transform="rotate(270)"/><path d="M0 -17V-14" transform="rotate(300)"/><path d="M0 -17V-14" transform="rotate(330)"/></g>
+            <path d="M0 0L-6 -8M0 0L9 -5" stroke="#2a1a10" stroke-width="2" stroke-linecap="round"/>
+            <path class="sm-sec" d="M0 0V-15" stroke="#a3122a" stroke-width="1"/><circle r="1.6" fill="#2a1a10"/>
+          </g>
           <g transform="rotate(-18 800 450)">
             <ellipse cx="800" cy="480" rx="130" ry="42" fill="rgba(210,225,235,.1)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
             <ellipse cx="800" cy="478" rx="100" ry="28" fill="rgba(0,0,0,.35)"/>
@@ -633,7 +894,11 @@
         <div class="pool"></div>
         <button class="paper-btn" id="paper" type="button" aria-label="Открыть газету: сухой закон и спикизи"></button>
       </div>
-      <p class="room-note">Нажми на газету</p>
+      <p class="room-note">Постучи в дверь, заведи граммофон или почитай газету</p>
+      <div class="sm-actions">
+        <button class="sm-act" type="button" data-act="door">Постучать в дверь</button>
+        <button class="sm-act" type="button" data-act="gramo">Граммофон</button>
+      </div>
     </section>
   </div>
 
@@ -1238,7 +1503,7 @@
 
   const Music = (() => {
     const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null;
+    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null;
     const roomFreq = () => roomIdx === 1 ? 3400 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -1263,6 +1528,18 @@
       master.connect(comp).connect(ctx.destination);
       band = createBand(ctx, tone);
       band.crackle();
+      // треск камина: слышен только в курилке
+      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? .5 : 0;
+      const fb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), fd = fb.getChannelData(0);
+      let env = 0;
+      for (let i = 0; i < fd.length; i++) {
+        if (Math.random() < .0009) env = .35 + Math.random() * .6;
+        env *= .985;
+        fd[i] = (Math.random() * 2 - 1) * (env + .012);
+      }
+      const fsrc = ctx.createBufferSource(), flp = ctx.createBiquadFilter();
+      fsrc.buffer = fb; fsrc.loop = true; flp.type = "lowpass"; flp.frequency.value = 3200;
+      fsrc.connect(flp).connect(fire).connect(master); fsrc.start();
       return true;
     }
     function tick() {
@@ -1297,7 +1574,10 @@
     }
     function room(i) {
       roomIdx = i;
-      if (ctx) tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
+      if (ctx) {
+        tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
+        fire.gain.setTargetAtTime(roomIdx === 2 ? .5 : 0, ctx.currentTime, .6);
+      }
     }
     document.addEventListener("visibilitychange", () => {
       if (!ctx || !on) return;
@@ -1338,6 +1618,7 @@
     if (!ok) return;
     const text = want ? "Выключить музыку" : "Включить музыку";
     musicBtn.classList.toggle("on", want);
+    document.body.classList.toggle("music-on", want);
     musicBtn.setAttribute("aria-label", text);
     musicBtn.querySelector(".label").textContent = text;
     try { localStorage.setItem("hacheden-music", want ? "on" : "off"); } catch (e) {}
@@ -1347,7 +1628,7 @@
   try { musicWasOn = localStorage.getItem("hacheden-music") === "on"; } catch (e) {}
   if (musicWasOn) {
     // браузер разрешает звук только после действия человека: включаем при первом клике
-    addEventListener("pointerdown", e => { if (!e.target.closest("#music") && !Music.on) setMusic(true); }, { once: true });
+    addEventListener("pointerdown", e => { if (!e.target.closest("#music, #sm-gramo, [data-act=gramo]") && !Music.on) setMusic(true); }, { once: true });
   }
 
   /* ---------- бармен: живёт своей жизнью и подаёт бутылки ---------- */
@@ -1659,6 +1940,75 @@
     }
     new ResizeObserver(size).observe(cv);
     return { setActive };
+  })();
+
+  /* ---------- курилка: часы, граммофон и дверь с глазком ---------- */
+  const DOOR_STORY = {
+    name: "Три стука в дверь",
+    tagline: "Как попадали в подпольный бар",
+    facts: [["Годы", "1920–1933"], ["Страна", "США"]],
+    sections: [
+      ["Условный стук и пароль", "Вход в спикизи часто выглядел как дверь склада, прачечной или обычного подъезда. Гость стучал условным стуком, в двери открывалось окошко, и охранник спрашивал пароль или имя знакомого, который за гостя поручился."],
+      ["Если нагрянет полиция", "Бары готовились к облавам: прятали бутылки в тайниках за стенами и под полом, а в некоторых заведениях запасы можно было быстро сбросить в потайной подвал или слив."],
+      ["Что осталось до наших дней", "Традиция живёт и сейчас: многие современные бары прячут вход за неприметной дверью, телефонной будкой или книжным шкафом, а иногда просят назвать пароль."]
+    ]
+  };
+  (() => {
+    const room = document.getElementById("room-smoke");
+    const gramo = document.getElementById("sm-gramo"), door = document.getElementById("sm-door");
+    const hourH = document.getElementById("sm-hour"), minH = document.getElementById("sm-min");
+    function clock() {
+      const d = new Date(), h = d.getHours() % 12, m = d.getMinutes();
+      hourH.setAttribute("transform", `rotate(${h * 30 + m * .5})`);
+      minH.setAttribute("transform", `rotate(${m * 6})`);
+    }
+    clock();
+    setInterval(clock, 20000);
+    const act = (el, fn) => {
+      el.addEventListener("click", fn);
+      el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } });
+    };
+    act(gramo, () => setMusic(!Music.on));
+
+    let kctx = null;
+    function knock() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      kctx = kctx || new AC();
+      kctx.resume();
+      const t0 = kctx.currentTime + .05;
+      for (let i = 0; i < 3; i++) {
+        const t = t0 + i * .3, o = kctx.createOscillator(), g = kctx.createGain();
+        o.frequency.setValueAtTime(140, t);
+        o.frequency.exponentialRampToValueAtTime(55, t + .12);
+        g.gain.setValueAtTime(.6, t);
+        g.gain.exponentialRampToValueAtTime(.0001, t + .18);
+        o.connect(g).connect(kctx.destination);
+        o.start(t); o.stop(t + .2);
+        const n = kctx.createBuffer(1, kctx.sampleRate * .06, kctx.sampleRate), d = n.getChannelData(0);
+        for (let j = 0; j < d.length; j++) d[j] = (Math.random() * 2 - 1) * Math.pow(1 - j / d.length, 4);
+        const s = kctx.createBufferSource(), f = kctx.createBiquadFilter(), ng = kctx.createGain();
+        s.buffer = n; f.type = "lowpass"; f.frequency.value = 900; ng.gain.value = .5;
+        s.connect(f).connect(ng).connect(kctx.destination);
+        s.start(t);
+      }
+    }
+    let doorBusy = false;
+    const knockDoor = () => {
+      if (doorBusy || busy) return;
+      doorBusy = true;
+      knock();
+      setTimeout(() => room.classList.add("peek"), 1000);
+      setTimeout(() => openCard(DOOR_STORY), 2300);
+    };
+    act(door, knockDoor);
+    room.querySelectorAll("[data-act]").forEach(b => b.addEventListener("click", () => {
+      if (b.dataset.act === "door") knockDoor(); else setMusic(!Music.on);
+    }));
+    dlg.addEventListener("close", () => {
+      if (!room.classList.contains("peek")) return;
+      setTimeout(() => { room.classList.remove("peek"); doorBusy = false; }, 400);
+    });
   })();
 
   /* ================= крупный план: бармен готовит коктейль ================= */

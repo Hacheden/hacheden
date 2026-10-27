@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hacheden</title>
+<link href="https://fonts.googleapis.com/css2?family=Forum&family=Literata:opsz,wght@7..72,400..600&display=swap" rel="stylesheet">
+<style>
+  /* Бар тёмный в любом режиме: те же значения для светлой и тёмной темы. */
+  :root {
+    color-scheme: dark;
+    --brass: #d6aa5c;
+    --cream: #f1e4cc;
+    --muted: #c2a784;
+    --walnut: #4a2c1a;
+    --font-display: "Forum", "Palatino Linotype", Georgia, serif;
+    --font-text: "Literata", Georgia, "Times New Roman", serif;
+    --bh: clamp(92px, 15svh, 168px);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark; }
+  }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  *, *::before, *::after { box-sizing: inherit; }
+  html { height: 100%; scroll-padding-top: env(safe-area-inset-top, 0px); background: #070304; }
+  body { height: 100%; margin: 0; background: #070304; color: var(--cream); font-family: var(--font-text); overflow-x: hidden; }
+
+  /* ---------- мир из трёх комнат ---------- */
+  .app { position: relative; height: 100%; min-height: 640px; overflow: hidden; }
+  .world { position: absolute; inset: 0; width: 300%; display: flex; transform: translateX(-33.3333%);
+    transition: transform 1.2s cubic-bezier(.65, 0, .25, 1); }
+  .app[data-room="0"] .world { transform: translateX(0); }
+  .app[data-room="2"] .world { transform: translateX(-66.6667%); }
+  .room { position: relative; flex: 0 0 33.3333%; height: 100%; overflow: hidden;
+    --tableH: calc(clamp(560px, 100vw, 1000px) * .2201); }
+  .scene { position: absolute; inset: 0; display: flex; flex-direction: column; }
+  .art-box { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: clamp(560px, 100vw, 1000px); aspect-ratio: 1000 / 560; }
+  .art-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+  .table-ext { position: absolute; left: 0; right: 0; bottom: 0; height: var(--tableH); }
+  .room-note { position: absolute; left: 0; right: 0; top: clamp(20px, 6svh, 60px); text-align: center;
+    color: var(--muted); font-size: 15px; pointer-events: none; }
+
+  /* ---------- переходы между комнатами ---------- */
+  .go { position: absolute; bottom: 18px; z-index: 4; display: flex; align-items: center; gap: 8px;
+    padding: 12px 16px 12px 12px; border: 1px solid rgba(214,170,92,.5); border-radius: 999px;
+    background: rgba(14,5,8,.72); color: var(--cream); font: 400 17px/1 var(--font-display); cursor: pointer;
+    opacity: 0; animation: fade-in .9s 3.4s forwards; transition: border-color .2s, color .2s; }
+  .go svg { width: 18px; height: 18px; }
+  .go:hover { border-color: var(--brass); color: var(--brass); }
+  .go:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+  .go-left { left: 18px; }
+  .go-right { right: 18px; flex-direction: row-reverse; padding: 12px 12px 12px 16px; }
+  .go.off { visibility: hidden; pointer-events: none; }
+
+  /* ================= БАР ================= */
+  .room-bar { background: #0b0407; }
+  .room-bar::before { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 38%, rgba(255,50,80,.2), transparent 62%); }
+  .wall { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .3; }
+  .room-bar .scene { animation: scene-in 3.6s .4s cubic-bezier(.16,.8,.24,1) backwards; }
+
+  .neon { position: relative; z-index: 3; flex: 0 0 clamp(54px, 9svh, 88px); display: grid; place-items: center; }
+  .neon-text { margin: 0; font: 400 clamp(34px, 6vw, 62px)/1 var(--font-display); letter-spacing: .1em; color: #ffe6ea;
+    text-shadow: 0 0 4px #fff, 0 0 12px #ff5c7a, 0 0 28px #ff2a55, 0 0 60px #ff2a55;
+    opacity: 0; animation: flicker 1.4s 2.2s forwards; }
+
+  .shelving { position: relative; flex: 0 0 auto; width: min(96vw, 820px); margin: 0 auto; padding: 14px 18px 4px;
+    border: 8px solid #190a0d; border-radius: 4px;
+    background: radial-gradient(ellipse at 50% 45%, rgba(255,80,100,.5), rgba(200,28,62,.34) 55%, rgba(70,8,26,.9) 100%), #1a0509;
+    box-shadow: inset 0 0 60px rgba(255,40,80,.32), 0 0 90px rgba(255,40,80,.25), 0 14px 34px rgba(0,0,0,.6);
+    animation: led-on 1.6s 1.9s ease-out backwards; }
+  .row { position: relative; display: flex; justify-content: space-around; align-items: flex-end; padding: 8px 6px 0; }
+  .row + .row { margin-top: 10px; }
+  .row::before { content: ""; position: absolute; left: -18px; right: -18px; top: -2px; height: 3px;
+    background: linear-gradient(90deg, transparent, #ffb3c0 10%, #ffb3c0 90%, transparent);
+    box-shadow: 0 0 14px 4px rgba(255,60,90,.6); }
+  .row::after { content: ""; position: absolute; left: -18px; right: -18px; bottom: 28px; height: 12px;
+    background: linear-gradient(#5a1d2a, #2a0d14); box-shadow: 0 3px 8px rgba(0,0,0,.55), 0 -2px 10px rgba(255,80,100,.35); }
+  .bottle { appearance: none; background: none; border: 0; margin: 0; padding: 0 6px; min-width: 76px; perspective: 700px;
+    color: inherit; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; }
+  .bottle svg { display: block; height: var(--bh); width: calc(var(--bh) * .3); overflow: visible;
+    filter: drop-shadow(0 0 10px rgba(255,70,100,.35)); transition: transform .25s ease, opacity .4s ease; }
+  .bottle .name { margin-top: 12px; height: 28px; line-height: 28px; font-family: var(--font-display);
+    font-size: 16px; color: var(--muted); transition: color .2s; }
+  .bottle:hover svg, .bottle:focus-visible svg { transform: translateY(-10px); }
+  .bottle:hover .name, .bottle:focus-visible .name { color: var(--brass); }
+  .bottle:focus-visible { outline: 2px solid var(--brass); outline-offset: 4px; border-radius: 6px; }
+  .shelving.picking .bottle:not(.chosen) svg { opacity: .4; }
+  .decor { position: absolute; left: 0; right: 0; bottom: 40px; height: var(--bh); pointer-events: none; }
+  .decor svg { position: absolute; bottom: 0; transform: translateX(-50%); height: calc(var(--bh) * var(--s, .8));
+    width: calc(var(--bh) * var(--s, .8) * .3); overflow: visible; opacity: .62; }
+
+  .service { position: relative; flex: 1 1 auto; min-height: 80px; }
+  .rail { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); width: min(96vw, 860px); height: auto; }
+  .bartender { position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%); height: 100%; max-height: 210px; width: auto; }
+  .shaker { transform-box: fill-box; transform-origin: 50% 100%; }
+  .bartender.shaking .shaker { animation: shake .45s ease-in-out 2; }
+
+  .counter { position: relative; flex: 0 0 clamp(118px, 17svh, 160px); display: flex; flex-direction: column; }
+  .counter-top { position: relative; height: 30px;
+    background: repeating-linear-gradient(180deg, rgba(0,0,0,.12) 0 1px, transparent 1px 5px),
+      linear-gradient(180deg, #3a181e 0, #25100f 45%, #160809 100%);
+    border-top: 2px solid rgba(255,130,150,.5); box-shadow: 0 -8px 30px rgba(255,50,80,.3); }
+  .counter-front { flex: 1; display: grid; place-content: start center; text-align: center; padding: 20px 16px 0;
+    background: repeating-linear-gradient(90deg, #1b0c0e 0 62px, #120708 62px 64px), #1b0c0e;
+    box-shadow: inset 0 14px 18px rgba(0,0,0,.55); }
+  .hint { position: relative; z-index: 3; margin: 0; color: var(--muted); font-size: 15px; opacity: 0; animation: fade-in .9s 3.4s forwards; }
+  .prop { position: absolute; bottom: calc(100% - 14px); overflow: visible; }
+  .prop.limes { left: 5%; width: 92px; }
+  .prop.glasses { left: 20%; width: 86px; }
+  .prop.bucket { left: 72%; width: 48px; }
+  .prop.shaker2 { left: 82%; width: 34px; }
+  .vignette { position: absolute; inset: 0; z-index: 2; pointer-events: none;
+    background: linear-gradient(rgba(0,0,0,.12), rgba(0,0,0,.12)),
+      radial-gradient(ellipse at 50% 38%, rgba(0,0,0,0) 20%, rgba(4,1,2,.8) 100%); }
+
+  /* ================= ЧИТАЛЬНЯ ================= */
+  .room-nook { background: #060403; }
+  .room-nook .table-ext { background: linear-gradient(180deg, #2a180d 0, #120a05 55%, #080402 100%);
+    border-top: 1px solid rgba(255,190,110,.25); }
+  .nook-glow { position: absolute; left: 50%; top: 30%; width: 200%; height: 200%; transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(255,180,90,.3) 0%, rgba(255,150,60,.1) 25%, transparent 50%);
+    pointer-events: none; transition: opacity .6s; animation: glow-pulse 3.2s ease-in-out infinite; }
+  .nook-dark { position: absolute; inset: 0; background: #030201; opacity: 0; pointer-events: none; transition: opacity 1.2s; }
+  .room-nook.unlit .nook-dark { opacity: .8; }
+  .room-nook.unlit .flame, .room-nook.unlit .nook-glow { opacity: 0; }
+  .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flame 2.6s ease-in-out infinite; transition: opacity .35s; }
+  .wisp { opacity: 0; filter: blur(2px); transform-box: fill-box; transform-origin: 50% 100%; }
+  .room-nook.unlit .wisp { animation: wisp 3.6s ease-out 1; }
+  .candle-btn { position: absolute; left: 44%; top: 20%; width: 13%; height: 42%; background: none; border: 0;
+    border-radius: 12px; cursor: pointer; z-index: 3; }
+  .candle-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 4px; }
+
+  /* ================= КУРИЛКА ================= */
+  .room-smoke { background: #080403; --cord: clamp(40px, 12svh, 120px); }
+  .room-smoke .table-ext { background: linear-gradient(180deg, #2b1a0f 0, #150b06 55%, #080402 100%);
+    border-top: 1px solid rgba(255,190,110,.18); }
+  .smoke-wall { position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,.55), transparent 40%),
+      repeating-linear-gradient(90deg, #241209 0 70px, #150b06 70px 73px); }
+  .pendant { position: absolute; top: 0; left: 42%; width: 56px; margin-left: -28px; }
+  .cord { display: block; width: 2px; height: var(--cord); margin: 0 auto; background: #0c0607; }
+  .shade { display: block; width: 56px; height: 44px; }
+  .bulb-on { position: absolute; left: 50%; top: calc(var(--cord) + 38px); width: 18px; height: 14px; margin-left: -9px;
+    border-radius: 0 0 9px 9px; background: #ffe6ad;
+    box-shadow: 0 0 14px 6px rgba(255,200,110,.75), 0 0 40px 16px rgba(255,170,80,.35); }
+  .cone { position: absolute; left: 42%; top: calc(var(--cord) + 44px); bottom: calc(var(--tableH) * .55); width: min(70vw, 620px);
+    transform: translateX(-50%); clip-path: polygon(46% 0, 54% 0, 100% 100%, 0 100%);
+    background: linear-gradient(180deg, rgba(255,190,110,.32), rgba(255,170,90,.03)); pointer-events: none; }
+  .pool { position: absolute; left: -25%; top: -10%; width: 150%; height: 130%; pointer-events: none;
+    background: radial-gradient(ellipse at 43% 72%, rgba(255,190,110,.22) 0%, transparent 38%); }
+  .paper-btn { position: absolute; left: 21%; top: 64%; width: 37%; height: 35%; background: none; border: 0;
+    border-radius: 6px; cursor: pointer; z-index: 3; transition: box-shadow .2s, background .2s; }
+  .paper-btn:hover { background: rgba(255,230,170,.06); box-shadow: inset 0 0 0 2px rgba(214,170,92,.5); }
+  .paper-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 4px; }
+  .smoke-wisp { fill: none; stroke: rgba(235,235,245,.5); stroke-width: 6; stroke-linecap: round; filter: blur(3px);
+    transform-box: fill-box; transform-origin: 50% 100%; animation: smoke 7s ease-in infinite; opacity: 0; }
+  .smoke-wisp.s2 { animation-delay: -2.3s; }
+  .smoke-wisp.s3 { animation-delay: -4.6s; }
+
+  /* ---------- вход: двери ---------- */
+  .blackout { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: #070204; opacity: .95;
+    animation: blackout 3.6s ease-out forwards; }
+  .doors { position: absolute; inset: 0; z-index: 7; perspective: 1400px; pointer-events: none; overflow: hidden; }
+  .door { position: absolute; top: 0; bottom: 0; width: 50.2%; backface-visibility: hidden;
+    background: radial-gradient(ellipse at 50% 18%, rgba(255,190,110,.2), transparent 62%),
+      repeating-linear-gradient(90deg, #3a2113 0 58px, #26140a 58px 60px);
+    box-shadow: inset 0 0 60px rgba(0,0,0,.7); }
+  .door::before { content: ""; position: absolute; inset: 6% 12%; border: 2px solid rgba(214,170,92,.35); border-radius: 3px;
+    box-shadow: inset 0 0 0 8px rgba(0,0,0,.18); }
+  .door::after { content: ""; position: absolute; top: 46%; width: 12px; height: 88px; border-radius: 7px;
+    background: linear-gradient(90deg, #8f6a2c, #e2b866 50%, #8f6a2c); box-shadow: 0 4px 8px rgba(0,0,0,.5); }
+  .door.l { left: 0; transform-origin: left center; animation: door-l 2s .45s cubic-bezier(.65,0,.25,1) forwards; }
+  .door.l::after { right: 16px; }
+  .door.r { right: 0; transform-origin: right center; animation: door-r 2s .45s cubic-bezier(.65,0,.25,1) forwards; }
+  .door.r::after { left: 16px; }
+
+  /* ---------- карточка ---------- */
+  dialog.card { margin: 0 0 0 auto; padding: 0; border: 0; border-left: 1px solid rgba(214,170,92,.35);
+    width: min(480px, 100%); max-width: 100%; height: 100%; max-height: 100%; overflow: auto;
+    background: linear-gradient(180deg, #2a1118, #1a0a0e); color: var(--cream);
+    box-shadow: -20px 0 50px rgba(0,0,0,.5); }
+  dialog.card[open] { animation: slide-in .35s cubic-bezier(.2,.8,.2,1); }
+  dialog.card::backdrop { background: rgba(8,2,4,.62); }
+  .close-wrap { position: sticky; top: 0; height: 0; z-index: 2; text-align: right; padding-right: 12px; }
+  .close { position: relative; top: 12px; width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+    border: 1px solid rgba(214,170,92,.5); background: rgba(20,8,10,.78); color: var(--cream); font-size: 22px; line-height: 1; }
+  .close:hover { border-color: var(--brass); color: var(--brass); }
+  .close:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .card-inner { padding: 28px 28px calc(40px + env(safe-area-inset-bottom, 0px)); }
+  .card-inner > * { animation: reveal .55s cubic-bezier(.2,.8,.2,1) both; }
+  .stage { display: grid; place-items: center; height: 210px; margin: 8px -8px 0;
+    background: radial-gradient(closest-side, rgba(255,184,96,.28), transparent 75%); }
+  .stage svg { height: 190px; width: auto; }
+  .pour { animation: pour-up 1.2s .5s cubic-bezier(.3,.7,.2,1) both; }
+  .late { animation: fade-in-late .6s 1.5s both; }
+  .title { margin: 8px 0 4px; font: 400 44px/1.1 var(--font-display); }
+  .tagline { margin: 0; color: var(--muted); font-size: 17px; line-height: 1.5; }
+  .facts { margin: 22px 0 4px; border-top: 1px solid rgba(214,170,92,.3); }
+  .facts div { display: flex; justify-content: space-between; gap: 16px; padding: 10px 0; border-bottom: 1px solid rgba(214,170,92,.2); }
+  .facts dt { color: var(--muted); }
+  .facts dd { margin: 0; text-align: right; }
+  .card h3 { margin: 26px 0 8px; font: 400 22px/1.2 var(--font-display); color: var(--brass); }
+  .card p { margin: 0; max-width: 60ch; font-size: 16px; line-height: 1.65; }
+  .card ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+  .card li { margin: 6px 0; }
+  .card b { font-weight: 600; }
+
+  @media (max-width: 640px) {
+    dialog.card { margin: auto 0 0 0; width: 100%; height: auto; max-height: 88svh;
+      border-left: 0; border-top: 1px solid rgba(214,170,92,.35); border-radius: 18px 18px 0 0; }
+    dialog.card[open] { animation-name: slide-up; }
+    .card-inner { padding: 24px 22px calc(36px + env(safe-area-inset-bottom, 0px)); }
+    .title { font-size: 38px; }
+    .go { font-size: 15px; padding: 10px 14px 10px 10px; }
+    .go-right { padding: 10px 10px 10px 14px; }
+    .prop.glasses { display: none; }
+  }
+
+  /* ---------- движение ---------- */
+  @keyframes blackout { 0%, 25% { opacity: .95; } 45% { opacity: .8; } 65% { opacity: .55; } 85% { opacity: .3; } 100% { opacity: 0; } }
+  @keyframes flicker { 0% { opacity: 0; } 8% { opacity: .9; } 14% { opacity: .15; } 24% { opacity: .8; } 30% { opacity: .3; } 44% { opacity: 1; } 100% { opacity: 1; } }
+  @keyframes led-on { from { filter: brightness(.25); } to { filter: brightness(1); } }
+  @keyframes fade-in { to { opacity: 1; } }
+  @keyframes scene-in { from { transform: scale(1.14); } to { transform: none; } }
+  @keyframes door-l { to { transform: rotateY(105deg); visibility: hidden; } }
+  @keyframes door-r { to { transform: rotateY(-105deg); visibility: hidden; } }
+  @keyframes slide-in { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes slide-up { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes reveal { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes pour-up { from { transform: translateY(120px); } to { transform: none; } }
+  @keyframes fade-in-late { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes shake { 0%, 100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-8px) rotate(-6deg); }
+    50% { transform: translateY(4px) rotate(5deg); } 75% { transform: translateY(-6px) rotate(-4deg); } }
+  @keyframes flame { 0%, 100% { transform: scale(1, 1) skewX(0); } 25% { transform: scale(.96, 1.07) skewX(-2.5deg); }
+    55% { transform: scale(1.03, .95) skewX(2deg); } 80% { transform: scale(.98, 1.05) skewX(-1deg); } }
+  @keyframes glow-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .85; } }
+  @keyframes wisp { 0% { opacity: .7; transform: translateY(0) scaleX(.8); } 100% { opacity: 0; transform: translateY(-90px) scaleX(1.8); } }
+  @keyframes smoke { 0% { opacity: 0; transform: translateY(8px) scale(.7, .8); } 15% { opacity: .55; }
+    100% { opacity: 0; transform: translateY(-40px) scale(1.5, 1.2); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .blackout, .doors { display: none; }
+    .room-bar .scene, .shelving { animation: none; }
+    .neon-text, .hint, .go { opacity: 1; animation: none; }
+    .world { transition: none; }
+    .flame, .nook-glow, .smoke-wisp, .wisp { animation: none; }
+    .smoke-wisp { opacity: .35; }
+    .nook-dark { transition: none; }
+    .card-inner > *, .pour, .late { animation: none; }
+    dialog.card[open] { animation: none; }
+    .bottle svg { transition: none; }
+    .bartender.shaking .shaker { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main class="app" id="app" data-room="1">
+  <div class="world">
+
+    <!-- ===== Читальня ===== -->
+    <section class="room room-nook" id="room-nook" aria-label="Читальня">
+      <div class="table-ext"></div>
+      <div class="art-box">
+        <svg class="art-svg" viewBox="0 0 1000 560" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="wax" x1="0" x2="1"><stop offset="0" stop-color="#f1d596"/><stop offset=".55" stop-color="#f9ebc6"/><stop offset="1" stop-color="#d8934a"/></linearGradient>
+            <linearGradient id="flameg" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff9a2e"/><stop offset=".6" stop-color="#ffd27a"/><stop offset="1" stop-color="#fff3cf"/></linearGradient>
+            <linearGradient id="pgL" x1="0" x2="1"><stop offset="0" stop-color="#f1e0b6"/><stop offset="1" stop-color="#cfae72"/></linearGradient>
+            <linearGradient id="pgR" x1="1" x2="0"><stop offset="0" stop-color="#f1e0b6"/><stop offset="1" stop-color="#cfae72"/></linearGradient>
+            <linearGradient id="cover" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#3a2514"/><stop offset="1" stop-color="#1d1209"/></linearGradient>
+          </defs>
+          <g id="book-stack"></g>
+          <g transform="rotate(10 800 340)">
+            <rect x="690" y="150" width="38" height="190" rx="3" fill="url(#cover)"/>
+            <rect x="730" y="165" width="34" height="175" rx="3" fill="url(#cover)"/>
+            <rect x="766" y="140" width="36" height="200" rx="3" fill="url(#cover)"/>
+            <path d="M696 175h26M696 182h26M696 300h26M696 307h26M736 190h22M736 197h22M736 300h22M772 165h24M772 172h24M772 300h24" stroke="#b8894a" stroke-width="1.6"/>
+          </g>
+          <path d="M800 240H880L872 340Q871 350 861 350H819Q809 350 808 340Z" fill="rgba(255,255,255,.07)" stroke="rgba(255,235,200,.5)" stroke-width="1.5"/>
+          <path d="M803 280H877L872 340Q871 350 861 350H819Q809 350 808 340Z" fill="#6b1020" fill-opacity=".9"/>
+          <path d="M812 252L816 330" stroke="rgba(255,255,255,.3)" stroke-width="2" stroke-linecap="round" fill="none"/>
+          <rect x="455" y="215" width="100" height="130" rx="18" fill="url(#wax)"/>
+          <ellipse cx="505" cy="215" rx="50" ry="12" fill="#f9ecc8"/>
+          <ellipse cx="505" cy="216" rx="30" ry="6" fill="#e8b86a"/>
+          <path d="M470 232C466 262 478 270 476 292C474 306 486 306 484 292C482 270 492 258 488 232Z" fill="#fff0cf" opacity=".5"/>
+          <line x1="505" y1="216" x2="505" y2="198" stroke="#2a1a10" stroke-width="3" stroke-linecap="round"/>
+          <g transform="translate(505 200)">
+            <path class="flame" d="M0 0C-14 -16 -10 -40 0 -62C10 -40 14 -16 0 0Z" fill="url(#flameg)"/>
+            <path class="wisp" d="M0 -10C14 -30 -14 -50 4 -80S-6 -120 8 -150" fill="none" stroke="rgba(235,235,245,.55)" stroke-width="6" stroke-linecap="round"/>
+          </g>
+          <path d="M80 546L498 528V536L84 556Z" fill="#c8a870"/>
+          <path d="M920 546L502 528V536L916 556Z" fill="#c8a870"/>
+          <path d="M110 420L498 388V528L80 546Z" fill="url(#pgL)"/>
+          <path d="M502 388L890 420L920 546L502 528Z" fill="url(#pgR)"/>
+          <g id="lines-l" stroke="rgba(60,40,20,.5)" stroke-width="1.2"></g>
+          <g id="lines-r" stroke="rgba(60,40,20,.5)" stroke-width="1.2"></g>
+        </svg>
+        <div class="nook-glow"></div>
+        <button class="candle-btn" id="candle" type="button" aria-label="Задуть свечу"></button>
+      </div>
+      <div class="nook-dark"></div>
+      <p class="room-note">Нажми на свечу</p>
+    </section>
+
+    <!-- ===== Бар ===== -->
+    <section class="room room-bar" id="room-bar" aria-label="Бар">
+      <div class="scene">
+        <svg class="wall" aria-hidden="true" focusable="false">
+          <defs>
+            <pattern id="brick" width="72" height="40" patternUnits="userSpaceOnUse">
+              <rect width="72" height="40" fill="#230d13"/>
+              <rect x="1" y="1" width="34" height="18" rx="1.5" fill="#431a25"/>
+              <rect x="37" y="1" width="34" height="18" rx="1.5" fill="#3c1620"/>
+              <rect x="-17" y="21" width="34" height="18" rx="1.5" fill="#3c1620"/>
+              <rect x="19" y="21" width="34" height="18" rx="1.5" fill="#46202a"/>
+              <rect x="55" y="21" width="34" height="18" rx="1.5" fill="#411925"/>
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#brick)"/>
+        </svg>
+
+        <div class="neon"><h1 class="neon-text">Hacheden</h1></div>
+
+        <section class="shelving" id="shelving" aria-label="Полка с напитками"></section>
+
+        <div class="service">
+          <svg class="rail" id="rail" viewBox="0 0 860 50" aria-hidden="true" focusable="false"></svg>
+          <svg class="bartender" id="bartender" viewBox="0 0 240 280" aria-hidden="true" focusable="false">
+            <g fill="#07030a" stroke="rgba(255,100,120,.28)" stroke-width="1.5">
+              <circle cx="110" cy="60" r="30"/>
+              <rect x="98" y="84" width="24" height="26"/>
+              <path d="M40 280V170C40 128 70 108 110 108C150 108 180 128 180 170V280Z"/>
+            </g>
+            <path d="M62 132L40 190L66 232" fill="none" stroke="#07030a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M158 132L204 160L186 88" fill="none" stroke="#07030a" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+            <g class="shaker" fill="#07030a" stroke="rgba(255,100,120,.35)" stroke-width="1.5">
+              <path d="M174 54H200L196 92H178Z"/>
+              <rect x="180" y="42" width="14" height="14" rx="3"/>
+            </g>
+          </svg>
+        </div>
+
+        <div class="counter">
+          <div class="counter-top">
+            <svg class="prop limes" viewBox="0 0 100 52" aria-hidden="true">
+              <path d="M6 22H94C94 42 76 50 50 50C24 50 6 42 6 22Z" fill="#1a0d0f" stroke="rgba(255,150,170,.35)"/>
+              <g fill="#a7c53a"><circle cx="24" cy="16" r="11"/><circle cx="46" cy="12" r="11" fill="#c9d94a"/><circle cx="68" cy="14" r="11"/><circle cx="82" cy="19" r="9" fill="#c9d94a"/><circle cx="35" cy="26" r="10" fill="#8fb12f"/><circle cx="58" cy="26" r="10" fill="#a7c53a"/></g>
+            </svg>
+            <svg class="prop glasses" viewBox="0 0 90 50" aria-hidden="true">
+              <g fill="rgba(255,255,255,.07)" stroke="rgba(255,215,225,.5)">
+                <path d="M4 8H28L26 46H6Z"/><path d="M32 8H56L54 46H34Z"/><path d="M60 8H84L82 46H62Z"/>
+              </g>
+            </svg>
+            <svg class="prop bucket" viewBox="0 0 50 56" aria-hidden="true">
+              <path d="M6 14H44L40 52H10Z" fill="#1b1013" stroke="rgba(255,255,255,.25)"/>
+              <g fill="rgba(255,255,255,.55)"><rect x="12" y="6" width="9" height="9" rx="2" transform="rotate(-10 16 10)"/><rect x="24" y="5" width="9" height="9" rx="2" transform="rotate(8 28 9)"/><rect x="33" y="8" width="8" height="8" rx="2"/></g>
+            </svg>
+            <svg class="prop shaker2" viewBox="0 0 34 70" aria-hidden="true">
+              <rect x="14" y="6" width="6" height="7" rx="1" fill="#cfd4d8"/><path d="M10 12H24L26 22H8Z" fill="#cfd4d8"/>
+              <path d="M8 22H26L24 66Q24 68 22 68H12Q10 68 10 66Z" fill="#b9bec3"/>
+              <rect x="21" y="24" width="3" height="42" fill="#8d9399" opacity=".5"/><rect x="12" y="26" width="2" height="36" fill="#fff" opacity=".35"/>
+            </svg>
+          </div>
+          <div class="counter-front">
+            <p class="hint">Выбери бутылку на полке, и мы расскажем, что внутри.</p>
+          </div>
+        </div>
+
+        <div class="vignette"></div>
+      </div>
+    </section>
+
+    <!-- ===== Курилка ===== -->
+    <section class="room room-smoke" id="room-smoke" aria-label="Курилка">
+      <div class="smoke-wall"></div>
+      <div class="cone"></div>
+      <div class="pendant">
+        <span class="cord"></span>
+        <svg class="shade" viewBox="0 0 56 44" aria-hidden="true"><path d="M4 38C4 18 20 8 28 8C36 8 52 18 52 38Z" fill="#1f3d33" stroke="#2f5a4a"/><rect x="2" y="36" width="52" height="4" rx="1" fill="#c9993f"/></svg>
+        <span class="bulb-on"></span>
+      </div>
+      <div class="table-ext"></div>
+      <div class="art-box">
+        <svg class="art-svg" viewBox="0 0 1000 560" aria-hidden="true" focusable="false">
+          <defs>
+            <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d3a8"/><stop offset="1" stop-color="#c4a97a"/></linearGradient>
+            <pattern id="cut" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <path d="M0 0H26M0 0V26" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+            </pattern>
+            <clipPath id="tumbler"><path d="M90 300H230L220 430Q219 442 207 442H113Q101 442 100 430Z"/></clipPath>
+          </defs>
+          <path d="M90 300H230L220 430Q219 442 207 442H113Q101 442 100 430Z" fill="rgba(255,255,255,.08)"/>
+          <g clip-path="url(#tumbler)">
+            <rect x="80" y="338" width="170" height="120" fill="#c9831f" fill-opacity=".85"/>
+            <rect x="80" y="300" width="170" height="150" fill="url(#cut)"/>
+          </g>
+          <path d="M90 300H230L220 430Q219 442 207 442H113Q101 442 100 430Z" fill="none" stroke="rgba(255,235,200,.6)" stroke-width="1.8"/>
+          <g transform="rotate(-5 420 470)">
+            <path d="M230 392L262 372L290 388L322 366L352 384L386 364L420 382L452 368L486 386L520 372L556 390L572 548L214 556Z" fill="url(#paper)"/>
+            <text x="396" y="424" text-anchor="middle" font-family="Forum, Georgia, serif" font-size="17" font-weight="700" fill="#2a1d10">ПОДПОЛЬНЫЕ БАРЫ НЬЮ-ЙОРКА</text>
+            <text x="396" y="442" text-anchor="middle" font-family="Georgia, serif" font-size="11.5" font-style="italic" fill="#3a2a1a">Сухой закон: проверки усиливаются</text>
+            <rect x="250" y="454" width="150" height="70" fill="#6b5a45"/>
+            <g fill="#2a2018"><circle cx="290" cy="486" r="9"/><rect x="280" y="494" width="20" height="30"/><circle cx="330" cy="482" r="9"/><rect x="320" y="490" width="20" height="34"/><circle cx="368" cy="488" r="9"/><rect x="358" y="496" width="20" height="28"/></g>
+            <g id="paper-lines" stroke="rgba(42,29,16,.55)" stroke-width="1.3"></g>
+          </g>
+          <g transform="rotate(-18 800 450)">
+            <ellipse cx="800" cy="480" rx="130" ry="42" fill="rgba(210,225,235,.1)" stroke="rgba(255,255,255,.4)" stroke-width="1.5"/>
+            <ellipse cx="800" cy="478" rx="100" ry="28" fill="rgba(0,0,0,.35)"/>
+          </g>
+          <g transform="rotate(-8 805 450)">
+            <rect x="772" y="428" width="70" height="42" rx="2" fill="#efe3c0"/>
+            <text x="807" y="453" text-anchor="middle" font-family="'Segoe Script','Bradley Hand','Brush Script MT',cursive" font-size="11" fill="#2a2a5a">knock 3 times</text>
+          </g>
+          <g transform="rotate(-18 800 450)">
+            <rect x="712" y="440" width="196" height="26" rx="12" fill="#6a4527"/>
+            <rect x="712" y="440" width="196" height="8" rx="4" fill="#8a6038" opacity=".7"/>
+            <rect x="842" y="440" width="14" height="26" fill="#c9993f"/>
+            <ellipse cx="716" cy="453" rx="10" ry="13" fill="#bcb6b0"/>
+            <circle cx="712" cy="453" r="4" fill="#ff7a2e"/>
+          </g>
+          <g transform="translate(722 420)">
+            <path class="smoke-wisp s1" d="M0 0C18 -30 -18 -60 6 -95S-6 -150 14 -190"/>
+            <path class="smoke-wisp s2" d="M0 0C-16 -28 16 -58 -4 -92S10 -140 -6 -180"/>
+            <path class="smoke-wisp s3" d="M0 0C12 -34 -10 -64 8 -100S-2 -146 10 -176"/>
+          </g>
+        </svg>
+        <div class="pool"></div>
+        <button class="paper-btn" id="paper" type="button" aria-label="Открыть газету: сухой закон и спикизи"></button>
+      </div>
+      <p class="room-note">Нажми на газету</p>
+    </section>
+  </div>
+
+  <button class="go go-left" id="goL" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    <span class="label">Читальня</span>
+  </button>
+  <button class="go go-right" id="goR" type="button">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    <span class="label">Курилка</span>
+  </button>
+
+  <div class="blackout"></div>
+  <div class="doors" aria-hidden="true"><div class="door l"></div><div class="door r"></div></div>
+</main>
+
+<dialog class="card" id="card" aria-labelledby="card-title"></dialog>
+
+<script>
+  /* ---------- формы бутылок ---------- */
+  const SHAPES = {
+    bordeaux: { d: "M25 14H35V62C35 76 52 80 52 104V186Q52 194 44 194H16Q8 194 8 186V104C8 80 25 76 25 62Z", neck: [25, 35], top: 14, body: [8, 44] },
+    squat:    { d: "M24 24H36V50C36 58 54 62 54 90V184Q54 194 44 194H16Q6 194 6 184V90C6 62 24 58 24 50Z", neck: [24, 36], top: 24, body: [6, 48] },
+    tall:     { d: "M24 22H36V60C36 68 50 70 50 84V186Q50 194 42 194H18Q10 194 10 186V84C10 70 24 68 24 60Z", neck: [24, 36], top: 22, body: [10, 40] },
+    flask:    { d: "M23 18H37V44C37 52 54 54 54 70V186Q54 194 46 194H14Q6 194 6 186V70C6 54 23 52 23 44Z", neck: [23, 37], top: 18, body: [6, 48] },
+    square:   { d: "M24 20H36V52L50 62V186Q50 194 42 194H18Q10 194 10 186V62L24 52Z", neck: [24, 36], top: 20, body: [10, 40] },
+    round:    { d: "M25 20H35V44C35 52 50 56 50 76V186Q50 194 42 194H18Q10 194 10 186V76C10 56 25 52 25 44Z", neck: [25, 35], top: 20, body: [10, 40] }
+  };
+
+  /* ---------- напитки ---------- */
+  const DRINKS = [
+    {
+      id: "wine", name: "Вино", shape: "bordeaux", cap: "#4a0f1c",
+      glass: "#1f2c1d", glassOp: .96, liquid: "#4a0d1e", liquidOp: .5, level: 54,
+      labelBg: "#eadcbc", labelInk: "#4a0f1c", labelY: 120, labelH: 50,
+      cup: "wine", pour: "#6b1228", pourLevel: 42, glassLabel: "Бокал красного вина",
+      tagline: "Напиток из сброженного виноградного сока",
+      facts: [["Родина", "Закавказье"], ["Крепость", "9–15%"], ["Подача", "красное 16–18 °C, белое 8–12 °C"]],
+      history: "Вино — один из старейших напитков человечества. Следы виноделия возрастом около 8000 лет нашли в Грузии: виноград бродил там в больших глиняных сосудах, квеври, которые закапывали в землю. Позже вино разнесли по Средиземноморью финикийцы, греки и римляне, а в Средние века виноделие сохраняли монастыри Европы.",
+      ingredients: [["Виноград", "сок, кожица и иногда косточки: от них зависят цвет и вкус"], ["Дрожжи", "превращают сахар винограда в спирт"], ["Время", "вино выдерживают в бочках, квеври или стальных чанах"]],
+      serve: "Красное подают при 16–18 °C, белое и розовое охлаждают до 8–12 °C. Бокал наполняют не больше чем на треть, чтобы аромат раскрылся."
+    },
+    {
+      id: "cognac", name: "Коньяк", shape: "squat", cap: "#2a1a10",
+      glass: "#2a1a0e", glassOp: .96, liquid: "#a85a14", liquidOp: .75, level: 44,
+      labelBg: "#1b1210", labelInk: "#e2b866", labelY: 112, labelH: 52,
+      cup: "snifter", pour: "#b8651a", pourLevel: 64, glassLabel: "Бокал-снифтер с коньяком",
+      tagline: "Виноградный бренди из французского региона Коньяк",
+      facts: [["Родина", "Франция"], ["Крепость", "от 40%"], ["Подача", "комнатная температура"]],
+      history: "Название пришло от города Коньяк на западе Франции. В XVI–XVII веках голландские купцы скупали местное вино, а по распространённой версии начали перегонять его, чтобы оно не портилось в дороге и занимало меньше места на корабле. Оказалось, что дистиллят, постоявший в дубовых бочках, получается вкуснее самого вина. Так появился коньяк.",
+      ingredients: [["Белый виноград", "чаще всего сорт юни блан"], ["Двойная перегонка", "в медных кубах, после неё получается спирт-сырец"], ["Дубовые бочки", "выдержка не меньше двух лет, лучшие коньяки стоят десятилетиями"], ["Купаж", "мастер смешивает спирты разных лет в один вкус"]],
+      serve: "Коньяк подают в бокале-снифтере при комнатной температуре и без льда. Бокал согревают ладонью, и аромат раскрывается. Классическая пара — горький шоколад или кофе."
+    },
+    {
+      id: "rum", name: "Ром", shape: "tall", cap: "#b98a55",
+      glass: "#26150d", glassOp: .95, liquid: "#6d2f10", liquidOp: .8, level: 62,
+      labelBg: "#8c2020", labelInk: "#f1e4cc", labelY: 110, labelH: 56,
+      cup: "rocks", ice: true, pour: "#8a3f12", pourLevel: 70, glassLabel: "Стакан рома со льдом",
+      tagline: "Крепкий напиток из сахарного тростника",
+      facts: [["Родина", "Карибы"], ["Крепость", "37,5–50%"], ["Подача", "со льдом или в коктейле"]],
+      history: "Ром появился в XVII веке на карибских плантациях: из патоки, отхода сахарного производства, начали гнать крепкий спирт. Его история тесно связана с колониальной торговлей и рабством. С 1740 года британский флот стал разбавлять ромовый паёк водой, и этот напиток назвали грогом.",
+      ingredients: [["Патока или тростниковый сок", "основа, из которой получается сахар для брожения"], ["Вода и дрожжи", "запускают брожение"], ["Выдержка", "светлый ром выдерживают недолго, тёмный годами в бочках"]],
+      serve: "Светлый ром — основа коктейлей: мохито, дайкири, пина колада. Выдержанный ром пьют чистым или со льдом, как виски."
+    },
+    {
+      id: "whisky", name: "Виски", shape: "flask", cap: "#3b2a1d",
+      glass: "#3a2410", glassOp: .9, liquid: "#c27a1a", liquidOp: .85, level: 56,
+      labelBg: "#1f4034", labelInk: "#f1e4cc", labelY: 104, labelH: 60,
+      cup: "rocks", ice: true, pour: "#c9831f", pourLevel: 70, glassLabel: "Стакан виски со льдом",
+      tagline: "Зерновой дистиллят, выдержанный в дубовых бочках",
+      facts: [["Родина", "Шотландия и Ирландия"], ["Крепость", "40–46% в бутылке"], ["Подача", "чистым, с водой или льдом"]],
+      history: "Первое письменное упоминание шотландского виски датируется 1494 годом: в налоговых записях значится солод для монаха Джона Кора, из которого тот гнал aqua vitae, «воду жизни». Само слово «виски» восходит к гэльскому uisge beatha, что тоже значит «вода жизни». Долгие века это был домашний напиток, а в XIX веке виски начали делать в промышленных масштабах.",
+      ingredients: [["Ячменный солод", "в других видах виски добавляют кукурузу, рожь или пшеницу"], ["Вода и дрожжи", "из них получается брага"], ["Перегонка", "в медных кубах, чаще дважды"], ["Дубовые бочки", "шотландский виски выдерживают минимум три года"]],
+      serve: "Виски подают в стакане рокс. Его пьют чистым, с каплей воды, которая раскрывает аромат, или со льдом. Из виски делают коктейли олд фэшн и виски сауэр."
+    },
+    {
+      id: "gin", name: "Джин", shape: "square", cap: "#c9ced1",
+      glass: "#9cc4cf", glassOp: .35, liquid: "#d6e8ec", liquidOp: .35, level: 56,
+      labelBg: "#20505c", labelInk: "#f1e4cc", labelY: 100, labelH: 60,
+      cup: "highball", pour: "#cfe6ea", pourLevel: 48, pourOp: .55, glassLabel: "Джин-тоник с долькой лайма",
+      tagline: "Крепкий напиток с ароматом можжевельника",
+      facts: [["Родина", "Нидерланды, Англия"], ["Крепость", "37,5–47%"], ["Подача", "с тоником и льдом"]],
+      history: "Джин родился в Нидерландах в XVI–XVII веках как можжевеловая настойка, которую считали лекарством. Голландцы называли её женевер, от слова «можжевельник». Англичане упростили рецепт, и в XVIII веке джин стал самым дешёвым напитком Лондона: это время зовут «джиновой лихорадкой». Британцы в Индии пили хинный тоник от малярии и добавляли в него джин, так появился джин-тоник.",
+      ingredients: [["Нейтральный зерновой спирт", "основа напитка"], ["Можжевельник", "главная нота, без него джин джином не считается"], ["Травы и специи", "кориандр, цедра цитрусов, корень дягиля, анис"]],
+      serve: "Классика — джин-тоник в высоком стакане: одна часть джина на две-три части тоника, лёд и долька лайма. Из джина также делают мартини, негрони и «Том Коллинз»."
+    },
+    {
+      id: "tequila", name: "Текила", shape: "round", cap: "#b07c48",
+      glass: "#d8c48f", glassOp: .25, liquid: "#e8cf86", liquidOp: .55, level: 58,
+      labelBg: "#3f6b2f", labelInk: "#f6efd8", labelY: 108, labelH: 58,
+      cup: "shot", pour: "#e6cf85", pourLevel: 70, pourOp: .85, glassLabel: "Рюмка текилы с долькой лайма",
+      tagline: "Мексиканский напиток из голубой агавы",
+      facts: [["Родина", "Мексика, Халиско"], ["Крепость", "35–55%, обычно 38–40%"], ["Подача", "в узкой рюмке"]],
+      history: "Текилу делают вокруг города Текила в штате Халиско. Ещё ацтеки готовили из агавы слабый напиток пульке, а после прихода испанцев в XVI веке научились его перегонять. Одну из первых лицензий на промышленное производство получила семья Куэрво в конце XVIII века.",
+      ingredients: [["Голубая агава", "сердцевину, пинью, запекают и отжимают сок"], ["Дрожжи и вода", "сок бродит, затем его перегоняют, чаще дважды"], ["Выдержка", "бланко не выдерживают, репосадо стоит от 2 до 12 месяцев, аньехо от года до трёх лет"]],
+      serve: "Текилу подают в узкой рюмке. Выдержанную пьют небольшими глотками, без закуски. Популярный способ — с долькой лайма и солью. Из текилы делают маргариту и «Текила санрайз»."
+    }
+  ];
+  const ROWS = [["wine", "cognac", "rum"], ["whisky", "gin", "tequila"]];
+
+  /* ---------- история из газеты ---------- */
+  const STORY = {
+    name: "Сухой закон и спикизи",
+    tagline: "Как выглядели подпольные бары Америки",
+    facts: [["Годы", "1920–1933"], ["Страна", "США"]],
+    sections: [
+      ["Что произошло", "С января 1920 года в США запретили производство, продажу и перевозку алкоголя. Поправку к конституции приняли в 1919 году, а отменили её только в 1933-м, когда вступила в силу 21-я поправка."],
+      ["Спикизи", "Пить не перестали, бары просто ушли в подполье. Их называли спикизи, от английского speakeasy. По одной из версий, название пришло от привычки говорить тихо, чтобы не привлечь полицию. Попасть внутрь можно было по паролю, особому стуку или рекомендации знакомого."],
+      ["Коктейли", "Качество нелегального алкоголя часто было плохим, поэтому его смешивали с соками, сиропами и травами. Считается, что именно в эти годы коктейли стали по-настоящему популярны."]
+    ]
+  };
+
+  /* ---------- рисуем бутылку ---------- */
+  function bottleSVG(d) {
+    const s = SHAPES[d.shape], id = "clip-" + d.id;
+    const [bx, bw] = s.body, [nl, nr] = s.neck, lx = bx + 3, lw = bw - 6;
+    const hlY = d.level + 8;
+    return `<svg viewBox="0 0 60 200" aria-hidden="true" focusable="false">
+      <defs><clipPath id="${id}"><path d="${s.d}"/></clipPath></defs>
+      <rect x="${nl - 1}" y="${s.top - 12}" width="${nr - nl + 2}" height="14" rx="2" fill="${d.cap}"/>
+      <path d="${s.d}" fill="${d.glass}" fill-opacity="${d.glassOp}"/>
+      <rect x="0" y="${d.level}" width="60" height="200" fill="${d.liquid}" fill-opacity="${d.liquidOp}" clip-path="url(#${id})"/>
+      <rect x="${bx + 4}" y="${hlY}" width="3.2" height="${188 - hlY}" rx="1.6" fill="#fff" fill-opacity=".14" clip-path="url(#${id})"/>
+      <rect x="${lx}" y="${d.labelY}" width="${lw}" height="${d.labelH}" rx="1.5" fill="${d.labelBg}"/>
+      <rect x="${lx + 3}" y="${d.labelY + 4}" width="${lw - 6}" height=".8" fill="${d.labelInk}" fill-opacity=".6"/>
+      <rect x="${lx + 3}" y="${d.labelY + d.labelH - 5}" width="${lw - 6}" height=".8" fill="${d.labelInk}" fill-opacity=".6"/>
+      <text x="30" y="${d.labelY + d.labelH / 2 + 3}" text-anchor="middle" font-family="Forum, Georgia, serif" font-size="8.5" fill="${d.labelInk}">${d.name}</text>
+    </svg>`;
+  }
+
+  /* ---------- рисуем бокал для карточки ---------- */
+  const ICE = `<g transform="rotate(-8 52 80)"><rect x="40" y="66" width="26" height="26" rx="5" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.4)"/></g>
+               <g transform="rotate(10 72 88)"><rect x="62" y="78" width="24" height="24" rx="5" fill="rgba(255,255,255,.22)" stroke="rgba(255,255,255,.4)"/></g>`;
+  const GLASSES = {
+    wine: {
+      body: "M32 12H88C90 56 80 84 60 86C40 84 30 56 32 12Z",
+      before: `<rect x="58" y="86" width="4" height="58" fill="rgba(255,235,200,.35)"/><ellipse cx="60" cy="148" rx="26" ry="5" fill="rgba(255,235,200,.22)" stroke="rgba(255,235,200,.5)"/>`,
+      shine: "M38 24C38 48 44 66 52 74", after: ""
+    },
+    snifter: {
+      body: "M44 18C14 34 12 82 40 96C52 102 68 102 80 96C108 82 106 34 76 18Z",
+      before: `<rect x="58" y="100" width="4" height="34" fill="rgba(255,235,200,.35)"/><ellipse cx="60" cy="142" rx="28" ry="5" fill="rgba(255,235,200,.22)" stroke="rgba(255,235,200,.5)"/>`,
+      shine: "M30 40C24 58 28 76 38 86", after: ""
+    },
+    rocks: {
+      body: "M24 40H96L90 130Q89 140 79 140H41Q31 140 30 130Z", before: "",
+      shine: "M32 52L35 124", after: ""
+    },
+    highball: {
+      body: "M38 16H82L78 140Q77 150 68 150H52Q43 150 42 140Z", before: "",
+      shine: "M45 28L47 130",
+      after: `<g transform="rotate(-6 52 70)"><rect x="46" y="58" width="22" height="22" rx="4" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.4)"/></g>
+              <g transform="rotate(8 66 104)"><rect x="56" y="94" width="20" height="20" rx="4" fill="rgba(255,255,255,.2)" stroke="rgba(255,255,255,.4)"/></g>
+              <g fill="#fff" fill-opacity=".5"><circle cx="52" cy="118" r="1.6"/><circle cx="70" cy="92" r="1.4"/><circle cx="60" cy="132" r="1.8"/><circle cx="72" cy="124" r="1.3"/></g>
+              <g transform="translate(84 17)"><circle r="15" fill="#8fb12f"/><circle r="12.5" fill="#d3e57c"/>
+                <path d="M0 0L0 -12.5M0 0L10.8 -6.2M0 0L10.8 6.2M0 0L0 12.5M0 0L-10.8 6.2M0 0L-10.8 -6.2" stroke="#8fb12f" stroke-width="1.2"/><circle r="2" fill="#8fb12f"/></g>`
+    },
+    shot: {
+      body: "M42 54H78L74 134Q73 142 65 142H55Q47 142 46 134Z", before: "",
+      shine: "M50 70L52 124",
+      after: `<g transform="translate(70 40)"><path d="M0 14C6 -4 30 -2 34 18C26 8 12 8 0 14Z" fill="#8fb12f"/><path d="M4 14C9 2 26 2 29 15C22 9 12 9 4 14Z" fill="#d3e57c"/></g>`
+    }
+  };
+  function glassSVG(d) {
+    const g = GLASSES[d.cup], id = "pour-" + d.id;
+    return `<svg viewBox="0 0 120 170" role="img" aria-label="${d.glassLabel}">
+      <defs><clipPath id="${id}"><path d="${g.body}"/></clipPath></defs>
+      ${g.before}
+      <path d="${g.body}" fill="rgba(255,255,255,.06)"/>
+      <g clip-path="url(#${id})"><rect class="pour" x="0" y="${d.pourLevel}" width="120" height="170" fill="${d.pour}" fill-opacity="${d.pourOp || .9}"/></g>
+      <g class="late">${d.ice ? ICE : ""}</g>
+      <path d="${g.body}" fill="none" stroke="rgba(255,235,200,.6)" stroke-width="1.5"/>
+      <path d="${g.shine}" stroke="rgba(255,255,255,.35)" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <g class="late">${g.after}</g>
+    </svg>`;
+  }
+
+  /* ---------- бутылки на заднем плане: много, тёмные, подсвечены сзади ---------- */
+  const JAR = "M12 122H48V186Q48 194 40 194H20Q12 194 12 186Z";
+  const GLASS_SET = [
+    ["#1a0f12", "#3a0b18", "#3a0a14"],
+    ["#241810", "#7d4210", "#2a1a10"],
+    ["#17241a", "#2a3a1c", "#1a1a14"],
+    ["#8aa7ad", "#c8dde0", "#9aa0a3", true],
+    ["#1d1a24", "#2a1a3a", "#2c2236"],
+    ["#2e1d10", "#8a5416", "#3b2a1d"]
+  ];
+  const SHAPE_KEYS = ["bordeaux", "squat", "tall", "flask", "square", "round"];
+  function decorItems(row) {
+    const spots = row === 0 ? [3, 11, 25, 34, 42, 58, 66, 75, 89, 97] : [2, 12, 24, 35, 43, 57, 67, 76, 88, 98];
+    return spots.map((at, i) => {
+      const g = GLASS_SET[(i * 5 + row * 3) % GLASS_SET.length];
+      return { at, jar: i === 4 + row, shape: SHAPE_KEYS[(i * 2 + row) % 6], glass: g[0], liquid: i === 4 + row ? "#8a4b1a" : g[1],
+               cap: g[2], clear: !!g[3], s: .6 + ((i * 37 + row * 11) % 25) / 100 };
+    });
+  }
+  function decorLayer(i) {
+    const wrap = document.createElement("div");
+    wrap.className = "decor";
+    wrap.setAttribute("aria-hidden", "true");
+    decorItems(i).forEach((it, n) => {
+      const id = `dc-${i}-${n}`;
+      let body;
+      if (it.jar) {
+        body = `<defs><clipPath id="${id}"><path d="${JAR}"/></clipPath></defs>
+          <path d="${JAR}" fill="#b9d0d0" fill-opacity=".22"/>
+          <rect x="0" y="134" width="60" height="70" fill="${it.liquid}" fill-opacity=".8" clip-path="url(#${id})"/>
+          <g fill="#7a1126"><circle cx="24" cy="160" r="4"/><circle cx="35" cy="168" r="4"/><circle cx="26" cy="178" r="4"/><circle cx="37" cy="152" r="3.6"/></g>
+          <rect x="10" y="112" width="40" height="10" rx="2" fill="#c9993f"/>`;
+      } else {
+        const s = SHAPES[it.shape];
+        const [nl, nr] = s.neck;
+        body = `<defs><clipPath id="${id}"><path d="${s.d}"/></clipPath></defs>
+          <rect x="${nl - 1}" y="${s.top - 12}" width="${nr - nl + 2}" height="14" rx="2" fill="${it.cap}"/>
+          <path d="${s.d}" fill="${it.glass}" fill-opacity="${it.clear ? .35 : .96}"/>
+          <rect x="0" y="${s.top + 40}" width="60" height="200" fill="${it.liquid}" fill-opacity="${it.clear ? .4 : .55}" clip-path="url(#${id})"/>
+          <rect x="${s.body[0] + 4}" y="${s.top + 60}" width="3" height="110" rx="1.5" fill="#fff" fill-opacity=".1" clip-path="url(#${id})"/>`;
+      }
+      wrap.insertAdjacentHTML("beforeend", `<svg viewBox="0 0 60 200" style="left:${it.at}%;--s:${it.s.toFixed(2)}" focusable="false">${body}</svg>`);
+    });
+    return wrap;
+  }
+
+  /* ---------- полка ---------- */
+  const byId = Object.fromEntries(DRINKS.map(d => [d.id, d]));
+  const shelving = document.getElementById("shelving");
+  ROWS.forEach((ids, ri) => {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.appendChild(decorLayer(ri));
+    ids.forEach(id => {
+      const d = byId[id];
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "bottle";
+      b.setAttribute("aria-label", "Открыть: " + d.name);
+      b.innerHTML = bottleSVG(d) + `<span class="name">${d.name}</span>`;
+      b.addEventListener("click", () => pick(b, d));
+      row.appendChild(b);
+    });
+    shelving.appendChild(row);
+  });
+
+  /* ---------- подвесные бокалы над стойкой ---------- */
+  (function () {
+    let g = "<line x1='0' y1='4' x2='860' y2='4' stroke='#5a4040' stroke-width='3'/>";
+    for (let i = 0; i < 15; i++) {
+      const x = 36 + i * 56.5;
+      g += `<line x1='${x}' y1='4' x2='${x}' y2='18' stroke='#4a3a3a'/>` +
+           `<path d='M${x - 4} 18C${x - 16} 22 ${x - 16} 34 ${x - 15} 42H${x + 15}C${x + 16} 34 ${x + 16} 22 ${x + 4} 18Z' fill='rgba(255,170,185,.18)' stroke='rgba(255,215,225,.55)'/>`;
+    }
+    document.getElementById("rail").innerHTML = g;
+  })();
+
+  /* ---------- рисуем читальню и газету ---------- */
+  (function () {
+    let stack = "";
+    for (let i = 0; i < 5; i++) {
+      const y = 178 + i * 32, o = [0, 14, 4, 18, 8][i];
+      stack += `<rect x='${70 + o}' y='${y}' width='250' height='30' rx='3' fill='url(#cover)'/>` +
+               `<rect x='${82 + o}' y='${y + 8}' width='238' height='14' fill='#caa86a'/>` +
+               `<rect x='${82 + o}' y='${y + 8}' width='238' height='3' fill='#e6cf9a'/>` +
+               `<rect x='${70 + o}' y='${y + 4}' width='14' height='22' fill='#2a1809'/>` +
+               `<path d='M${74 + o} ${y + 8}h6M${74 + o} ${y + 14}h6M${74 + o} ${y + 20}h6' stroke='#b8894a' stroke-width='1.4'/>`;
+    }
+    document.getElementById("book-stack").innerHTML = stack;
+
+    function bil(p, u, v) {
+      const [TL, TR, BL, BR] = p;
+      const tx = TL[0] + (TR[0] - TL[0]) * u, ty = TL[1] + (TR[1] - TL[1]) * u;
+      const bx = BL[0] + (BR[0] - BL[0]) * u, by = BL[1] + (BR[1] - BL[1]) * u;
+      return [tx + (bx - tx) * v, ty + (by - ty) * v];
+    }
+    function pageLines(p) {
+      let s = "";
+      for (let v = .14; v <= .9; v += .065) {
+        const a = bil(p, .1, v), b = bil(p, .9 - ((v * 97) % .12), v);
+        s += `<line x1='${a[0].toFixed(1)}' y1='${a[1].toFixed(1)}' x2='${b[0].toFixed(1)}' y2='${b[1].toFixed(1)}'/>`;
+      }
+      return s;
+    }
+    document.getElementById("lines-l").innerHTML = pageLines([[110, 420], [498, 388], [80, 546], [498, 528]]);
+    document.getElementById("lines-r").innerHTML = pageLines([[502, 388], [890, 420], [502, 528], [920, 546]]);
+
+    let pl = "";
+    for (let i = 0; i < 9; i++) pl += `<line x1='418' y1='${456 + i * 9}' x2='${548 - ((i * 53) % 28)}' y2='${456 + i * 9}'/>`;
+    for (let i = 0; i < 3; i++) pl += `<line x1='250' y1='${532 + i * 8}' x2='${400 - ((i * 41) % 24)}' y2='${532 + i * 8}'/>`;
+    document.getElementById("paper-lines").innerHTML = pl;
+  })();
+
+  /* ---------- карточка ---------- */
+  const dlg = document.getElementById("card");
+  function cardHTML(d) {
+    const head = `<div class="close-wrap"><button class="close" type="button" aria-label="Закрыть" data-close>×</button></div>`;
+    const facts = `<dl class="facts">${d.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+    if (d.sections) {
+      return head + `<div class="card-inner">
+        <h2 class="title" id="card-title">${d.name}</h2>
+        <p class="tagline">${d.tagline}</p>
+        ${facts}
+        ${d.sections.map(([h, t]) => `<h3>${h}</h3><p>${t}</p>`).join("")}
+      </div>`;
+    }
+    return head + `<div class="card-inner">
+      <div class="stage">${glassSVG(d)}</div>
+      <h2 class="title" id="card-title">${d.name}</h2>
+      <p class="tagline">${d.tagline}</p>
+      ${facts}
+      <h3>История</h3>
+      <p>${d.history}</p>
+      <h3>Из чего делают</h3>
+      <ul>${d.ingredients.map(([b, t]) => `<li><b>${b}.</b> ${t}</li>`).join("")}</ul>
+      <h3>Как подают</h3>
+      <p>${d.serve}</p>
+    </div>`;
+  }
+  function openCard(d) {
+    dlg.innerHTML = cardHTML(d);
+    dlg.showModal();
+    dlg.scrollTop = 0;
+    dlg.querySelectorAll(".card-inner > *").forEach((el, i) => { el.style.animationDelay = (0.2 + i * 0.07) + "s"; });
+  }
+  dlg.addEventListener("click", e => {
+    if (e.target === dlg || e.target.closest("[data-close]")) dlg.close();
+  });
+
+  /* ---------- клик по бутылке: поднялась, прокрутилась, открылась карточка ---------- */
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const bartender = document.getElementById("bartender");
+  let busy = false, pickedSvg = null;
+  function pick(btn, d) {
+    if (busy) return;
+    if (reduceMotion.matches) { openCard(d); return; }
+    busy = true;
+    const svg = btn.querySelector("svg");
+    pickedSvg = svg;
+    shelving.classList.add("picking");
+    btn.classList.add("chosen");
+    bartender.classList.add("shaking");
+    svg.style.transition = "transform .9s cubic-bezier(.45,.05,.2,1)";
+    svg.style.transform = "translateY(-28px) scale(1.12) rotateY(360deg)";
+    setTimeout(() => { openCard(d); busy = false; bartender.classList.remove("shaking"); }, 850);
+  }
+  dlg.addEventListener("close", () => {
+    shelving.classList.remove("picking");
+    if (!pickedSvg) return;
+    const svg = pickedSvg;
+    pickedSvg = null;
+    svg.closest(".bottle").classList.remove("chosen");
+    svg.style.transition = "none";
+    svg.style.transform = "translateY(-28px) scale(1.12)";
+    svg.getBoundingClientRect();
+    svg.style.transition = "transform .45s ease";
+    svg.style.transform = "";
+    setTimeout(() => { svg.style.transition = ""; }, 500);
+  });
+
+  /* ---------- читальня: задуть и зажечь свечу ---------- */
+  const nook = document.getElementById("room-nook");
+  const candle = document.getElementById("candle");
+  candle.addEventListener("click", () => {
+    const out = nook.classList.toggle("unlit");
+    candle.setAttribute("aria-label", out ? "Зажечь свечу" : "Задуть свечу");
+    nook.querySelector(".room-note").textContent = out ? "Нажми на свечу ещё раз, чтобы зажечь" : "Нажми на свечу";
+  });
+
+  /* ---------- курилка: газета ---------- */
+  document.getElementById("paper").addEventListener("click", () => openCard(STORY));
+
+  /* ---------- переходы между комнатами ---------- */
+  const app = document.getElementById("app");
+  const rooms = [...document.querySelectorAll(".room")];
+  const NAMES = ["Читальня", "Бар", "Курилка"];
+  const goL = document.getElementById("goL"), goR = document.getElementById("goR");
+  let cur = 1;
+  function setRoom(i) {
+    cur = Math.max(0, Math.min(2, i));
+    app.dataset.room = cur;
+    rooms.forEach((r, n) => r.toggleAttribute("inert", n !== cur));
+    goL.classList.toggle("off", cur === 0);
+    goR.classList.toggle("off", cur === 2);
+    goL.inert = cur === 0;
+    goR.inert = cur === 2;
+    if (cur > 0) goL.querySelector(".label").textContent = NAMES[cur - 1];
+    if (cur < 2) goR.querySelector(".label").textContent = NAMES[cur + 1];
+  }
+  goL.addEventListener("click", () => setRoom(cur - 1));
+  goR.addEventListener("click", () => setRoom(cur + 1));
+  addEventListener("keydown", e => {
+    if (dlg.open) return;
+    if (e.key === "ArrowLeft") setRoom(cur - 1);
+    if (e.key === "ArrowRight") setRoom(cur + 1);
+  });
+  let touchX = null;
+  app.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; }, { passive: true });
+  app.addEventListener("touchend", e => {
+    if (touchX === null || dlg.open) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    touchX = null;
+    if (dx > 70) setRoom(cur - 1);
+    if (dx < -70) setRoom(cur + 1);
+  }, { passive: true });
+  setRoom(1);
+</script>
+</body>
+</html>

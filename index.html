@@ -29,12 +29,12 @@
   body { height: 100%; margin: 0; background: #070304; color: var(--cream); font-family: var(--font-text); overflow-x: hidden; }
 
   /* ---------- мир из трёх комнат ---------- */
-  .app { position: relative; height: 100%; min-height: 640px; overflow: hidden; }
+  .app { position: relative; height: 100%; min-height: 640px; overflow: hidden; overflow: clip; }
   .world { position: absolute; inset: 0; width: 300%; display: flex; transform: translateX(-33.3333%);
     transition: transform 1.2s cubic-bezier(.65, 0, .25, 1); }
   .app[data-room="0"] .world { transform: translateX(0); }
   .app[data-room="2"] .world { transform: translateX(-66.6667%); }
-  .room { position: relative; flex: 0 0 33.3333%; height: 100%; overflow: hidden;
+  .room { position: relative; flex: 0 0 33.3333%; height: 100%; overflow: hidden; overflow: clip;
     --tableH: calc(clamp(560px, 100vw, 1000px) * .2201); }
   .scene { position: absolute; inset: 0; display: flex; flex-direction: column; }
   .art-box { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
@@ -313,6 +313,105 @@
   @keyframes sm-note { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 15% { opacity: .9; } 100% { opacity: 0; transform: translate(-80px, -130px) rotate(-20deg); } }
   @keyframes sm-blink { 0%, 88%, 100% { transform: scaleY(1); } 92% { transform: scaleY(.1); } }
 
+  /* ---------- читальня оживает ---------- */
+  .nook-bg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+  .nook-bg .hot { pointer-events: auto; }
+  .nk-rain { animation: nk-rain .55s linear infinite; }
+  .nk-drop { animation: nk-drop 7s linear infinite; }
+  .nk-win { animation: nk-win 6s steps(1, end) infinite; }
+  .nk-ladder { animation: nk-ladder 38s ease-in-out infinite alternate; }
+  .nk-reach { transform-box: fill-box; transform-origin: 0% 100%; animation: nk-reach 13s ease-in-out infinite; }
+  .nk-pen { transform-box: fill-box; transform-origin: 0% 0%; animation: nk-pen .7s ease-in-out infinite alternate, nk-dip 11s ease-in-out infinite; }
+  .nk-head { transform-box: fill-box; transform-origin: 50% 100%; animation: nk-head 15s ease-in-out infinite; }
+  .nk-lamplight { animation: sm-glow 4s ease-in-out infinite; }
+  .nk-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0; z-index: 2;
+    background: radial-gradient(ellipse at 50% 25%, rgba(220,232,255,.55), rgba(170,190,255,.14) 55%, transparent 80%); }
+  .room-nook.flash .nk-flash { animation: nk-flash 1.1s ease-out; }
+  .room-nook.flash .nk-winflash { animation: nk-flash 1.1s ease-out; }
+  .moth { transition: opacity .6s; }
+  .moth-fly { animation: nk-moth 5.5s ease-in-out infinite; }
+  .moth .wing { transform-box: fill-box; transform-origin: 50% 100%; animation: nk-flap .12s linear infinite alternate; }
+  .room-nook.unlit .moth { opacity: 0; }
+  .book-btn { position: absolute; left: 8%; top: 68%; width: 84%; height: 31%; background: none; border: 0; border-radius: 10px; cursor: pointer; z-index: 3; transition: box-shadow .2s; }
+  .book-btn:hover { box-shadow: inset 0 0 0 2px rgba(214,170,92,.5); }
+  .letter-btn { position: absolute; left: 13%; top: 50%; width: 17%; height: 22%; background: none; border: 0; border-radius: 8px; cursor: pointer; z-index: 3; transition: box-shadow .2s; }
+  .letter-btn:hover { box-shadow: inset 0 0 0 2px rgba(214,170,92,.5); }
+  .book-btn:focus-visible, .letter-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+  @keyframes nk-rain { from { transform: translateY(0); } to { transform: translate(-17px, 78px); } }
+  @keyframes nk-drop { 0% { transform: translateY(0); opacity: 0; } 8% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(150px); opacity: 0; } }
+  @keyframes nk-win { 0%, 100% { opacity: .9; } 37% { opacity: .2; } 61% { opacity: .9; } 83% { opacity: .5; } }
+  @keyframes nk-ladder { from { transform: translateX(-60px); } to { transform: translateX(80px); } }
+  @keyframes nk-reach { 0%, 8% { transform: rotate(0); } 18%, 30% { transform: rotate(-4deg) translateY(-6px); } 42%, 66% { transform: rotate(52deg) translateY(30px); } 78%, 100% { transform: rotate(0); } }
+  @keyframes nk-pen { from { transform: translate(0, 0); } to { transform: translate(5px, -1px); } }
+  @keyframes nk-dip { 0%, 80%, 100% { translate: 0 0; } 84%, 90% { translate: 24px -6px; } }
+  @keyframes nk-head { 0%, 70%, 100% { transform: rotate(0); } 76%, 88% { transform: translateY(-4px) rotate(-4deg); } }
+  @keyframes nk-flash { 0% { opacity: 0; } 6% { opacity: 1; } 12% { opacity: .15; } 20% { opacity: .85; } 45% { opacity: .1; } 100% { opacity: 0; } }
+  @keyframes nk-moth { 0% { transform: translate(-30px, 10px); } 20% { transform: translate(10px, -40px); } 40% { transform: translate(38px, 4px); } 60% { transform: translate(6px, 30px); } 80% { transform: translate(-36px, -20px); } 100% { transform: translate(-30px, 10px); } }
+  @keyframes nk-flap { from { transform: scaleY(1); } to { transform: scaleY(.3); } }
+
+  /* ---------- книга рецептов ---------- */
+  dialog.book { width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: none; color: #2a1a10; }
+  dialog.book[open] { display: grid; place-items: center; animation: book-in .5s cubic-bezier(.2,.8,.2,1); }
+  dialog.book::backdrop { background: rgba(6,2,3,.8); }
+  .book-wrap { position: relative; width: min(1080px, 94vw); }
+  .book-stage { position: relative; aspect-ratio: 1.45; max-height: 80svh; margin: 0 auto; perspective: 2600px;
+    border: 14px solid #3a1a12; border-radius: 10px; background: #3a1a12;
+    box-shadow: 0 30px 80px rgba(0,0,0,.6), inset 0 0 0 2px #6a3a22; }
+  .page, .leaf .face { position: absolute; top: 0; bottom: 0; width: 50%; overflow: hidden; }
+  .page.left, .leaf .face.l { left: 0; border-radius: 4px 0 0 4px;
+    background: linear-gradient(90deg, #e6d4b0, #f6ecd4 14%, #f3e6c8 86%, #d4be94); }
+  .page.right, .leaf .face.r { left: 50%; border-radius: 0 4px 4px 0;
+    background: linear-gradient(90deg, #d4be94, #f3e6c8 14%, #f6ecd4 86%, #e6d4b0); }
+  .leaf { position: absolute; inset: 0; transform-style: preserve-3d; pointer-events: none; z-index: 2; }
+  .leaf .face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+  .leaf.fwd { transform-origin: 50% 50%; }
+  .leaf .face.r { transform-origin: 0 50%; }
+  .leaf .face.l { transform-origin: 100% 50%; }
+  .leaf .shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(90deg, rgba(0,0,0,.25), transparent 40%); opacity: 0; transition: opacity .9s; }
+  .pg { height: 100%; overflow: auto; padding: clamp(18px, 3.4vw, 36px) clamp(18px, 3.4vw, 40px) 46px; font-family: var(--font-text); }
+  .pg h2 { margin: 0 0 6px; font: 400 clamp(28px, 3.6vw, 42px)/1.05 var(--font-display); color: #3a1a10; }
+  .pg h3 { margin: 16px 0 6px; font: 400 clamp(18px, 2vw, 22px)/1.2 var(--font-display); color: #7a3a1a; }
+  .pg p { margin: 0; font-size: clamp(13.5px, 1.35vw, 15.5px); line-height: 1.6; color: #2a1a10; }
+  .pg .tag { font-style: italic; color: #6a4a32; }
+  .pg dl { margin: 12px 0 0; font-size: 14px; border-top: 1px dotted #a08a64; }
+  .pg dl div { display: flex; justify-content: space-between; gap: 10px; padding: 5px 0; border-bottom: 1px dotted #a08a64; }
+  .pg dt { color: #6a4a32; } .pg dd { margin: 0; text-align: right; }
+  .pg ul { margin: 6px 0 0; padding-left: 18px; font-size: clamp(13.5px, 1.35vw, 15.5px); line-height: 1.6; }
+  .pg li b { color: #7a3a1a; }
+  .pg-glass { width: clamp(130px, 15vw, 170px); aspect-ratio: 1; margin: 12px auto 6px; border-radius: 50%; display: grid; place-items: center;
+    background: radial-gradient(circle, #3a1a14, #1a0a0c 70%); box-shadow: 0 0 0 3px #c9a46a, 0 0 0 7px #3a1a12; }
+  .pg-glass svg { height: 82%; width: auto; }
+  .pg-num { position: absolute; bottom: 14px; font-size: 13px; color: #8a6a4a; }
+  .page.left .pg-num, .leaf .face.l .pg-num { left: 26px; }
+  .page.right .pg-num, .leaf .face.r .pg-num { right: 26px; }
+  .pg-title { display: grid; place-content: center; text-align: center; height: 100%; gap: 10px; }
+  .pg-title .big { font: 400 clamp(46px, 6vw, 72px)/1 var(--font-display); color: #6b0f22; letter-spacing: .06em; }
+  .pg-title .orn { width: 160px; margin: 0 auto; }
+  .toc { list-style: none; padding: 0; margin: 8px 0 0; }
+  .toc li { display: flex; align-items: baseline; gap: 6px; margin: 2px 0; }
+  .toc button { appearance: none; border: 0; background: none; padding: 2px 0; font: inherit; color: #2a1a10; cursor: pointer; text-align: left; }
+  .toc button:hover { color: #6b0f22; text-decoration: underline; }
+  .toc .dots { flex: 1; border-bottom: 1px dotted #a08a64; transform: translateY(-4px); }
+  .toc-h { margin: 12px 0 2px; font: 400 18px/1.2 var(--font-display); color: #7a3a1a; }
+  .pg .cook { margin-top: 18px; appearance: none; border: 1px solid #6b0f22; background: #6b0f22; color: #f6ecd4; font: 400 17px/1 var(--font-display);
+    padding: 11px 18px; border-radius: 999px; cursor: pointer; }
+  .pg .cook:hover { background: #8a1428; }
+  .pg button:focus-visible { outline: 2px solid #6b0f22; outline-offset: 2px; }
+  .book-wrap .book-close { position: absolute; top: -14px; right: -14px; z-index: 5; }
+  .book-nav { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 14px; color: var(--muted); font-size: 15px; }
+  .book-arrow { width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(214,170,92,.55); background: rgba(14,5,8,.72);
+    color: var(--cream); font-size: 28px; line-height: 1; cursor: pointer; }
+  .book-arrow:hover { border-color: var(--brass); color: var(--brass); }
+  .book-arrow:disabled { opacity: .3; cursor: default; }
+  .book-arrow:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  @keyframes book-in { from { opacity: 0; transform: translateY(30px) scale(.96); } to { opacity: 1; transform: none; } }
+  @media (max-width: 759px) {
+    .book-stage { aspect-ratio: .64; max-height: 74svh; width: 100%; }
+    .page.left, .leaf .face.l { display: none; }
+    .page.right, .leaf .face.r { left: 0; width: 100%; border-radius: 4px; background: linear-gradient(90deg, #d4be94, #f3e6c8 8%, #f6ecd4 92%, #e6d4b0); }
+    .book-wrap .book-close { top: -54px; right: 0; }
+  }
+
   /* ---------- вход: двери ---------- */
   .blackout { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: #070204; opacity: .95;
     animation: blackout 3.6s ease-out forwards; }
@@ -421,6 +520,9 @@
     .bottle svg { transition: none; }
     .pa-head, .pb-arm, .pb-head, .neon.blink { animation: none; }
     .dust { display: none; }
+    .nk-rain, .nk-drop, .nk-win, .nk-ladder, .nk-reach, .nk-pen, .nk-head, .nk-lamplight, .moth-fly, .moth .wing { animation: none !important; }
+    .room-nook.flash .nk-flash, .room-nook.flash .nk-winflash { animation: none !important; }
+    dialog.book[open] { animation: none; }
     .sm-fl, .sm-glow, .sm-sconce, .sm-ember, .sm-pend, .sm-cat-body, .sm-tail, .sm-ear, .pp-paper, .pp-shin, .pp-puff circle,
     .pp-ember, .sm-haze, body.music-on .sm-disc, body.music-on .sm-note, .sm-sec, .sm-eyes .eye { animation: none !important; }
     dialog.mix[open] { animation: none; }
@@ -435,6 +537,98 @@
 
     <!-- ===== Читальня ===== -->
     <section class="room room-nook" id="room-nook" aria-label="Читальня">
+      <svg class="nook-bg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMax slice">
+        <defs>
+          <linearGradient id="nk-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05070e"/><stop offset=".7" stop-color="#121a2e"/><stop offset="1" stop-color="#1e2236"/></linearGradient>
+          <linearGradient id="nk-velvet" x1="0" x2="1"><stop offset="0" stop-color="#3a0a12"/><stop offset=".2" stop-color="#6a1622"/><stop offset=".4" stop-color="#3a0a12"/><stop offset=".6" stop-color="#6a1622"/><stop offset=".8" stop-color="#3a0a12"/><stop offset="1" stop-color="#5a121c"/></linearGradient>
+          <linearGradient id="nk-brass" x1="0" x2="1"><stop offset="0" stop-color="#7a5524"/><stop offset=".45" stop-color="#e2b866"/><stop offset="1" stop-color="#6a4a1e"/></linearGradient>
+          <radialGradient id="nk-lamp"><stop offset="0" stop-color="#ffd890" stop-opacity=".55"/><stop offset=".5" stop-color="#ffb860" stop-opacity=".16"/><stop offset="1" stop-color="#ffb860" stop-opacity="0"/></radialGradient>
+          <radialGradient id="nk-ocean" cx=".4" cy=".35"><stop offset="0" stop-color="#4a7a8a"/><stop offset="1" stop-color="#1a3240"/></radialGradient>
+          <pattern id="nk-rain" width="40" height="80" patternUnits="userSpaceOnUse" patternTransform="rotate(12)">
+            <path d="M8 0v22M28 30v26M18 60v18" stroke="#cfe0ff" stroke-opacity=".35" stroke-width="1.2"/>
+          </pattern>
+          <clipPath id="nk-winclip"><path d="M658 430V182Q658 78 800 78Q942 78 942 182V430Z"/></clipPath>
+          <clipPath id="nk-globeclip"><circle cx="1170" cy="520" r="62"/></clipPath>
+        </defs>
+        <rect width="1600" height="900" fill="#1a0e08"/>
+        <g opacity=".9"><rect x="10" y="50" width="590" height="640" fill="#2a160c"/><rect x="24" y="72" width="562" height="618" fill="#120805"/><rect x="2" y="40" width="606" height="22" fill="#3a1f12"/><rect x="2" y="40" width="606" height="3" fill="#8a5a36"/><g><rect x="28" y="74" width="12" height="94" fill="#2e3a22"/><path d="M30 84h8M30 88h8M30 154h8" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="41" y="91" width="17" height="77" fill="#2f4a34"/></g><g><rect x="59" y="72" width="18" height="96" fill="#5a1a1a"/></g><g transform="rotate(8 96 168)"><rect x="78" y="90" width="18" height="78" fill="#5e4a2a"/><path d="M80 100h14M80 104h14M80 154h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="106" y="155" width="60" height="13" fill="#2e3a22"/><rect x="106" y="142" width="62" height="13" fill="#2e3a22"/><g><rect x="180" y="88" width="19" height="80" fill="#6b3a22"/><path d="M182 98h15M182 102h15M182 154h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="200" y="93" width="12" height="75" fill="#5e4a2a"/><path d="M202 103h8M202 107h8M202 154h8" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="213" y="87" width="13" height="81" fill="#5e4a2a"/><path d="M215 97h9M215 101h9M215 154h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="227" y="93" width="17" height="75" fill="#23324a"/><path d="M229 103h13M229 107h13M229 154h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="245" y="92" width="26" height="76" fill="#4a1a22"/><path d="M247 102h22M247 106h22M247 154h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="272" y="81" width="18" height="87" fill="#6a4a1e"/><path d="M274 91h14M274 95h14M274 154h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="291" y="96" width="26" height="72" fill="#4a2e18"/></g><g><rect x="318" y="98" width="14" height="70" fill="#6b3a22"/></g><g><rect x="349" y="76" width="16" height="92" fill="#23324a"/><path d="M351 86h12M351 90h12M351 154h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="366" y="89" width="25" height="79" fill="#1e2a2a"/><path d="M368 99h21M368 103h21M368 154h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="392" y="76" width="25" height="92" fill="#5e4a2a"/><path d="M394 86h21M394 90h21M394 154h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="433" y="84" width="16" height="84" fill="#3a1a2a"/></g><g><rect x="468" y="102" width="15" height="66" fill="#6a4a1e"/><path d="M470 112h11M470 116h11M470 154h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="501" y="85" width="22" height="83" fill="#4a1a22"/><path d="M503 95h18M503 99h18M503 154h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="524" y="96" width="15" height="72" fill="#6b3a22"/></g><g><rect x="540" y="80" width="20" height="88" fill="#5a1a1a"/><path d="M542 90h16M542 94h16M542 154h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="24" y="168" width="562" height="12" fill="#3a1f12"/><rect x="24" y="168" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="28" y="188" width="21" height="90" fill="#23324a"/></g><g><rect x="50" y="199" width="13" height="79" fill="#2e3a22"/><path d="M52 209h9M52 213h9M52 264h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="64" y="183" width="26" height="95" fill="#5a1a1a"/></g><g><rect x="91" y="186" width="24" height="92" fill="#3a1a2a"/></g><g><rect x="116" y="185" width="23" height="93" fill="#4a1a22"/><path d="M118 195h19M118 199h19M118 264h19" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="140" y="210" width="18" height="68" fill="#6a4a1e"/></g><g><rect x="159" y="190" width="26" height="88" fill="#5a1a1a"/><path d="M161 200h22M161 204h22M161 264h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="186" y="199" width="20" height="79" fill="#6a4a1e"/><path d="M188 209h16M188 213h16M188 264h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="207" y="199" width="13" height="79" fill="#5a1a1a"/><path d="M209 209h9M209 213h9M209 264h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="221" y="197" width="14" height="81" fill="#23324a"/></g><g><rect x="236" y="190" width="22" height="88" fill="#6b3a22"/><path d="M238 200h18M238 204h18M238 264h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="259" y="188" width="13" height="90" fill="#4a2e18"/></g><g><rect x="273" y="192" width="20" height="86" fill="#23324a"/></g><g><rect x="294" y="191" width="16" height="87" fill="#1e2a2a"/></g><g><rect x="311" y="185" width="16" height="93" fill="#23324a"/><path d="M313 195h12M313 199h12M313 264h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="328" y="199" width="15" height="79" fill="#2a2a3a"/><path d="M330 209h11M330 213h11M330 264h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="344" y="211" width="20" height="67" fill="#2a2a3a"/><path d="M346 221h16M346 225h16M346 264h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="365" y="197" width="13" height="81" fill="#2f4a34"/><path d="M367 207h9M367 211h9M367 264h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="379" y="183" width="18" height="95" fill="#1e2a2a"/><path d="M381 193h14M381 197h14M381 264h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="398" y="184" width="18" height="94" fill="#6b3a22"/><path d="M400 194h14M400 198h14M400 264h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="417" y="183" width="12" height="95" fill="#6a4a1e"/></g><g><rect x="450" y="191" width="12" height="87" fill="#6a4a1e"/><path d="M452 201h8M452 205h8M452 264h8" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="463" y="197" width="13" height="81" fill="#2e3a22"/></g><g><rect x="477" y="206" width="23" height="72" fill="#2e3a22"/><path d="M479 216h19M479 220h19M479 264h19" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="501" y="186" width="18" height="92" fill="#2a2a3a"/><path d="M503 196h14M503 200h14M503 264h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="520" y="192" width="20" height="86" fill="#4a2e18"/></g><g><rect x="541" y="208" width="25" height="70" fill="#4a2e18"/></g><g><rect x="567" y="202" width="14" height="76" fill="#5e4a2a"/></g><rect x="24" y="278" width="562" height="12" fill="#3a1f12"/><rect x="24" y="278" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="28" y="294" width="15" height="94" fill="#2f4a34"/><path d="M30 304h11M30 308h11M30 374h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="44" y="310" width="16" height="78" fill="#2f4a34"/></g><g><rect x="61" y="318" width="23" height="70" fill="#4a2e18"/></g><g><rect x="105" y="293" width="17" height="95" fill="#3a1a2a"/><path d="M107 303h13M107 307h13M107 374h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="123" y="301" width="20" height="87" fill="#4a2e18"/><path d="M125 311h16M125 315h16M125 374h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="174" y="318" width="19" height="70" fill="#4a2e18"/><path d="M176 328h15M176 332h15M176 374h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="194" y="293" width="16" height="95" fill="#4a1a22"/><path d="M196 303h12M196 307h12M196 374h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="211" y="320" width="19" height="68" fill="#2f4a34"/><path d="M213 330h15M213 334h15M213 374h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="231" y="316" width="18" height="72" fill="#5e4a2a"/></g><g><rect x="270" y="311" width="19" height="77" fill="#2e3a22"/></g><g><rect x="290" y="306" width="13" height="82" fill="#5a1a1a"/><path d="M292 316h9M292 320h9M292 374h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="304" y="295" width="26" height="93" fill="#4a1a22"/></g><g><rect x="331" y="312" width="21" height="76" fill="#6a4a1e"/><path d="M333 322h17M333 326h17M333 374h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="353" y="296" width="14" height="92" fill="#1e2a2a"/><path d="M355 306h10M355 310h10M355 374h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="368" y="298" width="17" height="90" fill="#1e2a2a"/><path d="M370 308h13M370 312h13M370 374h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="386" y="297" width="13" height="91" fill="#3a1a2a"/><path d="M388 307h9M388 311h9M388 374h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g transform="rotate(8 422 388)"><rect x="400" y="294" width="22" height="94" fill="#5e4a2a"/><path d="M402 304h18M402 308h18M402 374h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="432" y="312" width="16" height="76" fill="#4a2e18"/></g><g><rect x="449" y="306" width="18" height="82" fill="#6b3a22"/></g><g><rect x="468" y="322" width="21" height="66" fill="#2f4a34"/></g><g><rect x="490" y="306" width="18" height="82" fill="#5a1a1a"/></g><g><rect x="531" y="312" width="26" height="76" fill="#2a2a3a"/><path d="M533 322h22M533 326h22M533 374h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="24" y="388" width="562" height="12" fill="#3a1f12"/><rect x="24" y="388" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="28" y="412" width="24" height="86" fill="#2f4a34"/></g><g><rect x="53" y="403" width="18" height="95" fill="#23324a"/></g><g transform="rotate(8 92 498)"><rect x="72" y="413" width="20" height="85" fill="#5e4a2a"/></g><g><rect x="102" y="420" width="20" height="78" fill="#5e4a2a"/><path d="M104 430h16M104 434h16M104 484h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="123" y="415" width="16" height="83" fill="#6a4a1e"/></g><g><rect x="161" y="427" width="22" height="71" fill="#1e2a2a"/><path d="M163 437h18M163 441h18M163 484h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="184" y="420" width="23" height="78" fill="#5a1a1a"/></g><g><rect x="208" y="404" width="24" height="94" fill="#4a2e18"/><path d="M210 414h20M210 418h20M210 484h20" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="233" y="431" width="15" height="67" fill="#2a2a3a"/></g><g><rect x="249" y="402" width="14" height="96" fill="#4a2e18"/><path d="M251 412h10M251 416h10M251 484h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="264" y="429" width="19" height="69" fill="#4a2e18"/><path d="M266 439h15M266 443h15M266 484h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="284" y="418" width="17" height="80" fill="#23324a"/><path d="M286 428h13M286 432h13M286 484h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="302" y="411" width="21" height="87" fill="#1e2a2a"/></g><g><rect x="324" y="402" width="14" height="96" fill="#6a4a1e"/><path d="M326 412h10M326 416h10M326 484h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="339" y="423" width="26" height="75" fill="#2a2a3a"/><path d="M341 433h22M341 437h22M341 484h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="366" y="409" width="22" height="89" fill="#5e4a2a"/><path d="M368 419h18M368 423h18M368 484h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="389" y="426" width="15" height="72" fill="#4a2e18"/></g><g><rect x="405" y="431" width="22" height="67" fill="#4a1a22"/><path d="M407 441h18M407 445h18M407 484h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="428" y="431" width="21" height="67" fill="#2f4a34"/><path d="M430 441h17M430 445h17M430 484h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="450" y="411" width="26" height="87" fill="#23324a"/></g><g><rect x="477" y="421" width="19" height="77" fill="#4a2e18"/><path d="M479 431h15M479 435h15M479 484h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="497" y="430" width="25" height="68" fill="#2f4a34"/></g><g><rect x="523" y="426" width="24" height="72" fill="#6b3a22"/><path d="M525 436h20M525 440h20M525 484h20" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="548" y="428" width="17" height="70" fill="#4a1a22"/></g><rect x="24" y="498" width="562" height="12" fill="#3a1f12"/><rect x="24" y="498" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="28" y="529" width="14" height="79" fill="#4a1a22"/><path d="M30 539h10M30 543h10M30 594h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="43" y="525" width="13" height="83" fill="#2f4a34"/></g><g><rect x="57" y="533" width="19" height="75" fill="#5a1a1a"/><path d="M59 543h15M59 547h15M59 594h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="77" y="520" width="13" height="88" fill="#6a4a1e"/></g><g><rect x="91" y="538" width="26" height="70" fill="#4a2e18"/></g><g><rect x="118" y="532" width="13" height="76" fill="#2e3a22"/></g><g><rect x="132" y="513" width="22" height="95" fill="#6a4a1e"/></g><g><rect x="155" y="535" width="17" height="73" fill="#1e2a2a"/></g><g transform="rotate(8 186 608)"><rect x="173" y="531" width="13" height="77" fill="#3a1a2a"/></g><g><rect x="196" y="536" width="24" height="72" fill="#2e3a22"/></g><g><rect x="221" y="524" width="25" height="84" fill="#5e4a2a"/><path d="M223 534h21M223 538h21M223 594h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="247" y="533" width="25" height="75" fill="#5a1a1a"/><path d="M249 543h21M249 547h21M249 594h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="273" y="512" width="16" height="96" fill="#5a1a1a"/></g><rect x="290" y="595" width="61" height="14" fill="#2f4a34"/><rect x="290" y="582" width="62" height="10" fill="#6a4a1e"/><rect x="290" y="569" width="55" height="12" fill="#2f4a34"/><rect x="290" y="556" width="52" height="11" fill="#2f4a34"/><g><rect x="364" y="529" width="22" height="79" fill="#4a2e18"/><path d="M366 539h18M366 543h18M366 594h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="387" y="518" width="17" height="90" fill="#6b3a22"/><path d="M389 528h13M389 532h13M389 594h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="405" y="538" width="22" height="70" fill="#6b3a22"/></g><rect x="428" y="595" width="53" height="13" fill="#4a1a22"/><rect x="428" y="582" width="63" height="10" fill="#1e2a2a"/><rect x="428" y="569" width="54" height="13" fill="#2a2a3a"/><rect x="428" y="556" width="52" height="14" fill="#3a1a2a"/><g><rect x="502" y="539" width="24" height="69" fill="#1e2a2a"/></g><g><rect x="527" y="522" width="14" height="86" fill="#1e2a2a"/><path d="M529 532h10M529 536h10M529 594h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="542" y="533" width="20" height="75" fill="#6a4a1e"/><path d="M544 543h16M544 547h16M544 594h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="563" y="533" width="13" height="75" fill="#4a1a22"/></g><rect x="24" y="608" width="562" height="12" fill="#3a1f12"/><rect x="24" y="608" width="562" height="2" fill="#8a5a36" opacity=".6"/><rect x="298" y="72" width="14" height="618" fill="#2a160c"/></g>
+        <g opacity=".9"><rect x="1000" y="50" width="590" height="640" fill="#2a160c"/><rect x="1014" y="72" width="562" height="618" fill="#120805"/><rect x="992" y="40" width="606" height="22" fill="#3a1f12"/><rect x="992" y="40" width="606" height="3" fill="#8a5a36"/><g><rect x="1018" y="88" width="24" height="80" fill="#5a1a1a"/></g><g><rect x="1060" y="96" width="17" height="72" fill="#5e4a2a"/></g><g><rect x="1078" y="88" width="15" height="80" fill="#23324a"/><path d="M1080 98h11M1080 102h11M1080 154h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1094" y="93" width="26" height="75" fill="#4a1a22"/></g><g><rect x="1121" y="87" width="16" height="81" fill="#1e2a2a"/><path d="M1123 97h12M1123 101h12M1123 154h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1138" y="87" width="13" height="81" fill="#4a2e18"/><path d="M1140 97h9M1140 101h9M1140 154h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1152" y="90" width="24" height="78" fill="#2a2a3a"/></g><g><rect x="1177" y="81" width="12" height="87" fill="#4a2e18"/></g><g><rect x="1190" y="77" width="19" height="91" fill="#4a2e18"/></g><g><rect x="1210" y="78" width="14" height="90" fill="#3a1a2a"/></g><g><rect x="1225" y="82" width="14" height="86" fill="#2e3a22"/><path d="M1227 92h10M1227 96h10M1227 154h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g transform="rotate(8 1254 168)"><rect x="1240" y="84" width="14" height="84" fill="#23324a"/></g><g><rect x="1264" y="98" width="25" height="70" fill="#2f4a34"/></g><g><rect x="1290" y="87" width="26" height="81" fill="#2e3a22"/></g><g transform="rotate(8 1342 168)"><rect x="1317" y="86" width="25" height="82" fill="#6a4a1e"/><path d="M1319 96h21M1319 100h21M1319 154h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1352" y="100" width="22" height="68" fill="#6b3a22"/><path d="M1354 110h18M1354 114h18M1354 154h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1375" y="72" width="14" height="96" fill="#6a4a1e"/><path d="M1377 82h10M1377 86h10M1377 154h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1390" y="81" width="19" height="87" fill="#2e3a22"/><path d="M1392 91h15M1392 95h15M1392 154h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1410" y="90" width="22" height="78" fill="#4a1a22"/></g><g><rect x="1433" y="88" width="22" height="80" fill="#5a1a1a"/></g><g><rect x="1456" y="84" width="16" height="84" fill="#2f4a34"/><path d="M1458 94h12M1458 98h12M1458 154h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1473" y="79" width="24" height="89" fill="#4a2e18"/><path d="M1475 89h20M1475 93h20M1475 154h20" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1498" y="85" width="26" height="83" fill="#2e3a22"/><path d="M1500 95h22M1500 99h22M1500 154h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1525" y="100" width="22" height="68" fill="#6a4a1e"/><path d="M1527 110h18M1527 114h18M1527 154h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1548" y="72" width="16" height="96" fill="#6a4a1e"/></g><rect x="1014" y="168" width="562" height="12" fill="#3a1f12"/><rect x="1014" y="168" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="1018" y="200" width="25" height="78" fill="#2f4a34"/></g><g><rect x="1044" y="190" width="22" height="88" fill="#23324a"/><path d="M1046 200h18M1046 204h18M1046 264h18" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1067" y="190" width="21" height="88" fill="#2f4a34"/><path d="M1069 200h17M1069 204h17M1069 264h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1089" y="199" width="18" height="79" fill="#2f4a34"/></g><g><rect x="1108" y="192" width="14" height="86" fill="#4a2e18"/></g><g><rect x="1123" y="183" width="17" height="95" fill="#1e2a2a"/></g><g><rect x="1141" y="187" width="17" height="91" fill="#4a2e18"/></g><g><rect x="1183" y="192" width="16" height="86" fill="#6b3a22"/><path d="M1185 202h12M1185 206h12M1185 264h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1200" y="203" width="24" height="75" fill="#2f4a34"/><path d="M1202 213h20M1202 217h20M1202 264h20" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1225" y="203" width="26" height="75" fill="#2a2a3a"/></g><g><rect x="1252" y="190" width="21" height="88" fill="#4a2e18"/><path d="M1254 200h17M1254 204h17M1254 264h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1274" y="183" width="25" height="95" fill="#4a2e18"/><path d="M1276 193h21M1276 197h21M1276 264h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1300" y="210" width="24" height="68" fill="#23324a"/></g><g><rect x="1325" y="210" width="17" height="68" fill="#3a1a2a"/></g><g><rect x="1343" y="208" width="23" height="70" fill="#4a2e18"/><path d="M1345 218h19M1345 222h19M1345 264h19" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1367" y="183" width="20" height="95" fill="#6a4a1e"/></g><g><rect x="1388" y="193" width="17" height="85" fill="#23324a"/></g><g><rect x="1406" y="201" width="26" height="77" fill="#4a2e18"/><path d="M1408 211h22M1408 215h22M1408 264h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1433" y="195" width="21" height="83" fill="#2f4a34"/><path d="M1435 205h17M1435 209h17M1435 264h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1455" y="182" width="26" height="96" fill="#4a1a22"/></g><g><rect x="1482" y="200" width="26" height="78" fill="#5e4a2a"/></g><g><rect x="1529" y="208" width="12" height="70" fill="#2a2a3a"/></g><g><rect x="1542" y="208" width="20" height="70" fill="#6a4a1e"/></g><rect x="1014" y="278" width="562" height="12" fill="#3a1f12"/><rect x="1014" y="278" width="562" height="2" fill="#8a5a36" opacity=".6"/><rect x="1018" y="375" width="56" height="13" fill="#6b3a22"/><rect x="1018" y="362" width="55" height="13" fill="#3a1a2a"/><g><rect x="1092" y="293" width="21" height="95" fill="#2e3a22"/><path d="M1094 303h17M1094 307h17M1094 374h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1114" y="308" width="26" height="80" fill="#2e3a22"/><path d="M1116 318h22M1116 322h22M1116 374h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1141" y="292" width="26" height="96" fill="#2a2a3a"/><path d="M1143 302h22M1143 306h22M1143 374h22" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1168" y="312" width="12" height="76" fill="#5a1a1a"/></g><g><rect x="1181" y="303" width="18" height="85" fill="#3a1a2a"/><path d="M1183 313h14M1183 317h14M1183 374h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1200" y="315" width="13" height="73" fill="#2f4a34"/><path d="M1202 325h9M1202 329h9M1202 374h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1214" y="307" width="12" height="81" fill="#2e3a22"/></g><g><rect x="1227" y="310" width="22" height="78" fill="#4a2e18"/></g><g><rect x="1250" y="301" width="25" height="87" fill="#3a1a2a"/><path d="M1252 311h21M1252 315h21M1252 374h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1276" y="302" width="15" height="86" fill="#2e3a22"/><path d="M1278 312h11M1278 316h11M1278 374h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="1292" y="375" width="56" height="10" fill="#2a2a3a"/><rect x="1292" y="362" width="70" height="13" fill="#5a1a1a"/><rect x="1292" y="349" width="61" height="11" fill="#2e3a22"/><rect x="1292" y="336" width="61" height="10" fill="#3a1a2a"/><g><rect x="1366" y="294" width="19" height="94" fill="#6b3a22"/><path d="M1368 304h15M1368 308h15M1368 374h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1386" y="315" width="21" height="73" fill="#5a1a1a"/><path d="M1388 325h17M1388 329h17M1388 374h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1408" y="307" width="17" height="81" fill="#23324a"/></g><g><rect x="1426" y="316" width="15" height="72" fill="#6a4a1e"/></g><rect x="1442" y="375" width="63" height="13" fill="#5a1a1a"/><rect x="1442" y="362" width="57" height="14" fill="#4a2e18"/><rect x="1442" y="349" width="69" height="11" fill="#4a2e18"/><g><rect x="1516" y="302" width="12" height="86" fill="#2f4a34"/></g><g><rect x="1529" y="295" width="16" height="93" fill="#1e2a2a"/><path d="M1531 305h12M1531 309h12M1531 374h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1546" y="308" width="24" height="80" fill="#1e2a2a"/><path d="M1548 318h20M1548 322h20M1548 374h20" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="1014" y="388" width="562" height="12" fill="#3a1f12"/><rect x="1014" y="388" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="1018" y="410" width="23" height="88" fill="#4a2e18"/></g><g><rect x="1042" y="407" width="16" height="91" fill="#6a4a1e"/></g><g><rect x="1059" y="416" width="21" height="82" fill="#4a2e18"/></g><g><rect x="1081" y="424" width="15" height="74" fill="#23324a"/><path d="M1083 434h11M1083 438h11M1083 484h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1097" y="403" width="19" height="95" fill="#2a2a3a"/></g><g><rect x="1140" y="407" width="18" height="91" fill="#5e4a2a"/><path d="M1142 417h14M1142 421h14M1142 484h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1159" y="427" width="15" height="71" fill="#6a4a1e"/><path d="M1161 437h11M1161 441h11M1161 484h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1175" y="404" width="14" height="94" fill="#5a1a1a"/></g><g><rect x="1190" y="403" width="12" height="95" fill="#6b3a22"/><path d="M1192 413h8M1192 417h8M1192 484h8" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1203" y="421" width="26" height="77" fill="#3a1a2a"/></g><g><rect x="1230" y="406" width="20" height="92" fill="#4a1a22"/><path d="M1232 416h16M1232 420h16M1232 484h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1251" y="413" width="14" height="85" fill="#23324a"/><path d="M1253 423h10M1253 427h10M1253 484h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1266" y="408" width="20" height="90" fill="#6a4a1e"/></g><g><rect x="1287" y="415" width="19" height="83" fill="#4a2e18"/></g><g transform="rotate(8 1322 498)"><rect x="1307" y="413" width="15" height="85" fill="#2e3a22"/><path d="M1309 423h11M1309 427h11M1309 484h11" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g transform="rotate(8 1349 498)"><rect x="1332" y="428" width="17" height="70" fill="#5e4a2a"/><path d="M1334 438h13M1334 442h13M1334 484h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1359" y="409" width="19" height="89" fill="#6a4a1e"/><path d="M1361 419h15M1361 423h15M1361 484h15" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1379" y="414" width="14" height="84" fill="#4a1a22"/></g><g><rect x="1394" y="431" width="14" height="67" fill="#6a4a1e"/></g><g><rect x="1409" y="416" width="23" height="82" fill="#6a4a1e"/><path d="M1411 426h19M1411 430h19M1411 484h19" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1433" y="427" width="20" height="71" fill="#1e2a2a"/><path d="M1435 437h16M1435 441h16M1435 484h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1454" y="413" width="25" height="85" fill="#6b3a22"/><path d="M1456 423h21M1456 427h21M1456 484h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1480" y="410" width="15" height="88" fill="#5a1a1a"/></g><g><rect x="1496" y="428" width="14" height="70" fill="#2e3a22"/></g><g><rect x="1532" y="428" width="20" height="70" fill="#2f4a34"/><path d="M1534 438h16M1534 442h16M1534 484h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1553" y="431" width="13" height="67" fill="#4a1a22"/></g><rect x="1014" y="498" width="562" height="12" fill="#3a1f12"/><rect x="1014" y="498" width="562" height="2" fill="#8a5a36" opacity=".6"/><g><rect x="1018" y="533" width="15" height="75" fill="#6a4a1e"/></g><g><rect x="1034" y="513" width="13" height="95" fill="#4a2e18"/><path d="M1036 523h9M1036 527h9M1036 594h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1048" y="536" width="21" height="72" fill="#5a1a1a"/></g><g><rect x="1070" y="532" width="23" height="76" fill="#5e4a2a"/></g><g><rect x="1094" y="537" width="26" height="71" fill="#6b3a22"/></g><g><rect x="1121" y="517" width="18" height="91" fill="#5a1a1a"/><path d="M1123 527h14M1123 531h14M1123 594h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1140" y="517" width="20" height="91" fill="#23324a"/><path d="M1142 527h16M1142 531h16M1142 594h16" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1161" y="533" width="24" height="75" fill="#6b3a22"/></g><g><rect x="1186" y="527" width="25" height="81" fill="#4a2e18"/><path d="M1188 537h21M1188 541h21M1188 594h21" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1234" y="523" width="16" height="85" fill="#5a1a1a"/></g><g><rect x="1251" y="513" width="21" height="95" fill="#4a1a22"/><path d="M1253 523h17M1253 527h17M1253 594h17" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1273" y="519" width="14" height="89" fill="#3a1a2a"/><path d="M1275 529h10M1275 533h10M1275 594h10" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1288" y="542" width="13" height="66" fill="#3a1a2a"/><path d="M1290 552h9M1290 556h9M1290 594h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1302" y="532" width="18" height="76" fill="#6a4a1e"/><path d="M1304 542h14M1304 546h14M1304 594h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="1321" y="595" width="59" height="13" fill="#5a1a1a"/><rect x="1321" y="582" width="58" height="11" fill="#2a2a3a"/><rect x="1321" y="569" width="56" height="10" fill="#4a2e18"/><g><rect x="1395" y="527" width="18" height="81" fill="#2a2a3a"/><path d="M1397 537h14M1397 541h14M1397 594h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1414" y="519" width="17" height="89" fill="#6b3a22"/><path d="M1416 529h13M1416 533h13M1416 594h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1432" y="525" width="16" height="83" fill="#2e3a22"/><path d="M1434 535h12M1434 539h12M1434 594h12" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1449" y="535" width="17" height="73" fill="#2f4a34"/><path d="M1451 545h13M1451 549h13M1451 594h13" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1467" y="515" width="12" height="93" fill="#5a1a1a"/><path d="M1469 525h8M1469 529h8M1469 594h8" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1503" y="513" width="13" height="95" fill="#4a2e18"/><path d="M1505 523h9M1505 527h9M1505 594h9" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><g><rect x="1517" y="515" width="24" height="93" fill="#3a1a2a"/></g><g><rect x="1542" y="539" width="18" height="69" fill="#1e2a2a"/><path d="M1544 549h14M1544 553h14M1544 594h14" stroke="#c9993f" stroke-opacity=".55" stroke-width="1.2"/></g><rect x="1014" y="608" width="562" height="12" fill="#3a1f12"/><rect x="1014" y="608" width="562" height="2" fill="#8a5a36" opacity=".6"/><rect x="1288" y="72" width="14" height="618" fill="#2a160c"/></g>
+        <rect x="600" y="0" width="400" height="900" fill="#24140a"/>
+        <rect x="600" y="430" width="400" height="470" fill="#1a0d06"/>
+
+        <!-- окно: ночной город под дождём -->
+        <g clip-path="url(#nk-winclip)">
+          <rect x="650" y="70" width="300" height="370" fill="url(#nk-sky)"/>
+          <g fill="#0e1422" opacity=".9"><ellipse cx="720" cy="140" rx="90" ry="26"/><ellipse cx="880" cy="120" rx="110" ry="30"/><ellipse cx="800" cy="200" rx="140" ry="24"/></g>
+          <rect x="650" y="319" width="36" height="111" fill="#0a0e18"/><rect class="nk-win" x="664" y="341" width="4" height="6" fill="#ffd27a" style="animation-delay:-4.8s"/><rect class="nk-win" x="664" y="355" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.7s"/><rect class="nk-win" x="674" y="355" width="4" height="6" fill="#ffd27a" style="animation-delay:-3.2s"/><rect class="nk-win" x="654" y="411" width="4" height="6" fill="#ffd27a" style="animation-delay:-0.2s"/><rect x="692" y="349" width="36" height="81" fill="#0a0e18"/><rect x="728" y="377" width="40" height="53" fill="#0a0e18"/><rect class="nk-win" x="752" y="399" width="4" height="6" fill="#ffd27a" style="animation-delay:-1.3s"/><rect x="771" y="381" width="35" height="49" fill="#0a0e18"/><rect class="nk-win" x="785" y="389" width="4" height="6" fill="#ffd27a" style="animation-delay:-4.0s"/><rect class="nk-win" x="785" y="403" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.5s"/><rect class="nk-win" x="775" y="417" width="4" height="6" fill="#ffd27a" style="animation-delay:-4.2s"/><rect class="nk-win" x="785" y="417" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.8s"/><rect x="811" y="366" width="39" height="64" fill="#0a0e18"/><rect class="nk-win" x="825" y="374" width="4" height="6" fill="#ffd27a" style="animation-delay:-4.4s"/><rect class="nk-win" x="835" y="374" width="4" height="6" fill="#ffd27a" style="animation-delay:-3.9s"/><rect class="nk-win" x="815" y="388" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.5s"/><rect class="nk-win" x="825" y="388" width="4" height="6" fill="#ffd27a" style="animation-delay:-1.6s"/><rect class="nk-win" x="815" y="416" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.4s"/><rect x="850" y="372" width="23" height="58" fill="#0a0e18"/><rect class="nk-win" x="854" y="380" width="4" height="6" fill="#ffd27a" style="animation-delay:-1.5s"/><rect class="nk-win" x="854" y="408" width="4" height="6" fill="#ffd27a" style="animation-delay:-0.5s"/><rect x="875" y="332" width="41" height="98" fill="#0a0e18"/><rect class="nk-win" x="879" y="340" width="4" height="6" fill="#ffd27a" style="animation-delay:-3.5s"/><rect class="nk-win" x="899" y="340" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.3s"/><rect class="nk-win" x="879" y="368" width="4" height="6" fill="#ffd27a" style="animation-delay:-3.8s"/><rect class="nk-win" x="889" y="382" width="4" height="6" fill="#ffd27a" style="animation-delay:-0.3s"/><rect class="nk-win" x="899" y="382" width="4" height="6" fill="#ffd27a" style="animation-delay:-3.1s"/><rect x="917" y="329" width="29" height="101" fill="#0a0e18"/><rect class="nk-win" x="931" y="365" width="4" height="6" fill="#ffd27a" style="animation-delay:-0.1s"/><rect class="nk-win" x="921" y="393" width="4" height="6" fill="#ffd27a" style="animation-delay:-1.1s"/><rect class="nk-win" x="931" y="407" width="4" height="6" fill="#ffd27a" style="animation-delay:-2.2s"/>
+          <g class="nk-rain"><rect x="560" y="-160" width="480" height="720" fill="url(#nk-rain)"/></g>
+          <rect class="nk-winflash" x="650" y="70" width="300" height="370" fill="#e4ecff" opacity="0"/>
+          <path class="nk-drop" d="M690 120q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-5.1s; animation-duration:7.1s"/><path class="nk-drop" d="M730 200q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-6.6s; animation-duration:7.4s"/><path class="nk-drop" d="M780 150q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-6.5s; animation-duration:6.9s"/><path class="nk-drop" d="M838 230q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-2.5s; animation-duration:6.2s"/><path class="nk-drop" d="M880 130q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-0.2s; animation-duration:7.4s"/><path class="nk-drop" d="M910 260q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-0.5s; animation-duration:5.3s"/><path class="nk-drop" d="M760 290q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-2.2s; animation-duration:5.5s"/><path class="nk-drop" d="M700 330q-2 6 0 9q2 -3 0 -9Z" fill="#cfe0ff" fill-opacity=".55" style="animation-delay:-0.5s; animation-duration:6.8s"/>
+        </g>
+        <path d="M658 430V182Q658 78 800 78Q942 78 942 182V430Z" fill="none" stroke="#3a1f12" stroke-width="16"/>
+        <path d="M800 80V430M658 250H942" stroke="#3a1f12" stroke-width="10"/>
+        <rect x="636" y="428" width="328" height="18" fill="#4a2a16"/><rect x="636" y="428" width="328" height="3" fill="#8a5a36"/>
+        <rect x="604" y="48" width="392" height="8" rx="4" fill="url(#nk-brass)"/>
+        <path d="M612 56H690C686 160 700 300 676 470H612Z" fill="url(#nk-velvet)"/>
+        <path d="M988 56H910C914 160 900 300 924 470H988Z" fill="url(#nk-velvet)"/>
+        <path d="M612 300Q650 292 690 300" stroke="url(#nk-brass)" stroke-width="5" fill="none"/><path d="M910 300Q950 292 988 300" stroke="url(#nk-brass)" stroke-width="5" fill="none"/>
+
+        <!-- лестница и гость, который ищет книгу -->
+        <g class="nk-ladder"><g transform="translate(330 0)">
+          <path d="M0 66L70 680M44 66L114 680" stroke="#5a3a22" stroke-width="7"/>
+          <g stroke="#5a3a22" stroke-width="5"><path d="M3.9 118H49.9"/><path d="M9.9 170H55.9"/><path d="M15.8 222H61.8"/><path d="M21.7 274H67.7"/><path d="M27.6 326H73.6"/><path d="M33.6 378H79.6"/><path d="M39.5 430H85.5"/><path d="M45.4 482H91.4"/><path d="M51.4 534H97.4"/><path d="M57.3 586H103.3"/><path d="M63.2 638H109.2"/></g>
+          <circle cx="0" cy="66" r="6" fill="url(#nk-brass)"/><circle cx="44" cy="66" r="6" fill="url(#nk-brass)"/>
+          <g transform="translate(64 0)">
+            <path d="M-6 430L-14 344H10L14 430Z" fill="#1d1614"/><path d="M14 430L18 350H-2Z" fill="#1a1412"/>
+            <path d="M-18 430H6" stroke="#0a0606" stroke-width="7" stroke-linecap="round"/>
+            <path d="M-26 346Q-28 286 -14 264H14Q30 284 26 346Z" fill="#2a2420" stroke="#ffb070" stroke-opacity=".25"/>
+            <path d="M-8 266L0 300L8 266" fill="#d9ccb0"/>
+            <circle cx="0" cy="242" r="20" fill="#6a4236"/><path d="M-20 238Q-20 218 0 218Q20 218 20 236Q8 226 -2 226Q-14 228 -20 238Z" fill="#2a1a10"/>
+            <path d="M-22 290Q-30 330 -12 352" stroke="#d9ccb0" stroke-width="10" fill="none" stroke-linecap="round"/>
+            <g class="nk-reach"><path d="M18 272L34 214L22 150" stroke="#d9ccb0" stroke-width="10" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="22" cy="146" r="7" fill="#6a4236"/><rect x="12" y="112" width="18" height="34" fill="#2f4a34"/><rect x="12" y="112" width="18" height="4" fill="#c9993f"/></g>
+          </g>
+        </g></g>
+
+        <!-- письменный стол у окна и девушка, которая пишет письмо -->
+        <g transform="translate(70 0)">
+        <ellipse class="nk-lamplight" cx="930" cy="520" rx="240" ry="160" fill="url(#nk-lamp)"/>
+        <g transform="translate(822 0)">
+          <path d="M-30 520V676M30 520V676" stroke="#3a1f12" stroke-width="8"/><path d="M-30 540H30M-30 580H30" stroke="#3a1f12" stroke-width="5"/>
+          <g class="nk-writer">
+            <path d="M-42 562Q-46 482 -20 462H20Q46 482 42 562Z" fill="#5a1622" stroke="#ffcf8a" stroke-opacity=".25"/>
+            <path d="M-38 500Q0 520 38 500" stroke="#3a0a12" stroke-width="3" fill="none"/>
+            <g class="nk-head"><rect x="-8" y="440" width="16" height="22" fill="#6a4236"/><circle cx="0" cy="428" r="22" fill="#2a160e"/><circle cx="0" cy="404" r="12" fill="#2a160e"/><path d="M-6 400L8 396" stroke="#c9993f" stroke-width="2"/></g>
+            <path d="M-38 476Q-56 510 -40 540" stroke="#5a1622" stroke-width="12" fill="none" stroke-linecap="round"/>
+            <g class="nk-pen"><path d="M38 476Q58 510 46 542" stroke="#5a1622" stroke-width="12" fill="none" stroke-linecap="round"/><circle cx="46" cy="546" r="6" fill="#6a4236"/><path d="M48 548L64 520" stroke="#f2e8cf" stroke-width="2"/></g>
+          </g>
+        </g>
+        <rect x="684" y="550" width="276" height="16" rx="2" fill="#4a2a16"/><rect x="684" y="550" width="276" height="3" fill="#8a5a36"/>
+        <rect x="694" y="566" width="256" height="110" fill="#2e180c"/><path d="M710 580H934V664H710Z" fill="none" stroke="#000" stroke-opacity=".35" stroke-width="2"/>
+        <g transform="translate(930 550)">
+          <rect x="-18" y="-6" width="36" height="6" rx="2" fill="url(#nk-brass)"/><rect x="-3" y="-52" width="6" height="46" fill="url(#nk-brass)"/>
+          <path d="M-34 -50Q0 -78 34 -50Z" fill="#1f5a3a" stroke="#2f7a52"/><ellipse cy="-50" rx="34" ry="5" fill="#ffe2a0" opacity=".9"/>
+        </g>
+        <path d="M878 548L902 548L900 536L880 536Z" fill="#14100e"/><path d="M890 536L904 506" stroke="#efe6d2" stroke-width="2"/>
+        <g transform="translate(722 550)"><rect x="-22" y="-12" width="44" height="12" fill="#2f4a34"/><rect x="-18" y="-22" width="38" height="10" fill="#5a1a1a"/><rect x="-20" y="-31" width="40" height="9" fill="#23324a"/></g>
+        <path d="M790 548L846 544L848 550L792 552Z" fill="#efe6d2"/>
+
+        </g>
+        <!-- глобус -->
+        <g id="nk-globe" class="hot" role="button" tabindex="0" aria-label="Покрутить глобус" transform="translate(250 0)">
+          <rect class="hl" x="1092" y="438" width="156" height="250" rx="10" fill="#000" fill-opacity="0" stroke="#e2b866" stroke-width="3"/>
+          <path d="M1170 600L1124 684M1170 600L1216 684M1170 600V690" stroke="#4a2a16" stroke-width="8" stroke-linecap="round"/>
+          <rect x="1162" y="582" width="16" height="24" fill="url(#nk-brass)"/>
+          <g transform="rotate(-23 1170 520)">
+            <circle cx="1170" cy="520" r="62" fill="url(#nk-ocean)"/>
+            <g clip-path="url(#nk-globeclip)"><g id="nk-land" transform="translate(1108 478)"><path d="M20 40C40 20 80 24 90 44C100 64 80 80 60 76C40 72 10 60 20 40ZM70 90C84 86 96 100 92 120C88 140 76 150 66 138C58 124 58 96 70 90ZM140 30C170 20 210 30 220 50C214 70 190 66 176 80C160 92 136 76 134 60C132 46 130 36 140 30ZM190 96C206 92 220 104 214 120C206 136 190 130 186 118C184 108 182 100 190 96ZM260 50C280 40 300 46 304 62C300 80 282 84 268 78C256 70 250 58 260 50ZM320 100C340 96 356 112 350 128C344 140 326 138 320 126C316 116 312 104 320 100Z" fill="#6a7a3a"/><g transform="translate(400 0)"><path d="M20 40C40 20 80 24 90 44C100 64 80 80 60 76C40 72 10 60 20 40ZM70 90C84 86 96 100 92 120C88 140 76 150 66 138C58 124 58 96 70 90ZM140 30C170 20 210 30 220 50C214 70 190 66 176 80C160 92 136 76 134 60C132 46 130 36 140 30ZM190 96C206 92 220 104 214 120C206 136 190 130 186 118C184 108 182 100 190 96ZM260 50C280 40 300 46 304 62C300 80 282 84 268 78C256 70 250 58 260 50ZM320 100C340 96 356 112 350 128C344 140 326 138 320 126C316 116 312 104 320 100Z" fill="#6a7a3a"/></g></g></g>
+            <circle cx="1170" cy="520" r="62" fill="none" stroke="#c9b48a" stroke-opacity=".4"/>
+            <ellipse cx="1150" cy="496" rx="22" ry="14" fill="#fff" opacity=".12"/>
+            <path d="M1170 448A72 72 0 0 1 1170 592" stroke="url(#nk-brass)" stroke-width="7" fill="none"/>
+          </g>
+        </g>
+      </svg>
+      <div class="nk-flash"></div>
       <div class="table-ext"></div>
       <div class="art-box">
         <svg class="art-svg" viewBox="0 0 1000 560" aria-hidden="true" focusable="false">
@@ -470,12 +664,36 @@
           <path d="M502 388L890 420L920 546L502 528Z" fill="url(#pgR)"/>
           <g id="lines-l" stroke="rgba(60,40,20,.5)" stroke-width="1.2"></g>
           <g id="lines-r" stroke="rgba(60,40,20,.5)" stroke-width="1.2"></g>
+          <text x="300" y="440" text-anchor="middle" font-family="Forum, Georgia, serif" font-size="20" fill="#5a3a1e" transform="rotate(-4 300 440)">Книга рецептов</text>
+          <g transform="translate(700 488) rotate(-6)" fill="none" stroke="#2a1a10" stroke-width="3">
+            <circle cx="-26" cy="0" r="20" fill="#fff" fill-opacity=".12"/><circle cx="26" cy="0" r="20" fill="#fff" fill-opacity=".12"/>
+            <path d="M-6 -2Q0 -8 6 -2M-46 -4L-70 -14M46 -4L70 -14"/></g>
+          <g transform="translate(150 300) rotate(-8)">
+            <rect x="-6" y="0" width="150" height="92" rx="2" fill="#efe2c4" stroke="#b89a6a"/>
+            <path d="M-6 0L69 50L144 0" fill="none" stroke="#b89a6a" stroke-width="1.5"/>
+            <circle cx="69" cy="50" r="13" fill="#8a1424"/><circle cx="69" cy="50" r="8" fill="none" stroke="#5a0c18" stroke-width="2"/>
+            <text x="69" y="80" text-anchor="middle" font-family="'Segoe Script','Bradley Hand','Brush Script MT',cursive" font-size="11" fill="#2a2a5a">Hacheden, 1925</text>
+          </g>
+          <g transform="translate(944 360)">
+            <path d="M-20 0H20L24 30Q24 36 18 36H-18Q-24 36 -24 30Z" fill="#14100e" stroke="#c9b48a" stroke-opacity=".5"/>
+            <rect x="-10" y="-8" width="20" height="9" fill="url(#cover)"/>
+            <path d="M0 -4C10 -40 30 -80 56 -110C40 -70 24 -40 4 -2Z" fill="#efe6d2" stroke="#c9b48a" stroke-opacity=".6"/>
+          </g>
+          <g class="moth" transform="translate(505 150)"><g class="moth-fly">
+            <path class="wing" d="M0 0C-8 -8 -16 -6 -14 2C-12 6 -4 4 0 0ZM0 0C8 -8 16 -6 14 2C12 6 4 4 0 0Z" fill="#cdbb9a"/>
+            <ellipse cx="0" cy="1" rx="2" ry="5" fill="#6a5a44"/></g></g>
         </svg>
         <div class="nook-glow"></div>
         <button class="candle-btn" id="candle" type="button" aria-label="Задуть свечу"></button>
+        <button class="book-btn" id="open-book" type="button" aria-label="Открыть книгу рецептов"></button>
+        <button class="letter-btn" id="letter" type="button" aria-label="Прочитать письмо"></button>
       </div>
       <div class="nook-dark"></div>
-      <p class="room-note">Нажми на свечу</p>
+      <p class="room-note">Открой книгу рецептов, задуй свечу или прочти письмо</p>
+      <div class="sm-actions">
+        <button class="sm-act" type="button" data-nk="book">Книга рецептов</button>
+        <button class="sm-act" type="button" data-nk="letter">Письмо</button>
+      </div>
     </section>
 
     <!-- ===== Бар ===== -->
@@ -836,7 +1054,7 @@
       <div class="art-box">
         <svg class="art-svg" viewBox="0 0 1000 560" aria-hidden="true" focusable="false">
           <defs>
-            <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d3a8"/><stop offset="1" stop-color="#c4a97a"/></linearGradient>
+            <linearGradient id="paperg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6d3a8"/><stop offset="1" stop-color="#c4a97a"/></linearGradient>
             <pattern id="cut" width="26" height="26" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
               <path d="M0 0H26M0 0V26" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
             </pattern>
@@ -849,7 +1067,7 @@
           </g>
           <path d="M90 300H230L220 430Q219 442 207 442H113Q101 442 100 430Z" fill="none" stroke="rgba(255,235,200,.6)" stroke-width="1.8"/>
           <g transform="rotate(-5 420 470)">
-            <path d="M230 392L262 372L290 388L322 366L352 384L386 364L420 382L452 368L486 386L520 372L556 390L572 548L214 556Z" fill="url(#paper)"/>
+            <path d="M230 392L262 372L290 388L322 366L352 384L386 364L420 382L452 368L486 386L520 372L556 390L572 548L214 556Z" fill="url(#paperg)"/>
             <text x="396" y="424" text-anchor="middle" font-family="Forum, Georgia, serif" font-size="17" font-weight="700" fill="#2a1d10">ПОДПОЛЬНЫЕ БАРЫ НЬЮ-ЙОРКА</text>
             <text x="396" y="442" text-anchor="middle" font-family="Georgia, serif" font-size="11.5" font-style="italic" fill="#3a2a1a">Сухой закон: проверки усиливаются</text>
             <rect x="250" y="454" width="150" height="70" fill="#6b5a45"/>
@@ -937,6 +1155,20 @@
 </main>
 
 <dialog class="card" id="card" aria-labelledby="card-title"></dialog>
+<dialog class="book" id="book" aria-label="Книга рецептов">
+  <div class="book-wrap">
+    <button class="close book-close" type="button" aria-label="Закрыть книгу" data-book-close>×</button>
+    <div class="book-stage" id="book-stage">
+      <div class="page left" id="book-l"></div>
+      <div class="page right" id="book-r"></div>
+    </div>
+    <div class="book-nav">
+      <button class="book-arrow" type="button" data-turn="-1" aria-label="Предыдущая страница">‹</button>
+      <span id="book-pos"></span>
+      <button class="book-arrow" type="button" data-turn="1" aria-label="Следующая страница">›</button>
+    </div>
+  </div>
+</dialog>
 <dialog class="mix" id="mix" aria-labelledby="mix-title">
   <div class="mix-inner">
     <div class="mix-top">
@@ -1398,7 +1630,7 @@
   candle.addEventListener("click", () => {
     const out = nook.classList.toggle("unlit");
     candle.setAttribute("aria-label", out ? "Зажечь свечу" : "Задуть свечу");
-    nook.querySelector(".room-note").textContent = out ? "Нажми на свечу ещё раз, чтобы зажечь" : "Нажми на свечу";
+    nook.querySelector(".room-note").textContent = out ? "Нажми на свечу, чтобы снова её зажечь" : "Открой книгу рецептов, задуй свечу или прочти письмо";
   });
 
   /* ---------- курилка: газета ---------- */
@@ -1503,7 +1735,7 @@
 
   const Music = (() => {
     const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null;
+    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null;
     const roomFreq = () => roomIdx === 1 ? 3400 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
@@ -1540,6 +1772,13 @@
       const fsrc = ctx.createBufferSource(), flp = ctx.createBiquadFilter();
       fsrc.buffer = fb; fsrc.loop = true; flp.type = "lowpass"; flp.frequency.value = 3200;
       fsrc.connect(flp).connect(fire).connect(master); fsrc.start();
+      // дождь за окном читальни
+      rain = ctx.createGain(); rain.gain.value = roomIdx === 0 ? .32 : 0;
+      const rb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), rd = rb.getChannelData(0);
+      for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07);
+      const rsrc = ctx.createBufferSource(), rbp = ctx.createBiquadFilter();
+      rsrc.buffer = rb; rsrc.loop = true; rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
+      rsrc.connect(rbp).connect(rain).connect(master); rsrc.start();
       return true;
     }
     function tick() {
@@ -1577,6 +1816,7 @@
       if (ctx) {
         tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
         fire.gain.setTargetAtTime(roomIdx === 2 ? .5 : 0, ctx.currentTime, .6);
+        rain.gain.setTargetAtTime(roomIdx === 0 ? .32 : 0, ctx.currentTime, .6);
       }
     }
     document.addEventListener("visibilitychange", () => {
@@ -1609,7 +1849,21 @@
         src.start(t, Math.random() * .08, .1);
       }
     }
-    return { start, stop, room, beat, shake, get on() { return on; } };
+    // далёкий раскат грома
+    function thunder() {
+      if (!ctx || !on) return;
+      const len = ctx.sampleRate * 3.2, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
+      let v = 0;
+      for (let i = 0; i < len; i++) {
+        v = v * .985 + (Math.random() * 2 - 1) * .15;
+        const k = i / len;
+        d[i] = v * Math.min(1, k * 14) * Math.pow(1 - k, 1.6) * (1 + .6 * Math.sin(k * 23));
+      }
+      const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
+      src.buffer = b; lp.type = "lowpass"; lp.frequency.value = 260; g.gain.value = 1.4;
+      src.connect(lp).connect(g).connect(master); src.start();
+    }
+    return { start, stop, room, beat, shake, thunder, get on() { return on; } };
   })();
 
   const musicBtn = document.getElementById("music");
@@ -2009,6 +2263,185 @@
       if (!room.classList.contains("peek")) return;
       setTimeout(() => { room.classList.remove("peek"); doorBusy = false; }, 400);
     });
+  })();
+
+  /* ---------- читальня: молнии, глобус, письмо ---------- */
+  const JAZZ_STORY = {
+    name: "Век джаза",
+    tagline: "Письмо, забытое между книгами",
+    facts: [["Время", "1920-е"], ["Где", "США и Европа"]],
+    sections: [
+      ["Откуда название", "Выражение «век джаза» прославил писатель Фрэнсис Скотт Фицджеральд: в 1922 году вышел его сборник рассказов «Сказки века джаза». Так стали называть всё десятилетие с его музыкой, танцами и вечеринками."],
+      ["«Великий Гэтсби»", "В 1925 году Фицджеральд опубликовал роман «Великий Гэтсби». Его герой, как намекает автор, разбогател на подпольной торговле алкоголем, а пышные вечеринки в его особняке стали символом эпохи."],
+      ["Музыка подпольных баров", "Во многих спикизи играл живой джаз. Под него танцевали, пили запрещённые коктейли и спорили о книгах до утра."]
+    ]
+  };
+  const Reading = (() => {
+    const room = document.getElementById("room-nook"), land = document.getElementById("nk-land");
+    const globe = document.getElementById("nk-globe");
+    let active = false, flashT = 0, raf = 0, ang = 0, speed = .02, last = 0;
+    const still = reduceMotion.matches;
+    function flash() {
+      room.classList.remove("flash");
+      void room.offsetWidth;
+      room.classList.add("flash");
+      setTimeout(() => Music.thunder(), 500 + Math.random() * 1200);
+      flashT = setTimeout(flash, 9000 + Math.random() * 12000);
+    }
+    function spin(t) {
+      const dt = last ? Math.min(64, t - last) : 16;
+      last = t;
+      speed += (.02 - speed) * .012 * dt / 16;
+      ang = (ang + speed * dt) % 400;
+      land.setAttribute("transform", `translate(${(1108 - ang).toFixed(1)} 478)`);
+      raf = requestAnimationFrame(spin);
+    }
+    function setActive(on) {
+      if (on === active) return;
+      active = on;
+      if (still) return;
+      if (on) { flashT = setTimeout(flash, 3000 + Math.random() * 4000); last = 0; raf = requestAnimationFrame(spin); }
+      else { clearTimeout(flashT); cancelAnimationFrame(raf); raf = 0; }
+    }
+    const act = (el, fn) => {
+      el.addEventListener("click", fn);
+      el.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } });
+    };
+    act(globe, () => { speed = .9; });
+    document.getElementById("letter").addEventListener("click", () => openCard(JAZZ_STORY));
+    document.getElementById("open-book").addEventListener("click", () => Book.open());
+    room.querySelectorAll("[data-nk]").forEach(b => b.addEventListener("click", () => {
+      if (b.dataset.nk === "book") Book.open(); else openCard(JAZZ_STORY);
+    }));
+    return { setActive };
+  })();
+
+  /* ---------- книга рецептов: перелистывается как настоящая ---------- */
+  const Book = (() => {
+    const bookDlg = document.getElementById("book"), stage = document.getElementById("book-stage");
+    const L = document.getElementById("book-l"), R = document.getElementById("book-r"), pos = document.getElementById("book-pos");
+    const prevB = bookDlg.querySelector('[data-turn="-1"]'), nextB = bookDlg.querySelector('[data-turn="1"]');
+    const wide = matchMedia("(min-width: 760px)");
+    const ORN = `<svg class="orn" viewBox="0 0 160 20" aria-hidden="true"><path d="M0 10H60M100 10H160" stroke="#a08a64"/><path d="M80 2L88 10L80 18L72 10Z" fill="#6b0f22"/><circle cx="64" cy="10" r="2" fill="#a08a64"/><circle cx="96" cy="10" r="2" fill="#a08a64"/></svg>`;
+    let pages = [], i = 0, turning = false, n = 0;
+    function build() {
+      const first = 2;
+      const toc = BASES.map(([base, title]) => {
+        const list = COCKTAILS.filter(c => c.base === base);
+        if (!list.length) return "";
+        return `<p class="toc-h">${title}</p><ul class="toc">${list.map(c => {
+          const k = COCKTAILS.indexOf(c), pg = first + k * 2;
+          return `<li><button type="button" data-go="${pg}">${c.name}</button><span class="dots"></span><span>${pg + 1}</span></li>`;
+        }).join("")}</ul>`;
+      }).join("");
+      pages = [
+        `<div class="pg pg-title">${ORN}<div class="big">Hacheden</div><h3>Книга рецептов</h3>${ORN}
+          <p class="tag">Шестнадцать классических коктейлей,<br>их истории и рецепты</p></div>`,
+        `<div class="pg"><h2>Содержание</h2>${toc}</div>`
+      ];
+      COCKTAILS.forEach(c => {
+        pages.push(`<div class="pg"><h2>${c.name}</h2><p class="tag">${c.tagline}</p>
+          <div class="pg-glass">${glassSVG(c, { pre: "bk" + (n++) + "-", still: true })}</div>
+          <dl>${c.facts.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+          <h3>История</h3><p>${c.history}</p></div>`);
+        pages.push(`<div class="pg"><h3>Рецепт</h3><ul>${c.recipe.map(([a, b]) => `<li><b>${a}</b> ${b}</li>`).join("")}</ul>
+          <h3>Как готовить</h3><p>${c.steps}</p>
+          <button class="cook" type="button" data-cook="${c.id}">Приготовить у стойки</button></div>`);
+      });
+    }
+    const page = k => pages[k] ? pages[k] + `<span class="pg-num">${k + 1}</span>` : "";
+    const stepSize = () => wide.matches ? 2 : 1;
+    function render() {
+      if (wide.matches) { i -= i % 2; L.innerHTML = page(i); R.innerHTML = page(i + 1); }
+      else { L.innerHTML = ""; R.innerHTML = page(i); }
+      const st = stepSize();
+      prevB.disabled = i <= 0;
+      nextB.disabled = i + st >= pages.length;
+      pos.textContent = wide.matches ? `${i + 1}–${Math.min(i + 2, pages.length)} из ${pages.length}` : `${i + 1} из ${pages.length}`;
+    }
+    let sctx = null;
+    function rustle() {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      sctx = sctx || new AC();
+      sctx.resume();
+      const len = sctx.sampleRate * .35, b = sctx.createBuffer(1, len, sctx.sampleRate), d = b.getChannelData(0);
+      for (let j = 0; j < len; j++) { const k = j / len; d[j] = (Math.random() * 2 - 1) * Math.sin(Math.PI * k) * (.6 + .4 * Math.random()); }
+      const s = sctx.createBufferSource(), f = sctx.createBiquadFilter(), g = sctx.createGain();
+      s.buffer = b; f.type = "bandpass"; f.frequency.value = 3000; f.Q.value = .7; g.gain.value = .16;
+      s.connect(f).connect(g).connect(sctx.destination); s.start();
+    }
+    function turn(dir, target) {
+      if (turning) return;
+      const st = stepSize();
+      let ni = target != null ? target : i + dir * st;
+      if (wide.matches) ni -= ni % 2;
+      if (ni < 0 || ni >= pages.length || ni === i) return;
+      dir = ni > i ? 1 : -1;
+      if (reduceMotion.matches) { i = ni; render(); return; }
+      turning = true;
+      rustle();
+      const leaf = document.createElement("div");
+      leaf.className = "leaf";
+      if (wide.matches) {
+        if (dir > 0) {
+          leaf.innerHTML = `<div class="face r">${page(i + 1)}<div class="shade"></div></div><div class="face l" style="transform: rotateY(180deg)">${page(ni)}</div>`;
+          R.innerHTML = page(ni + 1);
+        } else {
+          leaf.innerHTML = `<div class="face l">${page(i)}<div class="shade"></div></div><div class="face r" style="transform: rotateY(-180deg)">${page(ni + 1)}</div>`;
+          L.innerHTML = page(ni);
+        }
+      } else {
+        leaf.innerHTML = dir > 0 ? `<div class="face r">${page(i)}<div class="shade"></div></div>` : `<div class="face r">${page(ni)}</div>`;
+        if (dir > 0) R.innerHTML = page(ni);
+      }
+      stage.appendChild(leaf);
+      const faces = [...leaf.querySelectorAll(".face")];
+      const deg = wide.matches ? (dir > 0 ? -180 : 180) : -180;
+      const anims = faces.map(f => {
+        const base = f.style.transform || "";
+        const from = !wide.matches && dir < 0 ? `rotateY(-180deg)` : `${base}`;
+        const to = !wide.matches && dir < 0 ? `rotateY(0deg)` : `${base} rotateY(${deg}deg)`;
+        return f.animate([{ transform: from }, { transform: to }], { duration: 900, easing: "cubic-bezier(.45,.05,.25,1)", fill: "forwards" });
+      });
+      leaf.querySelectorAll(".shade").forEach(sh => sh.animate([{ opacity: 0 }, { opacity: 1 }, { opacity: 0 }], { duration: 900 }));
+      anims[0].finished.then(() => { i = ni; render(); leaf.remove(); turning = false; });
+    }
+    function open(at) {
+      if (busy) return;
+      if (!pages.length) build();
+      if (at != null) i = at;
+      render();
+      bookDlg.showModal();
+      nextB.focus();
+    }
+    bookDlg.addEventListener("click", e => {
+      const b = e.target.closest("button");
+      if (e.target === bookDlg || (b && "bookClose" in b.dataset)) { bookDlg.close(); return; }
+      if (!b) return;
+      if (b.dataset.turn) turn(+b.dataset.turn);
+      else if (b.dataset.go) turn(0, +b.dataset.go);
+      else if (b.dataset.cook) {
+        const id = b.dataset.cook;
+        bookDlg.close();
+        setRoom(1);
+        setTimeout(() => makeCocktail(id), reduceMotion.matches ? 0 : 1300);
+      }
+    });
+    bookDlg.addEventListener("keydown", e => {
+      if (e.key === "ArrowRight") { e.preventDefault(); turn(1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); turn(-1); }
+    });
+    let tx = null;
+    stage.addEventListener("touchstart", e => { tx = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener("touchend", e => {
+      if (tx === null) return;
+      const dx = e.changedTouches[0].clientX - tx;
+      tx = null;
+      if (dx < -50) turn(1); else if (dx > 50) turn(-1);
+    }, { passive: true });
+    wide.addEventListener("change", () => { if (bookDlg.open) render(); });
+    return { open, get isOpen() { return bookDlg.open; } };
   })();
 
   /* ================= крупный план: бармен готовит коктейль ================= */
@@ -3141,6 +3574,7 @@
     Music.room(cur);
     Bartender.setActive(cur === 1);
     Ambience.setActive(cur === 1);
+    Reading.setActive(cur === 0);
     rooms.forEach((r, n) => r.toggleAttribute("inert", n !== cur));
     goL.classList.toggle("off", cur === 0);
     goR.classList.toggle("off", cur === 2);
@@ -3152,19 +3586,24 @@
   goL.addEventListener("click", () => setRoom(cur - 1));
   goR.addEventListener("click", () => setRoom(cur + 1));
   addEventListener("keydown", e => {
-    if (dlg.open || mixDlg.open || busy) return;
+    if (dlg.open || mixDlg.open || busy || Book.isOpen) return;
     if (e.key === "ArrowLeft") setRoom(cur - 1);
     if (e.key === "ArrowRight") setRoom(cur + 1);
   });
   let touchX = null;
   app.addEventListener("touchstart", e => { touchX = e.touches[0].clientX; }, { passive: true });
   app.addEventListener("touchend", e => {
-    if (touchX === null || dlg.open || mixDlg.open || busy) return;
+    if (touchX === null || dlg.open || mixDlg.open || busy || Book.isOpen) return;
     const dx = e.changedTouches[0].clientX - touchX;
     touchX = null;
     if (dx > 70) setRoom(cur - 1);
     if (dx < -70) setRoom(cur + 1);
   }, { passive: true });
+  // фокус на кнопке не должен «прокручивать» сцену вбок
+  document.addEventListener("scroll", e => {
+    const t = e.target;
+    if (t instanceof Element && t.matches(".app, .room, .world, .art-box")) { t.scrollLeft = 0; t.scrollTop = 0; }
+  }, true);
   setRoom(1);
 </script>
 </body>

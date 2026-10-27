@@ -261,7 +261,7 @@ const coneMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
 });
 const pendants = [];
-for (const x of [-2.1, 0, 2.1]) {
+for (const x of [-1.7, 1.7]) {
   const z = -2.4;
   mesh(new THREE.CylinderGeometry(.006, .006, ROOM.h - 2.78, 6), M.black, x, (ROOM.h + 2.78) / 2, z);
   const shade = mesh(lathe([[.02, .2], [.06, .19], [.14, .12], [.19, .02], [.2, 0]], 28), M.brass, x, 2.6, z);

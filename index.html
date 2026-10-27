@@ -334,6 +334,11 @@
     background: rgba(14,5,8,.86); border: 1px solid rgba(214,170,92,.45); color: var(--cream); font: 400 15px/1.2 var(--font-text);
     white-space: nowrap; opacity: 0; transition: opacity .15s; }
   .tip.show { opacity: 1; }
+  .bubble { position: absolute; z-index: 5; left: 0; top: 0; max-width: min(280px, 70vw); padding: 10px 14px; border-radius: 14px;
+    background: #f3e8d2; color: #2a1610; font: 400 15px/1.4 var(--font-text); box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    pointer-events: none; opacity: 0; transition: opacity .25s; }
+  .bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #f3e8d2; }
+  .bubble.show { opacity: 1; }
 
   /* вход */
   .intro { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 24px;
@@ -393,6 +398,7 @@
     </nav>
   </div>
   <div class="tip" id="tip" aria-hidden="true"></div>
+  <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
   <div class="served" id="served" hidden></div>
   <button class="music order" id="order" type="button" aria-label="Барная карта" aria-haspopup="dialog">
     <svg class="disc" viewBox="0 0 30 30" aria-hidden="true" focusable="false">
@@ -2925,9 +2931,9 @@ function point(name, color, intensity, dist, x, y, z) {
   l.userData.base = intensity;
   return l;
 }
-point("pendL", 0xffb066, 3.2, 6.5, -2.1, 2.45, -2.35);
+point("pendL", 0xffb066, 3.4, 6.5, -1.7, 2.45, -2.35);
 point("pendC", 0xffb066, 3.2, 6.5, 0, 2.45, -2.35);
-point("pendR", 0xffb066, 3.2, 6.5, 2.1, 2.45, -2.35);
+point("pendR", 0xffb066, 3.4, 6.5, 1.7, 2.45, -2.35);
 point("red", 0xff2238, 5, 5.5, 0, 1.95, -4.3);
 point("fire", 0xff7426, 13, 9, 7.3, .6, -1.7);
 point("lamp", 0xffbe70, 4, 6, -6.4, 1.15, -4.1);
@@ -3199,7 +3205,7 @@ const coneMat = new THREE.ShaderMaterial({
   transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
 });
 const pendants = [];
-for (const x of [-2.1, 0, 2.1]) {
+for (const x of [-1.7, 1.7]) {
   const z = -2.4;
   mesh(new THREE.CylinderGeometry(.006, .006, ROOM.h - 2.78, 6), M.black, x, (ROOM.h + 2.78) / 2, z);
   const shade = mesh(lathe([[.02, .2], [.06, .19], [.14, .12], [.19, .02], [.2, 0]], 28), M.brass, x, 2.6, z);
@@ -3300,92 +3306,375 @@ function placeServed(c) {
   tween(servedGlass.scale, { x: 1.35, y: 1.35, z: 1.35 }, .5, ease.out);
 }
 
-/* ================= люди: бармен и гости из простых форм, но с живой анимацией ================= */
-function makePerson(o = {}) {
-  const P = Object.assign({
-    shirt: 0xe2dbcc, vest: 0x2a0d13, trousers: 0x141113, skin: 0xb98262, hair: 0x1a110b,
-    seated: false, mustache: false, bowtie: null, hat: null, apron: false, rolled: false, jacket: null
-  }, o);
-  const mat = c => std({ color: c, roughness: .78 });
-  const mSkin = std({ color: P.skin, roughness: .62 }), mShirt = mat(P.shirt), mBody = mat(P.jacket || P.vest);
-  const mTr = mat(P.trousers), mHair = std({ color: P.hair, roughness: .85 }), mDark = std({ color: 0x0c0908, roughness: .5 });
-  const root = new THREE.Group();
-  const hips = group(0, P.seated ? .5 : 1.0, 0, root);
-  const spine = group(0, 0, 0, hips);
+/* ================= люди: фигуры с суставами, руки и ноги сами тянутся к точкам (IK) ================= */
+const FIGS = [];
+const _m1 = new THREE.Matrix4(), _m2 = new THREE.Matrix4(), _q1 = new THREE.Quaternion(), _q2 = new THREE.Quaternion();
+const _a = V3(), _b = V3(), _xa = V3(), _ya = V3(), _za = V3(), _w0 = V3();
+const smoothK = (k, dt) => 1 - Math.exp(-k * dt);
 
-  const torso = mesh(new THREE.CapsuleGeometry(.175, .4, 6, 18), mBody, 0, .36, 0, spine);
-  torso.scale.set(1.15, 1, .72);
-  const pelvis = mesh(new THREE.CapsuleGeometry(.16, .06, 4, 14), mTr, 0, .02, 0, spine);
-  pelvis.scale.set(1.1, 1, .78);
-  // вырез рубашки и воротник
-  const vs = new THREE.Shape();
-  vs.moveTo(-.07, 0); vs.lineTo(.07, 0); vs.lineTo(0, -.22); vs.closePath();
-  const vneck = mesh(new THREE.ShapeGeometry(vs), mShirt, 0, .72, .124, spine);
-  vneck.rotation.x = -.18;
-  const collar = mesh(new THREE.TorusGeometry(.06, .018, 6, 16), mShirt, 0, .77, 0, spine);
-  collar.rotation.x = Math.PI / 2;
-  if (P.bowtie) {
-    const bm = std({ color: P.bowtie, roughness: .5 });
-    for (const s of [-1, 1]) { const c = mesh(new THREE.ConeGeometry(.026, .05, 4), bm, s * .024, .745, .13, spine); c.rotation.z = s * Math.PI / 2; }
-    mesh(new THREE.SphereGeometry(.011, 8, 6), bm, 0, .745, .135, spine);
-  }
-  if (P.apron) {
-    const ap = mesh(new THREE.BoxGeometry(.42, .62, .012), std({ color: 0x0d0b0c, roughness: .9 }), 0, -.26, .13, spine);
-    mesh(new THREE.BoxGeometry(.42, .015, .2), std({ color: 0x0d0b0c }), 0, .06, 0, spine).scale.set(1.05, 1, 1);
-    ap.rotation.x = .04;
-  }
-  // голова
-  mesh(new THREE.CylinderGeometry(.048, .055, .1, 12), mSkin, 0, .8, 0, spine);
-  const head = group(0, .86, 0, spine);
-  const skull = mesh(new THREE.SphereGeometry(.105, 24, 18), mSkin, 0, .1, 0, head);
-  skull.scale.set(.92, 1.12, 1);
-  const hair = mesh(new THREE.SphereGeometry(.112, 24, 12, 0, Math.PI * 2, 0, Math.PI * .52), mHair, 0, .12, -.012, head);
-  hair.rotation.x = -.35; hair.scale.set(.96, 1.05, 1.06);
-  for (const s of [-1, 1]) {
-    mesh(new THREE.SphereGeometry(.024, 10, 8), mSkin, s * .097, .1, -.005, head).scale.set(.45, 1, .75);
-    mesh(new THREE.SphereGeometry(.0105, 8, 6), mDark, s * .036, .118, .089, head);
-    const brow = mesh(new THREE.BoxGeometry(.034, .007, .01), mHair, s * .037, .142, .092, head);
-    brow.rotation.z = s * -.12;
-  }
-  mesh(new THREE.SphereGeometry(.017, 10, 8), mSkin, 0, .093, .103, head).scale.set(.8, 1, 1.25);
-  if (P.mustache) {
-    for (const s of [-1, 1]) {
-      const m = mesh(new THREE.CapsuleGeometry(.008, .032, 3, 6), mHair, s * .02, .066, .1, head);
-      m.rotation.z = s * 1.2;
+function taper(r0, r1, len, seg = 14) { const g = new THREE.CylinderGeometry(r0, r1, len, seg, 1); g.translate(0, -len / 2, 0); return g; }
+const sph = (r, x, y, z, sx = 1, sy = 1, sz = 1, ws = 16, hs = 12) => { const g = new THREE.SphereGeometry(r, ws, hs); g.scale(sx, sy, sz); g.translate(x, y, z); return g; };
+const rbox = (w, h, d, x, y, z, r = .01) => { const g = new RoundedBoxGeometry(w, h, d, 2, r); g.translate(x, y, z); return g; };
+
+/* ---------- одежда: рисуем на развёртке торса ---------- */
+const CLOTH = {};
+function torsoTex(o) {
+  const key = JSON.stringify(o);
+  if (CLOTH[key]) return CLOTH[key];
+  const t = canvasTex(512, 512, (g, w, h) => {
+    const Y = v => h - v * h, U = u => u * w;
+    const poly = (pts, c) => { g.fillStyle = c; g.beginPath(); pts.forEach(([u, v], i) => i ? g.lineTo(U(u), Y(v)) : g.moveTo(U(u), Y(v))); g.closePath(); g.fill(); };
+    const dot = (u, v, r, c) => { g.fillStyle = c; g.beginPath(); g.ellipse(U(u), Y(v), r * .55, r, 0, 0, 7); g.fill(); };
+    g.fillStyle = o.shirt || "#e6dfd0"; g.fillRect(0, 0, w, h);
+    if (o.kind === "vest") {
+      g.fillStyle = o.body; g.fillRect(0, Y(.88), w, h);
+      // спинка жилета атласная
+      g.fillStyle = "rgba(255,255,255,.06)"; g.fillRect(0, Y(.86), U(.18), h); g.fillRect(U(.82), Y(.86), U(.18), h);
+      g.strokeStyle = "rgba(0,0,0,.35)"; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(U(.02), Y(.3)); g.lineTo(U(.98), Y(.3)); g.stroke();
+      // проймы
+      for (const u of [.25, .75]) { g.fillStyle = o.shirt; g.beginPath(); g.ellipse(U(u), Y(.86), U(.05), h * .12, 0, 0, 7); g.fill(); }
+      // вырез: белая рубашка
+      poly([[.5 - .08, .92], [.5 + .08, .92], [.5, .42]], o.shirt);
+      g.strokeStyle = "rgba(0,0,0,.45)"; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(U(.42), Y(.92)); g.lineTo(U(.5), Y(.42)); g.lineTo(U(.58), Y(.92)); g.stroke();
+      for (let i = 0; i < 5; i++) dot(.5, .38 - i * .072, 6, "#c9944a");
+      g.fillStyle = "rgba(0,0,0,.5)"; g.fillRect(U(.36), Y(.24), 34, 4); g.fillRect(U(.6), Y(.24), 34, 4); g.fillRect(U(.6), Y(.56), 30, 4);
+      // цепочка карманных часов
+      g.strokeStyle = "#d8aa5a"; g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(U(.5), Y(.24)); g.quadraticCurveTo(U(.56), Y(.15), U(.62), Y(.235)); g.stroke();
+      for (let i = 0; i < 1200; i++) { g.fillStyle = `rgba(${rng() < .5 ? "255,255,255" : "0,0,0"},.05)`; g.fillRect(rng() * w, Y(.88) + rng() * h * .88, 1, 3); }
+    } else if (o.kind === "suit") {
+      g.fillStyle = o.body; g.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 10) { g.fillStyle = "rgba(255,255,255,.035)"; g.fillRect(x, 0, 1, h); }
+      poly([[.5 - .14, .95], [.5 + .14, .95], [.5 + .02, .3], [.5 - .02, .3]], o.lapel || "rgba(0,0,0,.4)");
+      poly([[.5 - .085, .95], [.5 + .085, .95], [.5, .36]], o.shirt);
+      poly([[.5 - .014, .9], [.5 + .014, .9], [.5 + .02, .44], [.5, .38], [.5 - .02, .44]], o.tie || "#6a0f1e");
+      g.fillStyle = "#f0ece0"; g.beginPath(); g.moveTo(U(.6), Y(.62)); g.lineTo(U(.64), Y(.62)); g.lineTo(U(.62), Y(.68)); g.fill();
+      dot(.5, .26, 6, "#111"); dot(.5, .16, 6, "#111");
+    } else if (o.kind === "dress") {
+      g.fillStyle = o.body; g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 2600; i++) { g.fillStyle = rng() < .5 ? "rgba(255,220,150,.35)" : "rgba(0,0,0,.25)"; g.fillRect(rng() * w, rng() * h, 2, 2); }
+      poly([[.5 - .07, .95], [.5 + .07, .95], [.5, .72]], o.skin);
+      g.fillStyle = o.skin; g.fillRect(0, Y(1), w, h * .07);
+      for (let i = 0; i <= 26; i++) { const k = i / 26, u = .43 + k * .14, v = .9 - Math.sin(k * Math.PI) * .38; dot(u, v, 5, "#f4eee2"); }
+      g.fillStyle = "rgba(0,0,0,.35)"; g.fillRect(0, Y(.12), w, 10);
+    } else {
+      // вязаный кардиган
+      g.fillStyle = o.body; g.fillRect(0, 0, w, h);
+      for (let x = 0; x < w; x += 6) { g.fillStyle = "rgba(0,0,0,.12)"; g.fillRect(x, 0, 2, h); }
+      poly([[.5 - .07, .95], [.5 + .07, .95], [.5, .5]], o.shirt);
+      for (let i = 0; i < 5; i++) dot(.5, .45 - i * .08, 5, "#3a2a1a");
     }
+  });
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  return (CLOTH[key] = t);
+}
+
+/* профиль торса: от пояса (0) до основания шеи */
+const TORSO_PROFILE = [[0, -.03], [.14, -.03], [.142, .02], [.146, .07], [.152, .12], [.16, .17], [.168, .22], [.174, .27], [.178, .32], [.179, .37], [.176, .41], [.166, .445], [.14, .47], [.095, .49], [.058, .505], [0, .51]];
+
+function makeFigure(o) {
+  const P = Object.assign({
+    kind: "suit", body: "#2a2420", shirt: "#e6dfd0", trousers: 0x1c1a18, skin: 0xc48c6a, hair: 0x1a110b, hairStyle: "short",
+    shoes: 0x0c0908, mustache: false, bowtie: null, rolled: false, hat: null, lady: false, scale: 1, seated: false
+  }, o);
+  const mSkin = std({ color: P.skin, roughness: .6 });
+  const mHair = std({ color: P.hair, roughness: P.hairStyle === "slick" ? .35 : .8 });
+  const mTr = std({ color: P.trousers, roughness: .8 });
+  const mShoe = std({ color: P.shoes, roughness: .3, envMapIntensity: .8 });
+  const mTorso = std({ map: torsoTex({ kind: P.kind, body: P.body, shirt: P.shirt, skin: "#" + new THREE.Color(P.skin).getHexString(), tie: P.tie }), roughness: .75 });
+  const sleeveCol = P.kind === "vest" ? P.shirt : P.body;
+  const mSleeve = std({ color: sleeveCol, roughness: .8 });
+  const mWhite = std({ color: P.shirt, roughness: .8 });
+
+  const root = new THREE.Group();
+  root.scale.setScalar(P.scale);
+  const pelvis = group(0, P.hipY || (P.seated ? .5 : .96), 0, root);
+  const spine = group(0, .02, 0, pelvis);
+
+  // торс с одеждой
+  const torso = new THREE.Mesh(new THREE.LatheGeometry(TORSO_PROFILE.map(([r, y]) => new THREE.Vector2(r, y)), 28, Math.PI, Math.PI * 2), mTorso);
+  torso.scale.set(1.12, 1, .7);
+  spine.add(torso);
+  // бёдра в брюках или юбке
+  const hipG = lathe([[0, .0], [.152, .0], [.158, -.06], [.15, -.13], [0, -.14]], 22);
+  hipG.scale(1.08, 1, .78);
+  mesh(hipG, P.lady ? std({ color: new THREE.Color(P.body), roughness: .6 }) : mTr, 0, 0, 0, pelvis);
+  // шея, голова
+  const neckParts = [taper(.045, .05, .08)]; neckParts[0].translate(0, .565, 0);
+  if (P.bowtie || P.kind !== "dress") { const col = new THREE.TorusGeometry(.055, .014, 6, 18); col.rotateX(Math.PI / 2); col.scale(1, 1, .9); col.translate(0, .5, .005); mesh(col, mWhite, 0, 0, 0, spine); }
+  merged(neckParts, mSkin, spine);
+  if (P.bowtie) {
+    const bm = std({ color: P.bowtie, roughness: .45 });
+    const parts = [];
+    for (const s of [-1, 1]) { const c = new THREE.ConeGeometry(.024, .045, 4); c.rotateZ(s * Math.PI / 2); c.rotateY(Math.PI / 4); c.scale(1, 1, .5); c.translate(s * .022, .487, .116); parts.push(c); }
+    parts.push(sph(.01, 0, .487, .122));
+    merged(parts, bm, spine);
   }
+  const head = group(0, .535, 0, spine);
+  const skin = [sph(.1, 0, .11, 0, .88, 1.07, .98, 24, 18), sph(.078, 0, .055, .022, .86, .72, .9), sph(.016, 0, .1, .095, .62, .9, 1.15, 10, 8)];
+  for (const s of [-1, 1]) skin.push(sph(.022, s * .086, .1, -.005, .45, 1, .75, 10, 8));
+  merged(skin, mSkin, head);
+  // глаза: белки, зрачки; моргают
+  const eyes = group(0, .118, .078, head);
+  const ew = [], ei = [];
+  for (const s of [-1, 1]) { ew.push(sph(.0105, s * .033, 0, -.002, 1, .7, .5, 10, 8)); ei.push(sph(.0068, s * .033, 0, .004, 1, 1, .5, 8, 6)); }
+  merged(ew, std({ color: 0xece4d8, roughness: .3 }), eyes);
+  merged(ei, std({ color: 0x1a120c, roughness: .2 }), eyes);
+  // брови, волосы, усы
+  const hair = [];
+  for (const s of [-1, 1]) { const b = rbox(.03, .007, .01, s * .034, .143, .088, .003); b.rotateZ ? 0 : 0; hair.push(b); }
+  if (P.hairStyle === "bob") {
+    hair.push(sph(.116, 0, .125, -.008, .95, 1, 1.02, 24, 14));
+    const band = new THREE.CylinderGeometry(.112, .118, .1, 24, 1, true, Math.PI * .3, Math.PI * 1.4); band.translate(0, .085, -.006); hair.push(band);
+    hair.push(rbox(.15, .03, .03, 0, .175, .085, .012));
+  } else {
+    const cap = new THREE.SphereGeometry(.1, 28, 14, 0, Math.PI * 2, 0, Math.PI * .56); cap.rotateX(-.72); cap.scale(.93, 1.11, 1.05); cap.translate(0, .112, -.008); hair.push(cap);
+    for (const s of [-1, 1]) hair.push(rbox(.012, .04, .02, s * .084, .098, .03, .004));
+  }
+  if (P.mustache) {
+    const curve = new THREE.CatmullRomCurve3([V3(-.056, .082, .07), V3(-.042, .066, .088), V3(-.018, .066, .1), V3(0, .07, .102), V3(.018, .066, .1), V3(.042, .066, .088), V3(.056, .082, .07)]);
+    hair.push(new THREE.TubeGeometry(curve, 20, .0055, 6));
+  }
+  merged(hair, mHair, head);
+  if (P.lady) mesh(new THREE.BoxGeometry(.026, .006, .006), std({ color: 0x9a1a2a }), 0, .045, .093, head);
+  else mesh(new THREE.BoxGeometry(.026, .004, .006), std({ color: 0x5a2a20 }), 0, .045, .093, head);
   if (P.hat) {
     const hm = std({ color: P.hat, roughness: .7 });
-    mesh(new THREE.CylinderGeometry(.17, .17, .012, 24), hm, 0, .2, 0, head);
-    mesh(new THREE.CylinderGeometry(.09, .105, .1, 20), hm, 0, .25, 0, head);
-    mesh(new THREE.CylinderGeometry(.106, .106, .02, 20), std({ color: 0x3a0e16 }), 0, .215, 0, head);
+    merged([(() => { const g = new THREE.CylinderGeometry(.17, .17, .012, 28); g.translate(0, .2, 0); return g; })(), (() => { const g = new THREE.CylinderGeometry(.092, .106, .1, 24); g.translate(0, .25, 0); return g; })()], hm, head);
+    mesh(new THREE.CylinderGeometry(.107, .107, .022, 24), std({ color: 0x3a0e16 }), 0, .215, 0, head);
   }
-  // руки: плечо → локоть → кисть
+
+  // руки
+  const LA = .285, LB = .26;
   const arm = side => {
-    const sh = group(side * .23, .62, 0, spine);
-    mesh(new THREE.SphereGeometry(.06, 12, 10), mBody, 0, 0, 0, sh);
-    mesh(new THREE.CapsuleGeometry(.05, .2, 4, 10), P.jacket ? mBody : mShirt, 0, -.15, 0, sh);
-    const el = group(0, -.31, 0, sh);
-    mesh(new THREE.CapsuleGeometry(.044, .18, 4, 10), P.rolled ? mSkin : (P.jacket ? mBody : mShirt), 0, -.13, 0, el);
-    if (P.rolled) { const cuff = mesh(new THREE.TorusGeometry(.048, .016, 6, 14), mShirt, 0, -.02, 0, el); cuff.rotation.x = Math.PI / 2; }
-    const hand = group(0, -.28, 0, el);
-    mesh(new THREE.SphereGeometry(.046, 12, 10), mSkin, 0, 0, 0, hand).scale.set(.75, 1, .55);
-    mesh(new THREE.CapsuleGeometry(.014, .035, 3, 6), mSkin, side * -.03, .005, .02, hand).rotation.z = side * .8;
-    return { sh, el, hand };
+    const S = V3(side * .2, .425, -.005);
+    const up = group(S.x, S.y, S.z, spine);
+    merged([sph(.05, 0, -.01, 0), taper(.05, .043, LA)], mSleeve, up);
+    const fo = group(0, -LA, 0, up);
+    const fp = [sph(.045, 0, 0, 0), taper(.044, .034, LB)];
+    if (P.rolled) {
+      merged(fp, mSkin, fo);
+      const cuff = new THREE.TorusGeometry(.05, .02, 8, 16); cuff.rotateX(Math.PI / 2); cuff.translate(0, .01, 0);
+      merged([cuff], mWhite, fo);
+    } else {
+      merged(fp, mSleeve, fo);
+      const cuff = taper(.037, .036, .03); cuff.translate(0, -LB + .02, 0);
+      merged([cuff], mWhite, fo);
+    }
+    const hand = group(0, -LB, 0, fo);
+    const palm = [rbox(.062, .072, .026, 0, -.038, 0, .012)];
+    const th = new THREE.CapsuleGeometry(.0115, .035, 3, 8); th.rotateZ(side * .7); th.translate(side * .038, -.035, .012); palm.push(th);
+    merged(palm, mSkin, hand);
+    const fing = group(0, -.072, 0, hand);
+    merged([rbox(.058, .062, .02, 0, -.028, 0, .0095)], mSkin, fing);
+    return { S, up, fo, hand, fing, side, tgt: V3(), cur: V3(), ori: { f: V3(0, -1, 0), p: V3(0, 0, 1) }, curl: .2, curlT: .2, pole: V3(side * .45, -1, -.35), k: 9, set: false };
   };
   const L = arm(1), Rr = arm(-1);
   // ноги
-  const legs = [-1, 1].map(s => {
-    const th = group(s * .09, 0, 0, hips);
-    mesh(new THREE.CapsuleGeometry(.068, .36, 4, 10), mTr, 0, -.24, 0, th);
-    const kn = group(0, -.47, 0, th);
-    mesh(new THREE.CapsuleGeometry(.056, .36, 4, 10), mTr, 0, -.22, 0, kn);
-    mesh(new RoundedBoxGeometry(.09, .06, .22, 2, .02), mDark, 0, -.47, .05, kn);
-    if (P.seated) { th.rotation.x = -Math.PI / 2 + .05; kn.rotation.x = Math.PI / 2 - .05; }
-    return { th, kn };
-  });
-  return { root, hips, spine, head, L, R: Rr, legs };
+  const TA = .44, TB = .43;
+  const leg = side => {
+    const H = V3(side * .092, -.07, 0);
+    const th = group(H.x, H.y, H.z, pelvis);
+    merged([sph(.07, 0, 0, 0), taper(.074, .056, TA)], P.lady ? std({ color: new THREE.Color(P.body), roughness: .6 }) : mTr, th);
+    const sh = group(0, -TA, 0, th);
+    merged([sph(.054, 0, 0, 0), taper(.052, .04, TB)], P.lady ? std({ color: 0xa87a64, roughness: .5 }) : mTr, sh);
+    const ank = group(0, -TB, 0, sh);
+    merged([rbox(P.lady ? .065 : .085, .06, P.lady ? .2 : .25, 0, -.04, .055, .025)], mShoe, ank);
+    return { H, th, sh, ank, side, tgt: V3(), cur: V3(), world: V3(), from: V3(), to: V3(), stepT: 1, pole: V3(0, 0, 1) };
+  };
+  const legs = [leg(1), leg(-1)];
+  const F = {
+    P, root, pelvis, spine, head, eyes, L, R: Rr, legs, LA, LB, TA, TB,
+    x: 0, z: 0, face: 0, tx: 0, tz: 0, tface: 0, speed: 0, faceWalk: true,
+    lean: .04, twist: 0, sway: 0, leanT: .04, twistT: 0, look: null, lookK: 0, hy: 0, hp: 0,
+    blink: R(1, 4), seated: P.seated, hipY: P.hipY || (P.seated ? .5 : .96), bob: 0, breath: R(0, 6), held: [], legsFixed: P.seated
+  };
+  world.add(root);
+  FIGS.push(F);
+  return F;
 }
+
+/* место и направление фигуры */
+function placeFig(F, x, z, face) { F.x = F.tx = x; F.z = F.tz = z; F.face = F.tface = face; F.root.position.set(x, 0, z); F.root.rotation.y = face; for (const lg of F.legs) lg.stepT = 1; F._init = false; }
+/* перевод точки из мира в систему фигуры и обратно */
+function toFig(F, p, out = V3()) { const c = Math.cos(-F.face), s = Math.sin(-F.face), dx = p.x - F.x, dz = p.z - F.z; return out.set(dx * c + dz * s, p.y, -dx * s + dz * c); }
+function fromFig(F, p, out = V3()) { const c = Math.cos(F.face), s = Math.sin(F.face); return out.set(F.x + p.x * c + p.z * s, p.y, F.z - p.x * s + p.z * c); }
+/* задать цель руке: точка в системе фигуры; f — куда смотрят пальцы, p — куда ладонь */
+function reach(arm, x, y, z, f, p, curl) {
+  arm.tgt.set(x, y, z);
+  if (f) arm.ori.f.copy(f).normalize();
+  if (p) arm.ori.p.copy(p).normalize();
+  if (curl !== undefined) arm.curlT = curl;
+  if (!arm.set) { arm.cur.copy(arm.tgt); arm.set = true; }
+}
+
+/* двухзвенная IK: плечо S, цель T, длины a и b, подсказка изгиба pole (всё в одной системе) */
+function solve2(S, T, a, b, pole, outE, outT) {
+  _a.subVectors(T, S);
+  let Ld = _a.length();
+  const L = clamp(Ld, Math.abs(a - b) + 1e-3, a + b - 1e-3);
+  const dir = _a.normalize();
+  const cosA = clamp((a * a + L * L - b * b) / (2 * a * L), -1, 1), A = Math.acos(cosA);
+  _b.copy(pole).addScaledVector(dir, -pole.dot(dir));
+  if (_b.lengthSq() < 1e-6) _b.set(0, 0, 1).addScaledVector(dir, -dir.z);
+  _b.normalize();
+  outE.copy(S).addScaledVector(dir, Math.cos(A) * a).addScaledVector(_b, Math.sin(A) * a);
+  outT.copy(S).addScaledVector(dir, L);
+}
+/* повернуть кость (растёт вдоль -Y) так, чтобы она шла от A к B, а сустав сгибался в сторону C */
+function aimBone(bone, A, B, C, bendSign, parentQ) {
+  _ya.subVectors(A, B).normalize();
+  _za.subVectors(C, B).normalize();
+  _za.addScaledVector(_ya, -_za.dot(_ya));
+  if (_za.lengthSq() < 1e-6) _za.set(0, 0, 1).addScaledVector(_ya, -_ya.z);
+  _za.normalize().multiplyScalar(bendSign);
+  _xa.crossVectors(_ya, _za);
+  _m1.makeBasis(_xa, _ya, _za);
+  _q1.setFromRotationMatrix(_m1);
+  if (parentQ) _q1.premultiply(_q2.copy(parentQ).invert());
+  bone.quaternion.copy(_q1);
+}
+const _S = V3(), _T = V3(), _E = V3(), _TT = V3(), _pq = new THREE.Quaternion(), _hq = new THREE.Quaternion();
+const _inv = new THREE.Matrix4(), _pole = V3();
+function solveArm(F, arm, dt) {
+  arm.cur.lerp(arm.tgt, smoothK(arm.k, dt));
+  arm.curl += (arm.curlT - arm.curl) * smoothK(10, dt);
+  // цель в системе позвоночника
+  F.pelvis.updateMatrix(); F.spine.updateMatrix();
+  _m2.multiplyMatrices(F.pelvis.matrix, F.spine.matrix);
+  _inv.copy(_m2).invert();
+  _T.copy(arm.cur).applyMatrix4(_inv);
+  _S.copy(arm.S);
+  _pole.copy(arm.pole);
+  solve2(_S, _T, F.LA, F.LB, _pole, _E, _TT);
+  // плечо: кость от S к E, локоть сгибается вперёд к цели
+  aimBone(arm.up, _S, _E, _TT, 1, null);
+  // предплечье: шарнир
+  _a.subVectors(_E, _S).normalize(); _b.subVectors(_TT, _E).normalize();
+  const ang = Math.acos(clamp(_a.dot(_b), -1, 1));
+  arm.fo.quaternion.setFromAxisAngle(_xa.set(1, 0, 0), -ang);
+  // кисть: пальцы и ладонь в системе фигуры
+  _pq.copy(F.pelvis.quaternion).multiply(F.spine.quaternion).multiply(arm.up.quaternion).multiply(arm.fo.quaternion);
+  _ya.copy(arm.ori.f).negate();
+  _za.copy(arm.ori.p).addScaledVector(_ya, -arm.ori.p.dot(_ya));
+  if (_za.lengthSq() < 1e-6) _za.set(0, 0, 1);
+  _za.normalize();
+  _xa.crossVectors(_ya, _za);
+  _m1.makeBasis(_xa, _ya, _za);
+  _hq.setFromRotationMatrix(_m1);
+  arm.hand.quaternion.copy(_pq.invert().multiply(_hq));
+  arm.fing.rotation.x = -arm.curl * 1.5;
+}
+function solveLeg(F, lg) {
+  F.pelvis.updateMatrix();
+  _inv.copy(F.pelvis.matrix).invert();
+  _T.copy(lg.cur).applyMatrix4(_inv);
+  solve2(lg.H, _T, F.TA, F.TB, _pole.set(lg.side * .15, 0, 1), _E, _TT);
+  aimBone(lg.th, lg.H, _E, _TT, -1, null);
+  _a.subVectors(_E, lg.H).normalize(); _b.subVectors(_TT, _E).normalize();
+  const ang = Math.acos(clamp(_a.dot(_b), -1, 1));
+  lg.sh.quaternion.setFromAxisAngle(_xa.set(1, 0, 0), ang);
+  // стопа стоит ровно на полу
+  _pq.copy(F.pelvis.quaternion).multiply(lg.th.quaternion).multiply(lg.sh.quaternion);
+  lg.ank.quaternion.copy(_pq.invert());
+}
+
+/* шаги: стопа остаётся на месте, пока тело не уйдёт далеко, потом переставляется дугой */
+function stepFeet(F, dt, vx, vz) {
+  const homes = F.legs.map(lg => fromFig(F, V3(lg.side * .1, .075, .02)));
+  if (!F._init) { F.legs.forEach((lg, i) => { lg.world.copy(homes[i]); lg.stepT = 1; }); F._init = true; }
+  const moving = Math.hypot(vx, vz) > .05;
+  F.legs.forEach((lg, i) => {
+    const other = F.legs[1 - i];
+    const lead = V3(vx * .32, 0, vz * .32);
+    const want = homes[i].clone().add(lead);
+    if (lg.stepT >= 1 && other.stepT >= 1) {
+      const d = Math.hypot(lg.world.x - want.x, lg.world.z - want.z);
+      const od = Math.hypot(other.world.x - homes[1 - i].x, other.world.z - homes[1 - i].z);
+      if (d > (moving ? .16 : .07) && d >= od - .01) { lg.from.copy(lg.world); lg.to.copy(want); lg.stepT = 0; }
+    }
+    if (lg.stepT < 1) {
+      lg.stepT = Math.min(1, lg.stepT + dt / (moving ? .3 : .26));
+      const k = ease.sine(lg.stepT);
+      lg.world.lerpVectors(lg.from, lg.to, k);
+      lg.world.y = .075 + Math.sin(Math.PI * lg.stepT) * .07;
+    }
+    toFig(F, lg.world, lg.cur);
+  });
+}
+
+function updateFigure(F, t, dt) {
+  // перемещение к цели с разгоном и торможением
+  const dx = F.tx - F.x, dz = F.tz - F.z, dist = Math.hypot(dx, dz);
+  const want = dist > .02 ? Math.min(F.maxSpeed || .85, dist * 2.4) : 0;
+  F.speed += (want - F.speed) * smoothK(5, dt);
+  let vx = 0, vz = 0;
+  if (dist > .005) { vx = dx / dist * F.speed; vz = dz / dist * F.speed; F.x += vx * dt; F.z += vz * dt; }
+  // поворот: при ходьбе лицом по ходу, иначе к заданному направлению
+  let faceT = F.tface;
+  if (F.faceWalk && F.speed > .25 && dist > .15) faceT = Math.atan2(vx, vz);
+  let df = Math.atan2(Math.sin(faceT - F.face), Math.cos(faceT - F.face));
+  F.face += df * smoothK(6, dt);
+  F.root.position.set(F.x, 0, F.z);
+  F.root.rotation.y = F.face;
+  // тело: дыхание, наклон, поворот плеч в сторону взгляда
+  F.breath += dt;
+  F.lean += (F.leanT - F.lean) * smoothK(4, dt);
+  F.twist += (F.twistT - F.twist) * smoothK(4, dt);
+  const stepping = F.legs.some(l => l.stepT < 1);
+  F.bob += ((stepping ? -.018 : 0) - F.bob) * smoothK(10, dt);
+  F.pelvis.position.y = F.hipY + F.bob + (F.seated ? 0 : .003 * Math.sin(F.breath * 1.6));
+  F.pelvis.rotation.y = F.seated ? 0 : -df * .15;
+  F.spine.rotation.set(F.lean + .012 * Math.sin(F.breath * 1.6), F.twist + df * .2, F.sway);
+  F.spine.scale.set(1 + .008 * Math.sin(F.breath * 1.6), 1, 1 + .012 * Math.sin(F.breath * 1.6));
+  // голова: смотрит на цель (точка в мире) или прямо
+  let hy = 0, hp = .05;
+  if (F.look) {
+    toFig(F, F.look, _w0);
+    const hx = _w0.x, hyy = _w0.y - (F.pelvis.position.y + .67) * F.P.scale, hz = _w0.z;
+    hy = clamp(Math.atan2(hx, hz) - F.twist, -1.1, 1.1);
+    hp = clamp(-Math.atan2(hyy, Math.hypot(hx, hz)), -.6, .7);
+  }
+  if (F.nod) hp += F.nod;
+  F.hy += (hy - F.hy) * smoothK(5, dt);
+  F.hp += (hp - F.hp) * smoothK(5, dt);
+  F.head.rotation.set(F.hp - F.lean * .6, F.hy * .8, F.tilt || 0);
+  F.spine.rotation.y += F.hy * .15;
+  // моргание
+  F.blink -= dt;
+  F.eyes.scale.y = F.blink < .12 ? .12 : 1;
+  if (F.blink < 0) F.blink = R(2, 5.5);
+  // ноги
+  if (!F.legsFixed) stepFeet(F, dt, vx, vz);
+  else F.legs.forEach(lg => lg.cur.lerp(lg.tgt, smoothK(6, dt)));
+  F.legs.forEach(lg => solveLeg(F, lg));
+  // руки
+  solveArm(F, F.L, dt);
+  solveArm(F, F.R, dt);
+  F.root.updateMatrixWorld(true);
+  // предметы в руках
+  for (const h of F.held) {
+    const k = h.k === undefined ? 1 : h.k;
+    h.arm.hand.localToWorld(_w0.copy(h.off));
+    if (h.woff) _w0.add(h.woff);
+    if (k >= 1) h.obj.position.copy(_w0);
+    else h.obj.position.lerpVectors(h.from, _w0, k);
+    if (h.tilt !== undefined) h.obj.rotation.set(0, F.face, 0), h.obj.rotateX(h.tilt);
+  }
+}
+function updateFigures(t, dt) { for (const F of FIGS) if (!F.off) updateFigure(F, t, dt); }
+/* взять предмет: он плавно переходит из своего места в руку */
+function grab(F, arm, obj, off, dur = .3) {
+  const h = { arm, obj, off: off.clone(), from: obj.position.clone(), k: 0, tilt: 0 };
+  F.held.push(h);
+  tween(h, { k: 1 }, dur, ease.out);
+  return h;
+}
+function release(F, obj) { F.held = F.held.filter(h => h.obj !== obj); }
+/* пальцы смотрят вперёд, ладонь внутрь — обычный хват стакана */
+const DIR = { fwd: V3(0, 0, 1), down: V3(0, -1, 0), up: V3(0, 1, 0), in: s => V3(-s, 0, 0), out: s => V3(s, 0, 0), back: V3(0, 0, -1) };
 
 /* ================= КУРИЛКА: камин, кресла, граммофон, дверь с глазком ================= */
 const NOISE_GLSL = `
@@ -3585,22 +3874,6 @@ for (let i = 0; i < 6; i++) {
   haze.push(s);
 }
 
-/* ---------- гость с газетой в кресле у камина ---------- */
-const patron = makePerson({ seated: true, jacket: 0x2a2420, shirt: 0xd8d0c0, trousers: 0x1c1a18, hair: 0x3a3430, skin: 0xc49272, mustache: true, hat: 0x1c1a18 });
-patron.root.position.set(6.72, 0, -.22);
-patron.root.rotation.y = 2.69;
-world.add(patron.root);
-for (const a of [patron.L, patron.R]) { a.sh.rotation.x = -1.05; a.el.rotation.x = -.95; }
-patron.L.sh.rotation.z = -.25; patron.R.sh.rotation.z = .25;
-patron.spine.rotation.x = -.12;
-patron.head.rotation.x = .28;
-const paper = group(0, .55, .38, patron.spine);
-const paperL = mesh(new THREE.PlaneGeometry(.3, .4), std({ map: TEX.news, roughness: .9, side: THREE.DoubleSide }), -.15, 0, 0, paper);
-const paperR = group(0, 0, 0, paper);
-mesh(new THREE.PlaneGeometry(.3, .4), std({ map: TEX.news, roughness: .9, side: THREE.DoubleSide }), .15, 0, 0, paperR);
-paperL.rotation.y = .3;
-paper.rotation.x = -.35;
-hot(patron.root, 2, "Газета: сухой закон", () => openCard(STORY), { grow: .015 });
 
 /* ---------- граммофон ---------- */
 const GR = {};
@@ -3975,16 +4248,6 @@ function toggleCandle() {
 }
 LIGHTS.lamp.userData.mul = 1;
 
-/* писатель за столом */
-const writer = makePerson({ seated: true, jacket: 0x3a2e22, shirt: 0xe2d8c4, trousers: 0x1e1a16, hair: 0x5a3a22, skin: 0xd09a7a });
-writer.root.position.set(WIN.x - .02, 0, -3.66);
-writer.root.rotation.y = Math.PI;
-world.add(writer.root);
-writer.spine.rotation.x = .22;
-writer.head.rotation.x = .45;
-for (const a of [writer.L, writer.R]) { a.sh.rotation.x = -1.15; a.el.rotation.x = -.75; }
-writer.L.sh.rotation.z = -.25; writer.R.sh.rotation.z = .3;
-hot(writer.root, 0, "Писатель", () => { tween(writer.head.rotation, { y: -.6, x: .1 }, .6, ease.out).then(() => wait(1.4)).then(() => tween(writer.head.rotation, { y: 0, x: .45 }, .9)); }, { grow: 0 });
 
 /* ---------- кафедра с книгой рецептов ---------- */
 (() => {
@@ -4242,116 +4505,182 @@ onTick((t, dt) => {
   }
 });
 
-/* ================= бармен: протирает бокал, ходит, достаёт бутылки с полки ================= */
-const bt = makePerson({ vest: 0x2a0d13, shirt: 0xe6dfd0, trousers: 0x121012, skin: 0xb07a5a, hair: 0x140d09, mustache: true, bowtie: 0x7a0f22, apron: true, rolled: true });
+/* ================= бармен: протирает бокал, ходит шагами, достаёт бутылки рукой ================= */
 const BT_Z = -3.4;
-bt.root.position.set(.9, 0, BT_Z);
-world.add(bt.root);
-const REST = { lShx: -.62, lShy: 0, lShz: -.28, lEl: -1.45, rShx: -.78, rShy: 0, rShz: .32, rEl: -1.3, headX: .32, lean: .06, polish: 1 };
-const POSE = Object.assign({ x: .9, z: BT_Z, ry: 0, look: 0, headY: 0, walk: 0 }, REST);
-const BT = { busy: false, held: null, holdK: 0, holdFrom: V3(), gk: 1, rk: 1, nod: 0, get x() { return POSE.x; } };
-// бокал и полотенце в руках
-const btGlass = mesh(lathe([[0, 0], [.038, 0], [.039, .006], [.042, .09], [.043, .092]], 24), glassMat, 0, 0, 0);
+const bt = makeFigure({ kind: "vest", body: "#2a0d13", shirt: "#e8e2d4", trousers: 0x121012, skin: 0xc28a68, hair: 0x140d09,
+  hairStyle: "slick", mustache: true, bowtie: 0x7a0f22, rolled: true });
+placeFig(bt, .9, BT_Z, 0);
+bt.maxSpeed = 1.35;
+const BT = { busy: false, mode: "polish", get x() { return bt.x; } };
+// фартук поверх брюк
+(() => {
+  const ap = new THREE.PlaneGeometry(.4, .62, 6, 1), p = ap.attributes.position;
+  for (let i = 0; i < p.count; i++) p.setZ(i, Math.cos(p.getX(i) / .2 * 1.2) * .03);
+  ap.computeVertexNormals();
+  mesh(ap, std({ color: 0x0d0b0c, roughness: .9, side: THREE.DoubleSide }), 0, -.3, .1, bt.pelvis);
+})();
+// бокал и полотенце
+const btGlass = mesh(lathe([[0, 0], [.038, 0], [.039, .006], [.042, .09], [.043, .092]], 24), std({ color: 0xf4f8ff, transparent: true, opacity: .38, roughness: .02, envMapIntensity: 3, side: THREE.DoubleSide, depthWrite: false }), 0, 0, 0);
 btGlass.renderOrder = 5;
-const ragGeo = new THREE.PlaneGeometry(.16, .22, 6, 6);
-{ const p = ragGeo.attributes.position; for (let i = 0; i < p.count; i++) p.setZ(i, Math.sin(p.getX(i) * 30) * .012 + Math.sin(p.getY(i) * 20) * .01); ragGeo.computeVertexNormals(); }
+/* полотенце: смятый комок с висящим краем */
+const ragGeo = (() => {
+  const blob = new THREE.IcosahedronGeometry(.042, 2), p = blob.attributes.position;
+  for (let i = 0; i < p.count; i++) { const v = V3(p.getX(i), p.getY(i), p.getZ(i)); v.multiplyScalar(1 + Math.sin(v.x * 90) * .18 + Math.cos(v.y * 70 + v.z * 40) * .15); v.y *= .75; p.setXYZ(i, v.x, v.y, v.z); }
+  const flap = new THREE.PlaneGeometry(.08, .12, 4, 6), q = flap.attributes.position;
+  for (let i = 0; i < q.count; i++) q.setZ(i, Math.sin(q.getY(i) * 40) * .008 + Math.sin(q.getX(i) * 50) * .006);
+  flap.translate(.01, -.07, .0);
+  const g = mergeGeometries([blob.toNonIndexed(), flap.toNonIndexed()]);
+  g.computeVertexNormals();
+  return g;
+})();
 const btRag = mesh(ragGeo, std({ color: 0xd8d2c4, roughness: 1, side: THREE.DoubleSide }), 0, 0, 0);
-const GLASS_SPOT = V3(), RAG_SPOT = V3();
-const _v = V3(), _w = V3();
+let glassHold = null, ragHold = null;
+const GLASS_LOCAL = V3(.03, 1.18, .36);
+function holdTools() {
+  release(bt, btGlass); release(bt, btRag);
+  glassHold = grab(bt, bt.L, btGlass, V3(0, -.055, .05), .35);
+  glassHold.woff = V3(0, -.045, 0);
+  ragHold = grab(bt, bt.R, btRag, V3(0, -.08, .03), .35);
+}
+holdTools();
 
-function poseBartender(t) {
-  const P = POSE, pol = P.polish;
-  bt.root.position.x = P.x; bt.root.position.z = P.z;
-  bt.root.rotation.y = P.ry;
-  const c = Math.sin(t * 5.4), s = Math.cos(t * 5.4);
-  bt.R.sh.rotation.set(P.rShx + pol * .08 * c, P.rShy + pol * .16 * s, P.rShz + pol * .06 * s);
-  bt.R.el.rotation.x = P.rEl + pol * .12 * c;
-  bt.L.sh.rotation.set(P.lShx, P.lShy + pol * .05 * Math.sin(t * 1.3), P.lShz);
-  bt.L.el.rotation.x = P.lEl;
-  bt.L.hand.rotation.x = -(bt.L.sh.rotation.x + bt.L.el.rotation.x) * .9;
-  const br = Math.sin(t * 1.7);
-  bt.spine.rotation.x = P.lean + .012 * br;
-  bt.spine.position.y = .004 * br;
-  // шаг
-  const w = Math.sin(t * 8.5) * P.walk;
-  bt.hips.position.y = 1.0 + .018 * Math.abs(Math.sin(t * 8.5)) * P.walk;
-  bt.legs[0].th.rotation.x = .4 * w; bt.legs[1].th.rotation.x = -.4 * w;
-  bt.legs[0].kn.rotation.x = Math.max(0, -w) * .6; bt.legs[1].kn.rotation.x = Math.max(0, w) * .6;
-  // голова: смотрит на гостя или на бокал
-  const ang = Math.atan2(camera.position.x - P.x, camera.position.z - P.z) - P.ry;
-  const a = Math.atan2(Math.sin(ang), Math.cos(ang));
-  const beat = Music.beat();
-  const nod = beat === null ? 0 : Math.pow(Math.max(0, Math.cos(beat * Math.PI * 2)), 6) * .06 * BT.nod;
-  bt.head.rotation.y = lerp(P.headY, clamp(a, -.8, .8), P.look);
-  bt.head.rotation.x = lerp(P.headX, .04, P.look) + nod;
-  // предметы следуют за руками
-  bt.root.updateMatrixWorld(true);
-  bt.L.hand.getWorldPosition(_v);
-  btGlass.position.lerpVectors(GLASS_SPOT, _v.add(_w.set(0, -.03, 0)), BT.gk);
-  bt.R.hand.getWorldPosition(_v);
-  btRag.position.lerpVectors(RAG_SPOT, _v.add(_w.set(0, -.08, 0)), BT.rk);
-  btRag.rotation.set(BT.rk * .3 + (1 - BT.rk) * -Math.PI / 2, P.ry, 0);
-  if (BT.held) {
-    bt.R.hand.getWorldPosition(_v);
-    _v.y -= .16;
-    BT.held.root.position.lerpVectors(BT.holdFrom, _v, BT.holdK);
-  }
+/* поза «протираю бокал»: левая рука держит, правая с полотенцем ходит по кругу */
+function polishTargets(t) {
+  const g = GLASS_LOCAL;
+  reach(bt.L, g.x + .055, g.y, g.z - .01, V3(-.5, 0, 1), DIR.in(1), .75);
+  const a = t * 5.2;
+  reach(bt.R, g.x - .01 + Math.cos(a) * .022, g.y + .1 + Math.sin(a * .5) * .01, g.z + Math.sin(a) * .022, V3(.2, -1, .3), V3(1, 0, .2), .55);
+}
+/* опустить руки вдоль тела */
+function armsDown(curl = .25) {
+  reach(bt.L, .23, .92, .06, DIR.down, V3(-1, 0, .3), curl);
+  reach(bt.R, -.23, .92, .06, DIR.down, V3(1, 0, .3), curl);
 }
 
-/* положить бокал и полотенце на стойку, чтобы освободить руки */
-function stash() {
-  bt.L.hand.getWorldPosition(_v);
-  GLASS_SPOT.set(clamp(_v.x, -3, 3), CT.top + .001, -2.68);
-  RAG_SPOT.set(GLASS_SPOT.x - .22, CT.top + .004, -2.66);
-  return Promise.all([tween(BT, { gk: 0, rk: 0 }, .45), tween(POSE, { polish: 0, lShx: -.7, lEl: -.7, rShx: -.7, rEl: -.7 }, .45)]);
+/* каждый кадр — режимы, которые двигаются сами */
+let wipePh = 0;
+onTick((t, dt) => {
+  if (BT.mode === "polish") { polishTargets(t); bt.leanT = .07; }
+  else if (BT.mode === "inspect") {
+    reach(bt.L, .06, 1.48, .34, V3(-.3, .3, 1), DIR.in(1), .75);
+    reach(bt.R, -.2, 1.0, .2, DIR.down, V3(1, 0, .3), .4);
+  } else if (BT.mode === "wipe") {
+    wipePh += dt * 1.6;
+    reach(bt.R, -.08 + Math.sin(wipePh) * .22, 1.135, .5 + Math.cos(wipePh * 2) * .05, V3(0, -.2, 1), DIR.down, .1);
+    reach(bt.L, .25, 1.14, .42, V3(0, -.2, 1), DIR.down, .1);
+    bt.leanT = .32;
+  } else if (BT.mode === "lean") {
+    reach(bt.L, .26, 1.14, .5, V3(0, -.3, 1), DIR.down, .3);
+    reach(bt.R, -.26, 1.14, .5, V3(0, -.3, 1), DIR.down, .3);
+    bt.leanT = .2;
+  } else if (BT.mode === "shake") {
+    const s = Math.sin(t * 16) * .06;
+    reach(bt.R, -.14, 1.5 + s, .2 + s * .5, V3(0, 1, .3), DIR.in(-1), .9);
+    reach(bt.L, .02, 1.38 + s, .24 + s * .5, V3(0, 1, .3), DIR.in(1), .9);
+  }
+  // кивает в такт музыке, когда отдыхает
+  const beat = Music.beat();
+  bt.nod = BT.nod && beat !== null ? Math.pow(Math.max(0, Math.cos(beat * Math.PI * 2)), 6) * .07 : 0;
+});
+
+/* ---------- инструменты ---------- */
+const sleep = s => new Promise(r => setTimeout(r, s * 1000));
+async function walkTo(x, z = bt.tz, face = null) {
+  bt.tx = clamp(x, -2.85, 2.85); bt.tz = z;
+  if (face !== null) bt.tface = face;
+  for (let i = 0; i < 80; i++) { if (Math.hypot(bt.tx - bt.x, bt.tz - bt.z) < .03 && bt.speed < .08) break; await sleep(.05); }
+}
+async function turnTo(face) {
+  bt.tface = face;
+  for (let i = 0; i < 40; i++) { if (Math.abs(Math.atan2(Math.sin(face - bt.face), Math.cos(face - bt.face))) < .08) break; await sleep(.05); }
+}
+function putDown(F, obj, worldPos, dur = .3) {
+  release(F, obj);
+  return tween(obj.position, { x: worldPos.x, y: worldPos.y, z: worldPos.z }, dur, ease.out);
+}
+async function stash() {
+  BT.mode = "free";
+  const gp = fromFig(bt, V3(.12, CT.top, .6)), rp = fromFig(bt, V3(-.12, CT.top + .004, .6));
+  reach(bt.L, .14, CT.top + .1, .55, V3(0, -.6, 1), DIR.in(1), .75);
+  reach(bt.R, -.12, CT.top + .07, .55, V3(0, -.8, 1), DIR.down, .55);
+  await sleep(.45);
+  if (bt.held.some(h => h.obj === btGlass)) putDown(bt, btGlass, gp);
+  if (bt.held.some(h => h.obj === btRag)) putDown(bt, btRag, rp);
+  btRag.rotation.set(-Math.PI / 2, 0, 0);
+  reach(bt.L, .14, CT.top + .14, .5, V3(0, -.6, 1), DIR.in(1), .2);
+  reach(bt.R, -.12, CT.top + .14, .5, V3(0, -.6, 1), DIR.down, .2);
+  await sleep(.25);
+  armsDown();
 }
 async function unstash() {
-  await walkTo(GLASS_SPOT.x - .05);
-  await tween(POSE, { lShx: -.7, lEl: -.7, rShx: -.7, rEl: -.7, look: 0, headX: .4 }, .35);
-  await tween(BT, { gk: 1, rk: 1 }, .45);
-  await tween(POSE, REST, .6);
+  const gx = btGlass.position.x;
+  await walkTo(gx - .12, BT_Z, 0);
+  reach(bt.L, .14, CT.top + .1, .55, V3(0, -.6, 1), DIR.in(1), .3);
+  reach(bt.R, -.12, CT.top + .07, .55, V3(0, -.8, 1), DIR.down, .3);
+  await sleep(.5);
+  // захват берёт предмет из того места на стойке, где он лежит
+  holdTools();
+  btRag.rotation.set(0, 0, 0);
+  await sleep(.3);
+  BT.mode = "polish";
 }
-async function walkTo(tx, casual = false) {
-  tx = clamp(tx, -2.85, 2.85);
-  const d = Math.abs(tx - POSE.x);
-  if (d < .04) return;
-  const dur = clamp(d / (casual ? .7 : 1.1), .35, 4);
-  tween(POSE, { walk: 1 }, .2);
-  await tween(POSE, { x: tx }, dur, ease.sine);
-  await tween(POSE, { walk: 0 }, .2);
-}
-const handOffX = () => .23;
 
 async function fetchBottle(h) {
   BT.busy = true;
+  bt.look = null;
   await stash();
-  await walkTo(h.home.x - handOffX());
-  tween(POSE, { look: 0, headX: -.25 }, .4);
-  await tween(POSE, { ry: Math.PI, z: -4.0 }, .5);
-  await tween(POSE, { rShx: -1.5, rShz: .02, rEl: -.18 }, .45);
+  const hb = h.root.position;
+  await walkTo(hb.x - .2, -3.95, Math.PI);
+  await turnTo(Math.PI);
+  bt.look = V3(hb.x, hb.y + .2, hb.z);
+  // тянется к бутылке
+  const gp = V3(hb.x, hb.y + .17, hb.z + .02);
+  const lp = toFig(bt, gp);
+  reach(bt.R, lp.x, lp.y, lp.z - .02, V3(0, 0, 1), DIR.in(-1), .15);
+  await sleep(.6);
+  bt.R.curlT = .85;
   h.root.userData.out = true;
-  BT.holdFrom.copy(h.root.position); BT.holdK = 0; BT.held = h;
-  await tween(BT, { holdK: 1 }, .35, ease.out);
-  await tween(POSE, { rShx: -.95, rEl: -.95 }, .35);
-  await tween(POSE, { ry: 0, z: -3.3, headX: .15 }, .55);
-  await tween(POSE, { rShx: -1.2, rEl: -.32 }, .4);
-  BT.held = null;
-  const p = h.root.position;
-  await tween(p, { y: CT.top + .002, z: -2.42 }, .3, ease.out);
-  await tween(POSE, { rShx: -.35, rEl: -.5, lShx: -.75, lShz: .45, lEl: -.55, look: 1 }, .5);
+  const hold = grab(bt, bt.R, h.root, V3(0, -.04, .045), .25);
+  hold.woff = V3(0, -.17, 0);
+  await sleep(.3);
+  reach(bt.R, -.18, 1.3, .38, V3(0, .2, 1), DIR.in(-1));
+  await sleep(.3);
+  bt.look = null;
+  await walkTo(hb.x - .2, -3.3, 0);
+  await turnTo(0);
+  // ставит на стойку перед гостем
+  const spot = V3(hb.x - .35, CT.top, -2.42);
+  const sl = toFig(bt, spot);
+  reach(bt.R, sl.x, CT.top + .2, sl.z - .03, V3(0, -.1, 1), DIR.in(-1), .85);
+  await sleep(.55);
+  await putDown(bt, h.root, spot, .2);
+  bt.R.curlT = .1;
+  reach(bt.R, sl.x * .5 - .05, 1.1, .36, V3(-.3, 0, 1), V3(.2, 1, 0), .1);
+  reach(bt.L, .24, 1.0, .16, DIR.down, V3(-1, 0, .3), .3);
+  bt.look = camera.position;
+  await sleep(.5);
 }
 async function returnBottle(h) {
-  await tween(POSE, { look: 0, headX: .35, lShx: -.4, lShz: -.1, lEl: -.5, rShx: -1.2, rEl: -.32 }, .4);
-  BT.holdFrom.copy(h.root.position); BT.holdK = 0; BT.held = h;
-  await tween(BT, { holdK: 1 }, .3);
-  await tween(POSE, { rShx: -.95, rEl: -.95 }, .3);
-  await tween(POSE, { ry: Math.PI, z: -4.0, headX: -.25 }, .55);
-  await tween(POSE, { rShx: -1.5, rEl: -.18 }, .4);
-  BT.held = null;
-  await tween(h.root.position, { x: h.home.x, y: h.home.y, z: h.home.z }, .35, ease.out);
+  bt.look = null;
+  const p = h.root.position, lp = toFig(bt, V3(p.x, CT.top + .2, p.z));
+  reach(bt.R, lp.x, lp.y, lp.z - .03, V3(0, -.1, 1), DIR.in(-1), .2);
+  await sleep(.45);
+  bt.R.curlT = .85;
+  const hold = grab(bt, bt.R, h.root, V3(0, -.04, .045), .2);
+  hold.woff = V3(0, -.17, 0);
+  await sleep(.25);
+  reach(bt.R, -.18, 1.3, .35, V3(0, .2, 1), DIR.in(-1));
+  await walkTo(h.home.x - .2, -3.95, Math.PI);
+  await turnTo(Math.PI);
+  const hp = toFig(bt, V3(h.home.x, h.home.y + .17, h.home.z + .02));
+  reach(bt.R, hp.x, hp.y, hp.z - .02, V3(0, 0, 1), DIR.in(-1), .85);
+  await sleep(.55);
+  await putDown(bt, h.root, h.home, .2);
   h.root.userData.out = false;
-  await tween(POSE, { rShx: -.4, rEl: -.4 }, .3);
-  await tween(POSE, { ry: 0, z: BT_Z, headX: .2 }, .5);
+  bt.R.curlT = .15;
+  reach(bt.R, -.2, 1.2, .25, V3(0, 0, 1), DIR.in(-1));
+  await sleep(.25);
+  armsDown();
   await unstash();
   BT.busy = false;
 }
@@ -4359,49 +4688,430 @@ async function returnBottle(h) {
 async function prepCocktail() {
   BT.busy = true;
   await stash();
-  await walkTo(1.05);
-  await tween(POSE, { rShx: -1.9, rShz: .2, rEl: -1.6, lShx: -1.9, lShz: -.2, lEl: -1.6, look: .4 }, .5);
+  await walkTo(1.2, BT_Z, 0);
+  BT.mode = "shake";
+  bt.look = camera.position;
 }
 async function presentCocktail() {
-  await tween(POSE, { rShx: -1.15, rShz: .2, rEl: -.4, lShx: -.4, lShz: -.1, lEl: -.4, look: 1 }, .45);
-  await tween(POSE, { rShx: -.35, rEl: -.45 }, .4);
+  BT.mode = "free";
+  const sp = servedGlass ? servedGlass.position : fromFig(bt, V3(-.2, CT.top, .9));
+  await walkTo(sp.x + .2, BT_Z, 0);
+  const l = toFig(bt, sp);
+  reach(bt.R, l.x + .02, CT.top + .06, l.z - .05, V3(0, -.3, 1), DIR.in(-1), .3);
+  reach(bt.L, .24, .95, .1, DIR.down, V3(-1, 0, .3), .3);
+  bt.look = camera.position;
+  await sleep(.6);
+  reach(bt.R, l.x - .02, CT.top + .14, l.z - .2, V3(.2, -.2, 1), V3(.3, 1, 0), .1);
 }
 async function relax() {
-  await tween(POSE, { look: 0 }, .3);
+  bt.look = null;
   await unstash();
   BT.busy = false;
 }
 
-/* сам по себе: протирает бокал, переходит, смотрит на гостей, кивает в такт */
+/* ---------- сам по себе: протирает, разглядывает бокал на свет, вытирает стойку, болтает с гостями ---------- */
 async function idleLife() {
   if (STILL) return;
   for (;;) {
-    await new Promise(r => setTimeout(r, R(3.2, 6.5) * 1000));
+    await sleep(R(3.5, 7));
     if (BT.busy || PAUSED) continue;
     const r = rng();
-    if (r < .3) {
-      await walkTo(clamp(POSE.x + R(-1.8, 1.8), -2.3, 2.3), true);
-    } else if (r < .62) {
-      tween(POSE, { look: 1 }, .6);
-      await new Promise(res => setTimeout(res, R(1.6, 2.8) * 1000));
-      if (!BT.busy) tween(POSE, { look: 0 }, .8);
-    } else if (r < .8) {
-      tween(POSE, { lShx: -1.55, lEl: -1.05, lShz: -.1, headX: -.15, polish: .2 }, .7);
-      await new Promise(res => setTimeout(res, 1600));
-      if (!BT.busy) tween(POSE, { lShx: REST.lShx, lEl: REST.lEl, lShz: REST.lShz, headX: REST.headX, polish: 1 }, .8);
+    if (r < .22) {
+      await walkTo(clamp(bt.x + R(-1.6, 1.6), -2.2, 2.3), BT_Z, 0);
+    } else if (r < .42) {
+      bt.look = camera.position;
+      await sleep(R(1.6, 2.6));
+      if (!BT.busy) bt.look = null;
+    } else if (r < .56) {
+      BT.mode = "inspect";
+      bt.look = fromFig(bt, V3(.06, 1.55, .34));
+      await sleep(1.8);
+      if (!BT.busy) { BT.mode = "polish"; bt.look = null; }
+    } else if (r < .7 && typeof GUESTS !== "undefined" && GUESTS.length) {
+      // подходит к гостю и перекидывается парой слов
+      const g = pickOne(GUESTS);
+      await walkTo(g.F.x + .05, BT_Z + .1, 0);
+      if (BT.busy) continue;
+      bt.look = V3(g.F.x, 1.45, g.F.z);
+      bt.nod = 0;
+      g.F.look = bt.head.getWorldPosition(V3());
+      for (let i = 0; i < 3 && !BT.busy; i++) { bt.tilt = R(-.12, .12); await sleep(.9); }
+      bt.tilt = 0;
+      g.F.look = null;
+      if (!BT.busy) bt.look = null;
+    } else if (r < .82) {
+      // вытирает стойку
+      BT.mode = "free";
+      await stash();
+      if (BT.busy) continue;
+      reach(bt.R, 0, CT.top + .02, .5, V3(0, -.2, 1), DIR.down, .1);
+      await sleep(.3);
+      const rag = grab(bt, bt.R, btRag, V3(0, -.07, .02), .25);
+      rag.woff = V3(0, -.02, 0);
+      BT.mode = "wipe";
+      await sleep(4.5);
+      if (BT.busy) continue;
+      BT.mode = "free";
+      await putDown(bt, btRag, fromFig(bt, V3(-.12, CT.top + .004, .6)));
+      bt.leanT = .07;
+      await unstash();
     } else {
-      tween(BT, { nod: 1 }, .5);
-      await new Promise(res => setTimeout(res, 4000));
-      tween(BT, { nod: 0 }, .5);
+      BT.nod = 1;
+      await sleep(4);
+      BT.nod = 0;
     }
   }
 }
+
+/* ================= живая компания: гости у стойки, в курилке и в читальне ================= */
+const GUESTS = [];
+const bubbleEl = document.getElementById("bubble");
+let bubble = null;
+function say(F, text, dur = 5) {
+  bubble = { F, until: NOW + dur * 1000 };
+  bubbleEl.textContent = text;
+  bubbleEl.classList.add("show");
+  F.look = camera.position;
+  clearTimeout(F._sayT);
+  F._sayT = setTimeout(() => { if (F.look === camera.position) F.look = null; }, dur * 1000);
+}
+onTick(() => {
+  if (!bubble) return;
+  if (NOW > bubble.until || modalOpen()) { bubbleEl.classList.remove("show"); bubble = null; return; }
+  const p = bubble.F.head.getWorldPosition(_w0);
+  p.y += .26;
+  p.project(camera);
+  const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
+  bubbleEl.style.transform = `translate(${clamp(x, 140, innerWidth - 140)}px, ${clamp(y, 90, innerHeight - 200)}px) translate(-50%, -100%)`;
+  bubbleEl.style.visibility = p.z < 1 ? "visible" : "hidden";
+});
+const lineOf = F => { F._li = ((F._li ?? -1) + 1) % F.lines.length; return F.lines[F._li]; };
+
+/* звон бокалов */
+function clink() {
+  const c = fx(); if (!c) return;
+  const t = c.currentTime + .01;
+  for (const [f, v] of [[2650, .14], [3970, .08], [5210, .05]]) {
+    const o = c.createOscillator(), g = c.createGain();
+    o.frequency.value = f + R(-40, 40);
+    g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + .9);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + 1);
+  }
+}
+
+/* сколько гостей сейчас: к открытию один, вечером и ночью полный зал, под утро двое */
+const GUEST_H = hoursOf(sceneDate());
+const crowd = GUEST_H >= 17 && GUEST_H < 19 ? 1 : GUEST_H >= 1 && GUEST_H < 3 ? 2 : 3;
+
+/* ---------- гости за стойкой ---------- */
+function barGuest(x, look, drink, lines) {
+  const F = makeFigure(Object.assign({ seated: true, hipY: .93 }, look));
+  placeFig(F, x, -1.5, Math.PI);
+  F.legsFixed = true;
+  F.legs.forEach(lg => { lg.tgt.set(lg.side * .1, .33, .14); lg.cur.copy(lg.tgt); });
+  F.leanT = .12;
+  const glass = makeGlass(drink.cup, drink.color, { garnish: drink.garnish, ice: drink.ice, op: .85 });
+  const spot = fromFig(F, V3(-.1, CT.top, .62));
+  glass.position.copy(spot);
+  glass.scale.setScalar(1.25);
+  world.add(glass);
+  const G = { F, glass, spot, busy: false, x };
+  F.lines = lines;
+  restHands(G);
+  hot(F.root, 1, look.label, () => say(F, lineOf(F)), { grow: 0, noChip: true });
+  GUESTS.push(G);
+  return G;
+}
+function restHands(G) {
+  const F = G.F;
+  reach(F.L, .15, 1.15, .6, V3(-.3, -.15, 1), DIR.down, .35);
+  reach(F.R, -.13, 1.15, .58, V3(.3, -.15, 1), DIR.down, .35);
+}
+async function sip(G) {
+  const F = G.F, gl = toFig(F, G.glass.position);
+  G.busy = true;
+  reach(F.R, gl.x - .045, CT.top + .07, gl.z - .02, V3(.2, 0, 1), DIR.in(-1), .2);
+  await sleep(.6);
+  F.R.curlT = .8;
+  const h = grab(F, F.R, G.glass, V3(0, -.05, .05), .2);
+  h.woff = V3(0, -.07, 0);
+  await sleep(.25);
+  reach(F.R, -.03, 1.5, .2, V3(.4, .6, 1), DIR.in(-1));
+  F.look = null;
+  await sleep(.7);
+  tween(h, { tilt: -.75 }, .5);
+  F.nod = -.12;
+  await sleep(1.1);
+  tween(h, { tilt: 0 }, .4);
+  F.nod = 0;
+  await sleep(.3);
+  reach(F.R, gl.x - .045, CT.top + .07, gl.z - .02, V3(.2, 0, 1), DIR.in(-1));
+  await sleep(.6);
+  await putDown(F, G.glass, G.spot, .15);
+  G.glass.rotation.set(0, 0, 0);
+  F.R.curlT = .3;
+  restHands(G);
+  G.busy = false;
+}
+async function gesture(G, other) {
+  const F = G.F;
+  G.busy = true;
+  if (other) F.look = other.F.head.getWorldPosition(V3());
+  for (let i = 0; i < 4; i++) {
+    reach(F.L, .12 + R(-.04, .06), 1.28 + R(-.04, .08), .4 + R(-.04, .06), V3(.4, .5, 1), V3(-.3, .8, .2), .3);
+    F.tilt = R(-.1, .1);
+    await sleep(R(.5, .8));
+  }
+  F.tilt = 0;
+  restHands(G);
+  G.busy = false;
+}
+async function laugh(G) {
+  const F = G.F;
+  for (let i = 0; i < 10; i++) { F.sway = Math.sin(i * 2.1) * .03; F.nod = -.14 + Math.sin(i * 1.7) * .05; F.leanT = -.02; await sleep(.12); }
+  F.sway = 0; F.nod = 0; F.leanT = .12;
+}
+async function toast(A, B) {
+  if (A.busy || B.busy) return;
+  A.busy = B.busy = true;
+  const mid = V3((A.F.x + B.F.x) / 2, 1.42, -1.82);
+  const holds = [];
+  for (const G of [A, B]) {
+    const F = G.F, gl = toFig(F, G.glass.position);
+    reach(F.R, gl.x - .045, CT.top + .07, gl.z - .02, V3(.2, 0, 1), DIR.in(-1), .2);
+    F.look = mid;
+  }
+  await sleep(.6);
+  for (const G of [A, B]) { G.F.R.curlT = .8; const h = grab(G.F, G.F.R, G.glass, V3(0, -.05, .05), .2); h.woff = V3(0, -.07, 0); holds.push(h); }
+  await sleep(.3);
+  for (const G of [A, B]) {
+    const s = G === A ? 1 : -1, m = toFig(G.F, V3(mid.x + s * .07, mid.y, mid.z));
+    reach(G.F.R, m.x, m.y, m.z, V3(0, .3, 1), DIR.in(-1));
+  }
+  await sleep(.75);
+  clink();
+  for (const G of [A, B]) G.F.look = (G === A ? B : A).F.head.getWorldPosition(V3());
+  await sleep(.5);
+  for (const G of [A, B]) { G.F.busy = true; }
+  await Promise.all([A, B].map(async (G, i) => {
+    const h = holds[i];
+    reach(G.F.R, -.03, 1.5, .2, V3(.4, .6, 1), DIR.in(-1));
+    await sleep(.6);
+    tween(h, { tilt: -.7 }, .5); G.F.nod = -.12;
+    await sleep(1);
+    tween(h, { tilt: 0 }, .4); G.F.nod = 0;
+    await sleep(.3);
+    const gl = toFig(G.F, G.spot);
+    reach(G.F.R, gl.x - .045, CT.top + .07, gl.z - .02, V3(.2, 0, 1), DIR.in(-1));
+    await sleep(.6);
+    await putDown(G.F, G.glass, G.spot, .15);
+    G.glass.rotation.set(0, 0, 0);
+    G.F.look = null;
+    restHands(G);
+  }));
+  A.busy = B.busy = false;
+}
+
+const LADY = { kind: "dress", body: "#1f4a3a", skin: 0xd6a088, hair: 0x0e0a08, hairStyle: "bob", lady: true, label: "Гостья в зелёном" };
+const GENT = { kind: "suit", body: "#2c2c32", tie: "#7a1424", skin: 0xc8946e, hair: 0x4a2e1a, mustache: false, label: "Гость в сером костюме" };
+const SOLO = { kind: "suit", body: "#4a3626", tie: "#1f3a5a", skin: 0xb88262, hair: 0x2a2a2a, hat: 0x1c1a18, mustache: true, label: "Завсегдатай в шляпе" };
+const pair = [];
+if (crowd >= 2) {
+  pair.push(barGuest(-2.5, LADY, { cup: "martini", color: "#e8e4c8", garnish: "olive" }, [
+    "Говорят, «Негрони» придумали во Флоренции: граф Негрони попросил сделать его американо покрепче.",
+    "Мартини — только сухой и с оливкой. Остальное — разговоры.",
+    "Граммофон в курилке играет лучше любого оркестра."
+  ]));
+  pair.push(barGuest(-1.25, GENT, { cup: "rocks", color: "#c27a1a", ice: true }, [
+    "В сухой закон коктейли спасали положение: плохой подпольный алкоголь прятали за соками и сиропами.",
+    "Бармен здесь трясёт шейкер так, будто внутри гроза.",
+    "Пароль от этого бара я тебе не скажу. Ты и так уже внутри."
+  ]));
+}
+if (crowd !== 2) barGuest(2.5, SOLO, { cup: "highball", color: "#cfe6ea", garnish: "wheel", ice: true }, [
+  "Я тут с самого открытия. Лучшее время: бармен ещё никуда не спешит.",
+  "Джин с тоником придумали британцы в Индии: хинный тоник пили от малярии.",
+  "Загляни в курилку и постучи в дверь. Только тихо."
+]);
+
+/* распорядок гостей: разговоры, глоток, смех, тост */
+async function guestLife() {
+  if (STILL) return;
+  for (;;) {
+    await sleep(R(2.5, 5));
+    if (PAUSED || curZone !== 1) continue;
+    const free = GUESTS.filter(g => !g.busy);
+    if (!free.length) continue;
+    const r = rng();
+    if (pair.length === 2 && r < .12) toast(pair[0], pair[1]);
+    else if (pair.length === 2 && r < .55) {
+      const [a, b] = rng() < .5 ? pair : [pair[1], pair[0]];
+      if (!a.busy) { b.F.look = a.F.head.getWorldPosition(V3()); gesture(a, b).then(() => { if (rng() < .4) laugh(b); setTimeout(() => { if (!b.busy) b.F.look = null; }, 1500); }); }
+    } else if (r < .8) { const g = pickOne(free); sip(g); }
+    else { const g = pickOne(free); g.F.look = rng() < .5 ? bt.head.getWorldPosition(V3()) : camera.position; setTimeout(() => { g.F.look = null; }, 2200); }
+  }
+}
+
+/* ---------- курилка: гость с газетой и курильщик с сигарой ---------- */
+function seatIn(F, x, z, face, back = .05) {
+  placeFig(F, x - Math.sin(face) * back, z - Math.cos(face) * back, face);
+  F.legsFixed = true;
+  F.legs.forEach(lg => { lg.tgt.set(lg.side * .13, .075, .5); lg.cur.copy(lg.tgt); });
+}
+const reader = makeFigure({ kind: "suit", body: "#2a2420", tie: "#5a1a1a", skin: 0xc49272, hair: 0x3a3430, mustache: true, hat: 0x1c1a18, seated: true, hipY: .52 });
+seatIn(reader, 6.75, -.15, 2.69);
+reader.leanT = -.08;
+const NEWS = group(0, 1.0, .4, reader.root);
+NEWS.rotation.x = -.35;
+const newsMat = std({ map: TEX.news, roughness: .9, side: THREE.DoubleSide });
+const newsL = group(0, 0, 0, NEWS), newsR = group(0, 0, 0, NEWS);
+mesh(new THREE.PlaneGeometry(.3, .4), newsMat, -.15, 0, 0, newsL);
+mesh(new THREE.PlaneGeometry(.3, .4), newsMat, .15, 0, 0, newsR);
+newsL.rotation.y = .25; newsR.rotation.y = -.25;
+const newsHands = () => {
+  reach(reader.L, .27, .98, .35, V3(0, 1, -.2), DIR.in(1), .7);
+  reach(reader.R, -.27, .98, .35, V3(0, 1, -.2), DIR.in(-1), .7);
+};
+newsHands();
+reader.look = fromFig(reader, V3(0, .95, .45));
+hot(reader.root, 2, "Газета: сухой закон", () => openCard(STORY), { grow: 0, noChip: true });
+async function readerLife() {
+  if (STILL) return;
+  for (;;) {
+    await sleep(R(9, 16));
+    if (PAUSED) continue;
+    // перелистывает: правая половина уходит влево
+    reach(reader.R, .05, 1.05, .42, V3(0, 1, -.2), DIR.in(-1), .6);
+    await tween(newsR.rotation, { y: -Math.PI + .3 }, .6);
+    newsR.rotation.y = -.25;
+    newsHands();
+    if (rng() < .4) { reader.look = camera.position; await sleep(1.5); reader.look = fromFig(reader, V3(0, .95, .45)); }
+  }
+}
+
+const SMOKE_ON = GUEST_H >= 19 || GUEST_H < 3;
+let smoker = null;
+const puffs = [];
+if (SMOKE_ON) {
+  smoker = makeFigure({ kind: "suit", body: "#1e1a20", tie: "#8a6a2a", skin: 0xb07a5a, hair: 0x6a6a6a, mustache: true, seated: true, hipY: .52 });
+  seatIn(smoker, 6.75, -3.25, .45);
+  smoker.lines = ["Хорошая сигара не терпит спешки.", "Камин, кресло и тишина. Что ещё нужно?", "В этом клубе не спрашивают, кто ты. Только пароль."];
+  smoker.leanT = -.1;
+  const cig = mesh(new THREE.CylinderGeometry(.009, .009, .13, 10), std({ color: 0x4a2a14, roughness: .8 }), 0, 0, 0);
+  cig.rotation.z = Math.PI / 2;
+  const tipC = mesh(new THREE.SphereGeometry(.0095, 8, 6), basic({ color: 0xff6a20, toneMapped: false }), .066, 0, 0, cig);
+  const ch = grab(smoker, smoker.R, cig, V3(0, -.07, .03), 0);
+  ch.k = 1; ch.tilt = undefined;
+  smoker.cig = cig;
+  reach(smoker.R, -.34, .8, .12, V3(0, -.3, 1), DIR.in(-1), .6);
+  reach(smoker.L, .34, .78, .1, V3(0, -.3, 1), DIR.down, .3);
+  hot(smoker.root, 2, "Курильщик", () => say(smoker, lineOf(smoker)), { grow: 0, noChip: true });
+  for (let i = 0; i < 8; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.puff, color: 0xd8c8c0, transparent: true, opacity: 0, depthWrite: false }));
+    s.userData.t = 1; world.add(s); puffs.push(s);
+  }
+}
+onTick((t, dt) => {
+  if (!smoker) return;
+  smoker.cig.rotation.set(0, smoker.face + .4, Math.PI / 2 - .2);
+  for (const s of puffs) {
+    if (s.userData.t >= 1) { s.material.opacity = 0; continue; }
+    s.userData.t += dt * .35;
+    const k = s.userData.t;
+    s.position.copy(s.userData.o).addScaledVector(s.userData.v, k).add(_w0.set(0, k * .5, 0));
+    const sc = .08 + k * .45; s.scale.set(sc, sc, 1);
+    s.material.opacity = (1 - k) * .4;
+  }
+});
+async function smokerLife() {
+  if (STILL || !smoker) return;
+  for (;;) {
+    await sleep(R(7, 12));
+    if (PAUSED) continue;
+    reach(smoker.R, -.04, 1.13, .2, V3(.3, .8, .5), DIR.in(-1));
+    await sleep(1.6);
+    reach(smoker.R, -.34, .8, .12, V3(0, -.3, 1), DIR.in(-1));
+    await sleep(.5);
+    // выдыхает дым
+    const mouth = smoker.head.localToWorld(V3(0, .05, .12));
+    const fwd = fromFig(smoker, V3(0, 0, .5)).sub(V3(smoker.x, 0, smoker.z));
+    puffs.forEach((s, i) => setTimeout(() => { s.userData.t = 0; s.userData.o = mouth.clone(); s.userData.v = fwd.clone().multiplyScalar(R(.5, .9)); }, i * 90));
+    smoker.nod = -.15; await sleep(1.2); smoker.nod = 0;
+  }
+}
+
+/* ---------- читальня: писатель за столом и читательница в кресле ---------- */
+const writer = makeFigure({ kind: "cardigan", body: "#4a3a28", shirt: "#e2d8c4", trousers: 0x1e1a16, skin: 0xd09a7a, hair: 0x5a3a22, seated: true, hipY: .56 });
+placeFig(writer, WIN.x, -3.62, Math.PI);
+writer.legsFixed = true;
+writer.legs.forEach(lg => { lg.tgt.set(lg.side * .13, .075, .42); lg.cur.copy(lg.tgt); });
+writer.lines = ["Пишу роман о баре, где время идёт по-настоящему.", "Не мешай, муза только что зашла.", "Осталось придумать последнюю главу. Может, ты подскажешь?"];
+const pen = mesh(new THREE.CylinderGeometry(.004, .002, .14, 6), std({ color: 0x1a1210, roughness: .3 }), 0, 0, 0);
+const penH = grab(writer, writer.R, pen, V3(0, -.07, .03), 0); penH.k = 1; penH.tilt = .5;
+writer.mode = "write";
+hot(writer.root, 0, "Писатель", () => say(writer, lineOf(writer)), { grow: 0, noChip: true });
+onTick(t => {
+  if (writer.mode === "write") {
+    writer.leanT = .32;
+    reach(writer.R, -.1 + Math.sin(t * 1.3) * .05 + Math.sin(t * 9) * .008, .815 + Math.max(0, Math.sin(t * 9)) * .006, .5 + Math.cos(t * 9) * .006, V3(.3, -.4, 1), DIR.down, .6);
+    reach(writer.L, .17, .8, .48, V3(-.3, -.2, 1), DIR.down, .25);
+    if (writer.look !== camera.position) writer.look = fromFig(writer, V3(-.08, .79, .52));
+  } else if (writer.mode === "think") {
+    writer.leanT = -.05;
+    reach(writer.L, .02, 1.13, .14, V3(0, 1, .3), V3(-.2, 0, 1), .7);
+    reach(writer.R, -.15, .82, .4, V3(.3, -.4, 1), DIR.down, .6);
+  }
+});
+async function writerLife() {
+  if (STILL) return;
+  for (;;) {
+    await sleep(R(10, 18));
+    if (PAUSED) continue;
+    writer.mode = "think";
+    writer.look = V3(WIN.x + .3, 2.3, -5);
+    await sleep(R(3, 5));
+    writer.mode = "write";
+  }
+}
+
+let lady = null;
+if (GUEST_H >= 18 || GUEST_H < 1) {
+  lady = makeFigure({ kind: "dress", body: "#5a1a2a", skin: 0xe0ac92, hair: 0x6a3a1a, hairStyle: "bob", lady: true, seated: true, hipY: .6 });
+  seatIn(lady, -6.85, -1.25, .95, .02);
+  lady.leanT = -.1;
+  lady.lines = ["Тсс... я на самом интересном месте.", "«Великий Гэтсби». Перечитываю каждую осень, но и зимой хорошо.", "Попробуй открыть книгу рецептов на кафедре. Там все шестнадцать коктейлей."];
+  const book = group(0, .96, .32, lady.root);
+  book.rotation.x = -.7;
+  mesh(new THREE.BoxGeometry(.3, .21, .02), std({ color: 0x3a1a10 }), 0, 0, -.012, book);
+  const pg = std({ map: TEX.page, roughness: .95, side: THREE.DoubleSide });
+  mesh(new THREE.PlaneGeometry(.14, .2), pg, -.072, 0, .001, book).rotation.y = .12;
+  const leafG = group(0, 0, .002, book);
+  mesh(new THREE.PlaneGeometry(.14, .2), pg, .072, 0, 0, leafG);
+  leafG.rotation.y = -.12;
+  lady.leaf = leafG;
+  reach(lady.L, .16, .9, .3, V3(0, .6, .3), DIR.in(1), .6);
+  reach(lady.R, -.16, .9, .3, V3(0, .6, .3), DIR.in(-1), .6);
+  lady.look = fromFig(lady, V3(0, .92, .36));
+  hot(lady.root, 0, "Читательница", () => say(lady, lineOf(lady)), { grow: 0, noChip: true });
+}
+async function ladyLife() {
+  if (STILL || !lady) return;
+  for (;;) {
+    await sleep(R(8, 14));
+    if (PAUSED) continue;
+    await tween(lady.leaf.rotation, { y: -Math.PI + .12 }, .7);
+    lady.leaf.rotation.y = -.12;
+    if (rng() < .35) { lady.look = camera.position; await sleep(1.6); lady.look = fromFig(lady, V3(0, .92, .36)); }
+  }
+}
+function companyLife() { guestLife(); readerLife(); smokerLife(); writerLife(); ladyLife(); }
+Object.assign(H3D, { toast: () => pair.length === 2 && toast(pair[0], pair[1]), sip: i => GUESTS[i] && sip(GUESTS[i]), guests: GUESTS });
 
 /* ================= камера по точкам, клики, интерфейс и главный цикл ================= */
 const ZONES = [
   { name: "Читальня", sub: "Книги до потолка, дождь за окном, письмо на столе", pos: [-2.5, 1.6, 1.25], tgt: [-6.3, 1.3, -3.1], span: 5.4, pull: 2.6,
     hint: "Открой книгу рецептов на кафедре, прочти письмо или задуй свечу." },
-  { name: "Бар", sub: "Бармен на месте, лёд уже в ведёрке", pos: [0, 1.62, .95], tgt: [0, 1.6, -4.6], span: 7.0, pull: 3.4,
+  { name: "Бар", sub: "Бармен на месте, лёд уже в ведёрке", pos: [0, 1.95, 1.45], tgt: [0, 1.48, -4.6], span: 7.0, pull: 3.0,
     hint: "Нажми на бутылку, чтобы узнать её историю. Коктейли — в барной карте." },
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
     hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." }
@@ -4468,7 +5178,7 @@ function renderZoneUI(i) {
   }, STILL ? 0 : 280);
   if (!mixDlg.open && !busy) hintEl.textContent = ZONES[i].hint;
   spotsEl.innerHTML = "";
-  HOT.filter(h => h.userData.hot.zone === i).forEach(h => {
+  HOT.filter(h => h.userData.hot.zone === i && !h.userData.hot.noChip).forEach(h => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "spot"; b.textContent = h.userData.hot.label;
     b.addEventListener("click", () => activate(h));
@@ -4659,7 +5369,7 @@ function tick(now) {
     d.h += (want - d.h) * Math.min(1, dt * 10);
     if (d.grow) h.scale.copy(d.base).multiplyScalar(1 + d.grow * d.h);
     if (d.lift && !h.userData.out) h.position.y = d.y0 + d.lift * d.h;
-    if (d.chip) d.chip.classList.toggle("lit", want === 1);
+    if (h.userData.chip) h.userData.chip.classList.toggle("lit", want === 1);
   }
   // бутылки в шейкере светятся золотом
   for (const id in heroes) {
@@ -4667,10 +5377,10 @@ function tick(now) {
     const target = mixDlg.open ? (inS ? 1 : .4) : .2 + hr.root.userData.hot.h * .4;
     hr.halo.material.opacity += (target - hr.halo.material.opacity) * Math.min(1, dt * 6);
     hr.halo.material.color.setHex(inS ? 0xffd27a : 0xffb070);
-    if (hr.root.userData.hot.chip) hr.root.userData.hot.chip.classList.toggle("in", inS);
+    if (hr.root.userData.chip) hr.root.userData.chip.classList.toggle("in", inS);
   }
 
-  poseBartender(t);
+  updateFigures(t, dt);
   // камин
   FIRE.boost += (1 - FIRE.boost) * dt * .5;
   const fl = .78 + .14 * Math.sin(t * 7.3) + .1 * Math.sin(t * 13.1 + 1) + .06 * Math.sin(t * 23.7);
@@ -4712,7 +5422,6 @@ function tick(now) {
   for (const s of haze) { s.position.x += Math.sin(t * .1 + s.userData.ph) * .0015; s.material.opacity = .1 + .05 * Math.sin(t * .2 + s.userData.ph); }
   if (Music.on) GR.disc.rotation.y -= dt * 3.4;
   CAT.body.scale.y = .5 + .025 * Math.sin(t * 1.9);
-  paperL.rotation.y = .3 + Math.max(0, Math.sin(t * .35)) * .08;
   // читальня
   rainMat.uniforms.uTime.value = t;
   NOOK.flash = Math.max(0, NOOK.flash - dt * 2.2);
@@ -4723,8 +5432,6 @@ function tick(now) {
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
   if (NOOK.candleOn) { NOOK.flame.scale.set(1, 1 + .15 * Math.sin(t * 13), 1); NOOK.flameGlow.material.opacity = .7 + .1 * Math.sin(t * 9); }
-  writer.R.el.rotation.x = -.75 + .05 * Math.sin(t * 7);
-  writer.R.sh.rotation.y = .06 * Math.sin(t * 2.3);
   moth.position.set(-6.5 + Math.cos(t * 2.4) * .16, 1.13 + Math.sin(t * 3.1) * .05, -4.3 + Math.sin(t * 2.4) * .16);
   moth.rotation.y = -t * 2.4; moth.scale.x = .6 + .4 * Math.abs(Math.sin(t * 30));
   flashT -= dt;
@@ -4778,6 +5485,8 @@ renderer.compile(scene, camera);
 renderer.render(scene, camera);
 progress(1);
 H3D.ready = true;
+H3D.bt = bt; H3D.figs = FIGS; H3D.BT = BT;
+H3D.cam = (p, t, fov = 40) => { flight = null; setCam({ px: p[0], py: p[1], pz: p[2], tx: t[0], ty: t[1], tz: t[2], fov }); };
 H3D.render = () => renderer.render(scene, camera);
 H3D.info = () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, dpr: DPR, zone: curZone, busy, btBusy: BT.busy });
 renderZoneUI(1);
@@ -4865,7 +5574,7 @@ enter.addEventListener("click", async () => {
   if (!STILL) tween(renderer, { toneMappingExposure: 1.2 }, 2.2, ease.out);
   setCam(framed(INTRO_CAM));
   await flyTo(framed(1), 3.2, .4);
-  if (!idleStarted) { idleStarted = true; idleLife(); }
+  if (!idleStarted) { idleStarted = true; idleLife(); companyLife(); }
 });
 let idleStarted = false;
 

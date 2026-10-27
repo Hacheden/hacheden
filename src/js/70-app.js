@@ -2,7 +2,7 @@
 const ZONES = [
   { name: "Читальня", sub: "Книги до потолка, дождь за окном, письмо на столе", pos: [-2.5, 1.6, 1.25], tgt: [-6.3, 1.3, -3.1], span: 5.4, pull: 2.6,
     hint: "Открой книгу рецептов на кафедре, прочти письмо или задуй свечу." },
-  { name: "Бар", sub: "Бармен на месте, лёд уже в ведёрке", pos: [0, 1.62, .95], tgt: [0, 1.6, -4.6], span: 7.0, pull: 3.4,
+  { name: "Бар", sub: "Бармен на месте, лёд уже в ведёрке", pos: [0, 1.95, 1.45], tgt: [0, 1.48, -4.6], span: 7.0, pull: 3.0,
     hint: "Нажми на бутылку, чтобы узнать её историю. Коктейли — в барной карте." },
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
     hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." }
@@ -69,7 +69,7 @@ function renderZoneUI(i) {
   }, STILL ? 0 : 280);
   if (!mixDlg.open && !busy) hintEl.textContent = ZONES[i].hint;
   spotsEl.innerHTML = "";
-  HOT.filter(h => h.userData.hot.zone === i).forEach(h => {
+  HOT.filter(h => h.userData.hot.zone === i && !h.userData.hot.noChip).forEach(h => {
     const b = document.createElement("button");
     b.type = "button"; b.className = "spot"; b.textContent = h.userData.hot.label;
     b.addEventListener("click", () => activate(h));
@@ -260,7 +260,7 @@ function tick(now) {
     d.h += (want - d.h) * Math.min(1, dt * 10);
     if (d.grow) h.scale.copy(d.base).multiplyScalar(1 + d.grow * d.h);
     if (d.lift && !h.userData.out) h.position.y = d.y0 + d.lift * d.h;
-    if (d.chip) d.chip.classList.toggle("lit", want === 1);
+    if (h.userData.chip) h.userData.chip.classList.toggle("lit", want === 1);
   }
   // бутылки в шейкере светятся золотом
   for (const id in heroes) {
@@ -268,10 +268,10 @@ function tick(now) {
     const target = mixDlg.open ? (inS ? 1 : .4) : .2 + hr.root.userData.hot.h * .4;
     hr.halo.material.opacity += (target - hr.halo.material.opacity) * Math.min(1, dt * 6);
     hr.halo.material.color.setHex(inS ? 0xffd27a : 0xffb070);
-    if (hr.root.userData.hot.chip) hr.root.userData.hot.chip.classList.toggle("in", inS);
+    if (hr.root.userData.chip) hr.root.userData.chip.classList.toggle("in", inS);
   }
 
-  poseBartender(t);
+  updateFigures(t, dt);
   // камин
   FIRE.boost += (1 - FIRE.boost) * dt * .5;
   const fl = .78 + .14 * Math.sin(t * 7.3) + .1 * Math.sin(t * 13.1 + 1) + .06 * Math.sin(t * 23.7);
@@ -313,7 +313,6 @@ function tick(now) {
   for (const s of haze) { s.position.x += Math.sin(t * .1 + s.userData.ph) * .0015; s.material.opacity = .1 + .05 * Math.sin(t * .2 + s.userData.ph); }
   if (Music.on) GR.disc.rotation.y -= dt * 3.4;
   CAT.body.scale.y = .5 + .025 * Math.sin(t * 1.9);
-  paperL.rotation.y = .3 + Math.max(0, Math.sin(t * .35)) * .08;
   // читальня
   rainMat.uniforms.uTime.value = t;
   NOOK.flash = Math.max(0, NOOK.flash - dt * 2.2);
@@ -324,8 +323,6 @@ function tick(now) {
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
   if (NOOK.candleOn) { NOOK.flame.scale.set(1, 1 + .15 * Math.sin(t * 13), 1); NOOK.flameGlow.material.opacity = .7 + .1 * Math.sin(t * 9); }
-  writer.R.el.rotation.x = -.75 + .05 * Math.sin(t * 7);
-  writer.R.sh.rotation.y = .06 * Math.sin(t * 2.3);
   moth.position.set(-6.5 + Math.cos(t * 2.4) * .16, 1.13 + Math.sin(t * 3.1) * .05, -4.3 + Math.sin(t * 2.4) * .16);
   moth.rotation.y = -t * 2.4; moth.scale.x = .6 + .4 * Math.abs(Math.sin(t * 30));
   flashT -= dt;
@@ -379,6 +376,8 @@ renderer.compile(scene, camera);
 renderer.render(scene, camera);
 progress(1);
 H3D.ready = true;
+H3D.bt = bt; H3D.figs = FIGS; H3D.BT = BT;
+H3D.cam = (p, t, fov = 40) => { flight = null; setCam({ px: p[0], py: p[1], pz: p[2], tx: t[0], ty: t[1], tz: t[2], fov }); };
 H3D.render = () => renderer.render(scene, camera);
 H3D.info = () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, dpr: DPR, zone: curZone, busy, btBusy: BT.busy });
 renderZoneUI(1);
@@ -466,6 +465,6 @@ enter.addEventListener("click", async () => {
   if (!STILL) tween(renderer, { toneMappingExposure: 1.2 }, 2.2, ease.out);
   setCam(framed(INTRO_CAM));
   await flyTo(framed(1), 3.2, .4);
-  if (!idleStarted) { idleStarted = true; idleLife(); }
+  if (!idleStarted) { idleStarted = true; idleLife(); companyLife(); }
 });
 let idleStarted = false;

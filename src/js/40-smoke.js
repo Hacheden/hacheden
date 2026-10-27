@@ -196,22 +196,6 @@ for (let i = 0; i < 6; i++) {
   haze.push(s);
 }
 
-/* ---------- гость с газетой в кресле у камина ---------- */
-const patron = makePerson({ seated: true, jacket: 0x2a2420, shirt: 0xd8d0c0, trousers: 0x1c1a18, hair: 0x3a3430, skin: 0xc49272, mustache: true, hat: 0x1c1a18 });
-patron.root.position.set(6.72, 0, -.22);
-patron.root.rotation.y = 2.69;
-world.add(patron.root);
-for (const a of [patron.L, patron.R]) { a.sh.rotation.x = -1.05; a.el.rotation.x = -.95; }
-patron.L.sh.rotation.z = -.25; patron.R.sh.rotation.z = .25;
-patron.spine.rotation.x = -.12;
-patron.head.rotation.x = .28;
-const paper = group(0, .55, .38, patron.spine);
-const paperL = mesh(new THREE.PlaneGeometry(.3, .4), std({ map: TEX.news, roughness: .9, side: THREE.DoubleSide }), -.15, 0, 0, paper);
-const paperR = group(0, 0, 0, paper);
-mesh(new THREE.PlaneGeometry(.3, .4), std({ map: TEX.news, roughness: .9, side: THREE.DoubleSide }), .15, 0, 0, paperR);
-paperL.rotation.y = .3;
-paper.rotation.x = -.35;
-hot(patron.root, 2, "Газета: сухой закон", () => openCard(STORY), { grow: .015 });
 
 /* ---------- граммофон ---------- */
 const GR = {};

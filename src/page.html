@@ -50,6 +50,11 @@
     background: rgba(14,5,8,.86); border: 1px solid rgba(214,170,92,.45); color: var(--cream); font: 400 15px/1.2 var(--font-text);
     white-space: nowrap; opacity: 0; transition: opacity .15s; }
   .tip.show { opacity: 1; }
+  .bubble { position: absolute; z-index: 5; left: 0; top: 0; max-width: min(280px, 70vw); padding: 10px 14px; border-radius: 14px;
+    background: #f3e8d2; color: #2a1610; font: 400 15px/1.4 var(--font-text); box-shadow: 0 8px 24px rgba(0,0,0,.45);
+    pointer-events: none; opacity: 0; transition: opacity .25s; }
+  .bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #f3e8d2; }
+  .bubble.show { opacity: 1; }
 
   /* вход */
   .intro { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 24px;
@@ -109,6 +114,7 @@
     </nav>
   </div>
   <div class="tip" id="tip" aria-hidden="true"></div>
+  <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
   <div class="served" id="served" hidden></div>
   <!--@@BUTTONS@@-->
 </main>

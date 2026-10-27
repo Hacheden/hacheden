@@ -263,16 +263,6 @@ function toggleCandle() {
 }
 LIGHTS.lamp.userData.mul = 1;
 
-/* писатель за столом */
-const writer = makePerson({ seated: true, jacket: 0x3a2e22, shirt: 0xe2d8c4, trousers: 0x1e1a16, hair: 0x5a3a22, skin: 0xd09a7a });
-writer.root.position.set(WIN.x - .02, 0, -3.66);
-writer.root.rotation.y = Math.PI;
-world.add(writer.root);
-writer.spine.rotation.x = .22;
-writer.head.rotation.x = .45;
-for (const a of [writer.L, writer.R]) { a.sh.rotation.x = -1.15; a.el.rotation.x = -.75; }
-writer.L.sh.rotation.z = -.25; writer.R.sh.rotation.z = .3;
-hot(writer.root, 0, "Писатель", () => { tween(writer.head.rotation, { y: -.6, x: .1 }, .6, ease.out).then(() => wait(1.4)).then(() => tween(writer.head.rotation, { y: 0, x: .45 }, .9)); }, { grow: 0 });
 
 /* ---------- кафедра с книгой рецептов ---------- */
 (() => {

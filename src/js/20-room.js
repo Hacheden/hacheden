@@ -101,9 +101,9 @@ function point(name, color, intensity, dist, x, y, z) {
   l.userData.base = intensity;
   return l;
 }
-point("pendL", 0xffb066, 3.2, 6.5, -2.1, 2.45, -2.35);
+point("pendL", 0xffb066, 3.4, 6.5, -1.7, 2.45, -2.35);
 point("pendC", 0xffb066, 3.2, 6.5, 0, 2.45, -2.35);
-point("pendR", 0xffb066, 3.2, 6.5, 2.1, 2.45, -2.35);
+point("pendR", 0xffb066, 3.4, 6.5, 1.7, 2.45, -2.35);
 point("red", 0xff2238, 5, 5.5, 0, 1.95, -4.3);
 point("fire", 0xff7426, 13, 9, 7.3, .6, -1.7);
 point("lamp", 0xffbe70, 4, 6, -6.4, 1.15, -4.1);

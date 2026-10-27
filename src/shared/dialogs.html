@@ -1,0 +1,88 @@
+<dialog class="card" id="card" aria-labelledby="card-title"></dialog>
+<dialog class="book" id="book" aria-label="Книга рецептов">
+  <div class="book-wrap">
+    <button class="close book-close" type="button" aria-label="Закрыть книгу" data-book-close>×</button>
+    <div class="book-stage" id="book-stage">
+      <div class="page left" id="book-l"></div>
+      <div class="page right" id="book-r"></div>
+    </div>
+    <div class="book-nav">
+      <button class="book-arrow" type="button" data-turn="-1" aria-label="Предыдущая страница">‹</button>
+      <span id="book-pos"></span>
+      <button class="book-arrow" type="button" data-turn="1" aria-label="Следующая страница">›</button>
+    </div>
+  </div>
+</dialog>
+<dialog class="mix" id="mix" aria-labelledby="mix-title">
+  <div class="mix-inner">
+    <div class="mix-top">
+      <h2 id="mix-title">Барная карта</h2>
+      <button class="close" type="button" aria-label="Закрыть барную карту" data-mix-close>×</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab" type="button" role="tab" id="tab-mix" aria-controls="panel-mix" aria-selected="true" data-tab="mix">Смешать</button>
+      <button class="tab" type="button" role="tab" id="tab-menu" aria-controls="panel-menu" aria-selected="false" data-tab="menu">Меню</button>
+    </div>
+    <section id="panel-mix" role="tabpanel" aria-labelledby="tab-mix">
+      <p class="mix-note" id="mix-summary"></p>
+      <div id="mix-results" aria-live="polite"></div>
+      <div id="mix-chips"></div>
+      <button class="clear" type="button" data-clear>Очистить шейкер</button>
+    </section>
+    <section id="panel-menu" role="tabpanel" aria-labelledby="tab-menu" hidden></section>
+  </div>
+</dialog>
+
+<div class="closeup" id="closeup" hidden>
+  <canvas class="cu-bokeh" id="cu-bokeh" aria-hidden="true"></canvas>
+  <svg class="cu-svg" id="cu-svg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id="cu-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a2516"/><stop offset=".22" stop-color="#2f170d"/><stop offset="1" stop-color="#110604"/></linearGradient>
+      <linearGradient id="cu-metal" x1="0" x2="1"><stop offset="0" stop-color="#6c7279"/><stop offset=".22" stop-color="#e8ecf0"/><stop offset=".5" stop-color="#9aa1a8"/><stop offset=".78" stop-color="#d7dce0"/><stop offset="1" stop-color="#60666d"/></linearGradient>
+      <linearGradient id="cu-skin" x1="0" x2="1"><stop offset="0" stop-color="#6e4234"/><stop offset=".5" stop-color="#9a6450"/><stop offset="1" stop-color="#5e382c"/></linearGradient>
+      <linearGradient id="cu-shirt" x1="0" x2="1"><stop offset="0" stop-color="#3e262c"/><stop offset=".5" stop-color="#6a4650"/><stop offset="1" stop-color="#3e262c"/></linearGradient>
+      <radialGradient id="cu-spot" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffbe82" stop-opacity=".34"/><stop offset="1" stop-color="#ff965a" stop-opacity="0"/></radialGradient>
+      <pattern id="cu-mat" width="20" height="20" patternUnits="userSpaceOnUse"><rect width="20" height="20" fill="#1a1210"/><circle cx="10" cy="10" r="5" fill="#0c0807"/></pattern>
+    </defs>
+    <g id="cu-cam">
+      <g id="cu-back">
+        <path d="M-700 560H1900V1400H-700Z" fill="url(#cu-wood)"/>
+        <rect x="-700" y="552" width="2600" height="10" fill="#6a3a22"/>
+        <rect x="-700" y="562" width="2600" height="2" fill="#ffc896" opacity=".3"/>
+        <g fill="none" stroke="#000" stroke-opacity=".28" stroke-width="2">
+          <path d="M-700 600C0 590 600 612 1900 596"/><path d="M-700 650C100 662 800 640 1900 656"/>
+          <path d="M-700 720C200 708 900 730 1900 714"/><path d="M-700 790C0 800 700 780 1900 796"/>
+        </g>
+        <ellipse cx="600" cy="655" rx="560" ry="120" fill="url(#cu-spot)"/>
+        <path d="M300 618H900L926 690H274Z" fill="url(#cu-mat)" stroke="#2c2325"/>
+        <g transform="translate(110 600)">
+          <ellipse cx="0" cy="24" rx="112" ry="24" fill="#120a0b"/>
+          <g fill="#8fb12f" stroke="#5f7f1a" stroke-width="2">
+            <circle cx="-60" cy="0" r="26"/><circle cx="-12" cy="-8" r="27"/><circle cx="38" cy="0" r="25"/>
+            <circle cx="-36" cy="14" r="24"/><circle cx="14" cy="16" r="25"/><circle cx="62" cy="14" r="22"/>
+          </g>
+          <g fill="#fff" opacity=".25"><ellipse cx="-20" cy="-20" rx="9" ry="5"/><ellipse cx="30" cy="-10" rx="8" ry="4"/></g>
+          <path d="M-112 18Q0 64 112 18" stroke="#ffc8aa" stroke-opacity=".25" fill="none" stroke-width="2"/>
+        </g>
+        <g transform="translate(990 642)">
+          <path d="M0 0L150 -14L168 34L14 48Z" fill="#d9ccb0" opacity=".9"/>
+          <path d="M8 18L158 4M12 30L162 16" stroke="#8a2a36" stroke-width="4"/>
+        </g>
+        <g transform="translate(1110 540)">
+          <circle cy="-26" r="70" fill="#ffb45a" opacity=".16"/>
+          <rect x="-22" y="-20" width="44" height="50" rx="6" fill="#ffdcb4" fill-opacity=".16" stroke="#ffe6c8" stroke-opacity=".4"/>
+          <rect x="-14" y="-4" width="28" height="30" rx="3" fill="#efe2c4"/>
+          <path class="flame" d="M0 -6C-6 -14 -4 -24 0 -32C4 -24 6 -14 0 -6Z" fill="#ffd27a"/>
+        </g>
+      </g>
+      <g id="cu-fall"></g>
+      <g id="cu-ves"></g>
+      <g id="cu-hold"></g>
+      <g id="cu-arms"></g>
+    </g>
+  </svg>
+  <h2 class="cu-title" id="cu-title"></h2>
+  <button class="go cu-skip" id="cu-skip" type="button">Пропустить</button>
+  <div class="cu-ui"><p class="cu-cap" id="cu-cap" aria-live="polite"><span class="cu-count" id="cu-count"></span><span class="cu-text" id="cu-text"></span></p></div>
+</div>
+

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Hacheden 3D</title>
+<title>Hacheden</title>
 <meta name="description" content="Бар Hacheden в 3D: стойка, курилка с камином и читальня с книгами.">
 <link href="https://fonts.googleapis.com/css2?family=Forum&family=Literata:opsz,wght@7..72,400..600&display=swap" rel="stylesheet">
 <style>
@@ -50,8 +50,6 @@
     background: rgba(14,5,8,.86); border: 1px solid rgba(214,170,92,.45); color: var(--cream); font: 400 15px/1.2 var(--font-text);
     white-space: nowrap; opacity: 0; transition: opacity .15s; }
   .tip.show { opacity: 1; }
-  .classic { position: absolute; z-index: 4; right: 18px; top: 70px; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
-  .classic:hover { color: var(--brass); }
 
   /* вход */
   .intro { position: fixed; inset: 0; z-index: 10; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 24px;
@@ -69,14 +67,12 @@
   .enter:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
   .load { width: 180px; height: 2px; border-radius: 2px; background: rgba(214,170,92,.2); overflow: hidden; }
   .load i { display: block; height: 100%; width: 0; background: var(--brass); transition: width .3s; }
-  .intro .classic { position: static; }
   .nogl { max-width: 40ch; }
 
   .app .music, .app .order { animation-delay: .2s; }
   @media (max-width: 640px) {
     .zone-title { top: 74px; }
     .nav button { padding: 10px 14px; font-size: 16px; }
-    .classic { top: auto; bottom: auto; right: 12px; top: 64px; }
     .hint { font-size: 13.5px; }
   }
   @media (prefers-reduced-motion: reduce) {
@@ -96,7 +92,6 @@
   <canvas id="gl" aria-hidden="true"></canvas>
   <div class="vignette"></div>
   <h2 class="zone-title" id="zone-title" aria-live="polite">Бар<span class="zone-sub" id="zone-sub"></span></h2>
-  <a class="classic" href="https://hacheden.netlify.app/">Классическая версия</a>
   <div class="hud">
     <p class="hint" id="hint">Нажми на бутылку, чтобы узнать её историю. Коктейли — в барной карте.</p>
     <div class="spots" id="spots" role="group" aria-label="Что есть в этой комнате"></div>
@@ -116,7 +111,6 @@
   <p id="intro-text">Бар в трёх комнатах: стойка с барменом, курилка у камина и читальня под дождём.</p>
   <div class="load" aria-hidden="true"><i id="load"></i></div>
   <button class="enter" id="enter" type="button" disabled>Войти</button>
-  <a class="classic" href="https://hacheden.netlify.app/">Открыть классическую версию</a>
 </div>
 
 <!--@@HTML@@-->
@@ -134,7 +128,7 @@
   const Ambience = { setActive(on) { if (H3D.pause) H3D.pause(!on); } };
   function noGL() {
     if (H3D.ready) return;
-    document.getElementById("intro-text").textContent = "3D-версия не открылась: браузер не поддерживает WebGL или не загрузилась графика. Классическая версия работает везде.";
+    document.getElementById("intro-text").textContent = "Бар не открылся: этот браузер не поддерживает 3D-графику (WebGL) или страница не загрузилась. Попробуй обновить страницу или открыть сайт в Chrome, Safari или Firefox.";
     document.getElementById("enter").hidden = true;
     document.querySelector(".load").hidden = true;
   }

@@ -353,6 +353,46 @@
   .show-cap.show { animation: cap-rise .45s cubic-bezier(.2,.8,.2,1) both; }
   .show-count { display: block; min-height: 18px; color: var(--muted); font-size: 14px; }
   .show-text { display: block; margin-top: 6px; font: 400 clamp(20px, 2.8vw, 30px)/1.25 var(--font-display); color: var(--cream); text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+  /* карточка рецепта: что уже в бокале и что дальше */
+  .show-card { position: absolute; right: 22px; top: max(84px, calc(50% - 230px)); width: 248px; box-sizing: border-box; padding: 16px 16px 12px;
+    border-radius: 14px; border: 1px solid rgba(214,170,92,.32); background: linear-gradient(rgba(20,8,11,.82), rgba(12,4,7,.86));
+    box-shadow: 0 18px 50px rgba(0,0,0,.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .sc-cup { display: block; width: 74px; height: 83px; margin: 0 auto 6px; overflow: visible; }
+  .sc-cup .gl { fill: rgba(255,255,255,.05); stroke: rgba(241,228,204,.75); stroke-width: 1.6; stroke-linejoin: round; }
+  .sc-cup .st { fill: none; stroke: rgba(241,228,204,.75); stroke-width: 1.6; stroke-linecap: round; }
+  .sc-cup .ly { animation: sc-in .7s cubic-bezier(.2,.8,.2,1) both; transform-box: fill-box; transform-origin: bottom; transition: fill .9s; }
+  @keyframes sc-in { from { transform: scaleY(0); } to { transform: none; } }
+  .sc-sub { margin: 0 0 8px; text-align: center; color: var(--brass); font: 400 13px/1.2 var(--font-text); letter-spacing: .08em; text-transform: uppercase; }
+  .sc-list { list-style: none; margin: 0; padding: 0; }
+  .sc-list li { display: grid; grid-template-columns: 10px 1fr auto; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 8px;
+    color: rgba(241,228,204,.62); font: 400 15px/1.25 var(--font-text); transition: color .3s, background .3s; }
+  .sc-list li i { width: 9px; height: 9px; border-radius: 50%; box-shadow: 0 0 0 1px rgba(255,255,255,.25) inset; }
+  .sc-list li.tech i { background: none; border-radius: 1px; width: 7px; height: 7px; transform: rotate(45deg); box-shadow: 0 0 0 1px var(--brass) inset; }
+  .sc-list li .a { color: rgba(241,228,204,.5); font-size: 13px; white-space: nowrap; }
+  .sc-list li.now { color: #fff3dc; background: rgba(214,170,92,.16); box-shadow: inset 2px 0 0 var(--brass); }
+  .sc-list li.now .a { color: var(--brass); }
+  .sc-list li.done { color: rgba(241,228,204,.42); }
+  .sc-list li.done .a::after { content: " ✓"; color: var(--brass); }
+  /* ярлык у бутылки */
+  .show-tag { position: absolute; left: 0; top: 0; padding: 7px 12px; border-radius: 999px; border: 1px solid rgba(214,170,92,.6);
+    background: rgba(14,5,8,.82); color: #fff3dc; font: 400 17px/1 var(--font-display); letter-spacing: .03em; white-space: nowrap;
+    opacity: 0; transition: opacity .3s; pointer-events: none; }
+  .show-tag.show { opacity: 1; }
+  @media (min-width: 641px) and (max-height: 640px) {
+    .show-card { top: 76px; padding: 10px 12px 8px; width: 230px; }
+    .sc-cup { width: 46px; height: 52px; margin-bottom: 2px; }
+    .sc-sub { font-size: 11px; margin-bottom: 4px; }
+    .sc-list li { font-size: 13.5px; padding: 3px 7px; }
+  }
+  @media (max-width: 640px) {
+    .show-card { top: 116px; right: 8px; left: auto; transform: none; width: 156px; padding: 8px 8px 5px; background: rgba(14,5,8,.62); }
+    .sc-cup { width: 36px; height: 40px; margin-bottom: 0; }
+    .sc-sub { display: none; }
+    .sc-list { max-height: 34vh; overflow: hidden; }
+    .sc-list li { font-size: 12px; padding: 2px 5px; gap: 5px; grid-template-columns: 7px 1fr auto; }
+    .sc-list li .a { font-size: 11px; }
+    .show-tag { font-size: 14px; padding: 5px 10px; }
+  }
   @keyframes cap-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .app.showing .hud, .app.showing .zone-title, .app.showing #order { opacity: 0; visibility: hidden; }
   .hud { transition: opacity .6s, visibility .6s; }
@@ -439,6 +479,12 @@
   <div class="show-ui" id="show-ui" hidden>
     <h2 class="show-title" id="show-title"></h2>
     <button class="show-skip" id="show-skip" type="button">Пропустить</button>
+    <aside class="show-card" aria-label="Рецепт">
+      <svg class="sc-cup" id="sc-cup" viewBox="0 0 100 112" aria-hidden="true"></svg>
+      <p class="sc-sub" id="sc-sub"></p>
+      <ol class="sc-list" id="sc-list"></ol>
+    </aside>
+    <div class="show-tag" id="show-tag" aria-hidden="true"></div>
     <p class="show-cap" id="show-cap" aria-live="polite"><span class="show-count" id="show-count"></span><span class="show-text" id="show-text"></span></p>
   </div>
   <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
@@ -3427,6 +3473,81 @@ function torsoTex(o) {
   return (CLOTH[key] = t);
 }
 
+/* ---------- кисть с пальцами: ладонь, четыре пальца по три фаланги, большой палец из двух ---------- */
+const NAIL = std({ color: 0xe8c2b0, roughness: .3 });
+const FINGER_MAX = [1.35, 1.55, 1.05];
+function buildHand(side, hand, mSkin) {
+  // ладонь: чуть сужается к запястью, с подушечкой у большого пальца
+  const palmG = new RoundedBoxGeometry(.078, .084, .026, 3, .011);
+  const pp = palmG.attributes.position;
+  for (let i = 0; i < pp.count; i++) { const y = pp.getY(i); pp.setX(i, pp.getX(i) * (1 - Math.max(0, y) * 2.2)); }
+  palmG.computeVertexNormals();
+  palmG.translate(0, -.044, 0);
+  merged([palmG, sph(.019, side * .022, -.03, .009, 1, 1.35, .75, 12, 10), sph(.021, 0, -.004, -.002, 1.6, .7, .8, 12, 8)], mSkin, hand);
+  const spec = [[side * .027, .95, .06], [side * .009, 1, .0], [-side * .009, .95, -.05], [-side * .026, .78, -.11]];
+  const fingers = spec.map(([x, len, spread]) => {
+    const segs = [];
+    let parent = group(x, -.084, 0, hand);
+    parent.rotation.z = spread * side * .5;
+    const root = parent;
+    [.043, .027, .022].forEach((L0, i) => {
+      const L = L0 * len, r = [.0088, .0081, .0074][i] * (len < .9 ? .92 : 1);
+      const seg = i === 0 ? root : group(0, 0, 0, parent);
+      const cap = new THREE.CapsuleGeometry(r, Math.max(.001, L - r * 1.2), 3, 8);
+      cap.translate(0, -L / 2, 0);
+      const parts = [cap];
+      merged(parts, mSkin, seg);
+      if (i === 2) mesh(new RoundedBoxGeometry(r * 1.5, L * .5, .002, 1, .0009), NAIL, 0, -L * .62, -r * .86, seg);
+      segs.push(seg);
+      parent = group(0, -L, 0, seg);
+      seg.userData.next = parent;
+    });
+    // фаланги вкладываются: каждая следующая — в конце предыдущей
+    for (let i = 1; i < 3; i++) segs[i - 1].userData.next.add(segs[i]);
+    return segs;
+  });
+  // большой палец
+  const tRoot = group(side * .03, -.018, .01, hand);
+  const t1 = group(0, 0, 0, tRoot);
+  merged([(() => { const c = new THREE.CapsuleGeometry(.0105, .022, 3, 8); c.translate(0, -.016, 0); return c; })()], mSkin, t1);
+  const t2 = group(0, -.032, 0, t1);
+  merged([(() => { const c = new THREE.CapsuleGeometry(.0095, .016, 3, 8); c.translate(0, -.013, 0); return c; })()], mSkin, t2);
+  mesh(new RoundedBoxGeometry(.013, .011, .002, 1, .0009), NAIL, 0, -.02, -.0085, t2);
+  return { fingers, thumb: [tRoot, t1, t2], fc: [.25, .25, .25, .25], ft: [.25, .25, .25, .25], tc: .2, tt: .2, ts: .3, tst: .3 };
+}
+/* позы кисти: насколько согнуты пальцы и куда смотрит большой */
+function handPose(arm, name, r = .03) {
+  if (!arm.fingers) { arm.curlT = { open: .05, flat: 0, relax: .3, pinch: .8, fist: 1, point: .8 }[name] ?? clamp(.09 / r / 4.1, .25, 1); return; }
+  let f, t, s;
+  switch (name) {
+    case "flat": f = [.02, .02, .02, .04]; t = 0; s = 0; break;
+    case "open": f = [.1, .12, .15, .2]; t = .1; s = .1; break;
+    case "relax": f = [.28, .32, .38, .45]; t = .25; s = .3; break;
+    case "pinch": f = [.48, .62, .78, .85]; t = .75; s = .9; break;
+    case "hook": f = [.55, .6, .65, .7]; t = .2; s = .2; break;
+    case "fist": f = [1, 1, 1, 1]; t = .7; s = .8; break;
+    case "point": f = [.05, .9, .95, .95]; t = .6; s = .7; break;
+    default: { const c = clamp(.088 / r / 4, .22, 1); f = [c, c * 1.04, c * 1.08, c * 1.12].map(v => Math.min(1, v)); t = clamp(c * .9, .3, .85); s = .75; }
+  }
+  arm.ft = f; arm.tt = t; arm.tst = s;
+}
+function poseFingers(arm, dt) {
+  if (!arm.manual) { const c = arm.curl; arm.ft = [c * .95, c, c * 1.05, Math.min(1, c * 1.12)]; arm.tt = c * .6; arm.tst = .3 + c * .4; }
+  const k = smoothK(arm.manual ? 16 : 30, dt);
+  for (let i = 0; i < 4; i++) {
+    arm.fc[i] += (arm.ft[i] - arm.fc[i]) * k;
+    const segs = arm.fingers[i];
+    for (let j = 0; j < 3; j++) segs[j].rotation.x = -arm.fc[i] * FINGER_MAX[j];
+  }
+  arm.tc += (arm.tt - arm.tc) * k;
+  arm.ts += (arm.tst - arm.ts) * k;
+  const [root, t1, t2] = arm.thumb, sd = arm.side;
+  // от «в сторону» к «напротив ладони»
+  root.rotation.set(-arm.ts * .9, sd * arm.ts * .5, sd * (.85 - arm.ts * .55));
+  t1.rotation.x = -arm.tc * .5;
+  t2.rotation.x = -arm.tc * .95;
+}
+
 /* профиль торса: от пояса (0) до основания шеи */
 const TORSO_PROFILE = [[0, -.03], [.14, -.03], [.142, .02], [.146, .07], [.152, .12], [.16, .17], [.168, .22], [.174, .27], [.178, .32], [.179, .37], [.176, .41], [.166, .445], [.14, .47], [.095, .49], [.058, .505], [0, .51]];
 
@@ -3507,19 +3628,23 @@ function makeFigure(o) {
   const arm = side => {
     const S = V3(side * .2, .425, -.005);
     const up = group(S.x, S.y, S.z, spine);
-    merged([sph(.05, 0, -.01, 0), taper(.05, .043, LA)], mSleeve, up);
+    const slim = !!P.fingers;
+    merged([sph(slim ? .046 : .05, 0, -.01, 0), taper(slim ? .046 : .05, slim ? .039 : .043, LA)], mSleeve, up);
+    if (P.garter) { const gt = new THREE.TorusGeometry(slim ? .044 : .047, .007, 6, 20); gt.rotateX(Math.PI / 2); gt.translate(0, -.11, 0); merged([gt], std({ color: P.garter, roughness: .4, metalness: .2 }), up); }
     const fo = group(0, -LA, 0, up);
-    const fp = [sph(.045, 0, 0, 0), taper(.044, .034, LB)];
+    const fp = [sph(slim ? .038 : .045, 0, 0, 0), taper(slim ? .036 : .044, slim ? .025 : .034, LB)];
     if (P.rolled) {
       merged(fp, mSkin, fo);
-      const cuff = new THREE.TorusGeometry(.05, .02, 8, 16); cuff.rotateX(Math.PI / 2); cuff.translate(0, .01, 0);
-      merged([cuff], mWhite, fo);
+      const cuff = new THREE.TorusGeometry(slim ? .043 : .05, slim ? .016 : .02, 8, 18); cuff.rotateX(Math.PI / 2); cuff.translate(0, slim ? -.005 : .01, 0);
+      const cuff2 = new THREE.TorusGeometry(slim ? .04 : .046, .012, 8, 18); cuff2.rotateX(Math.PI / 2); cuff2.translate(0, slim ? -.03 : -.015, 0);
+      merged(slim ? [cuff, cuff2] : [cuff], mWhite, fo);
     } else {
       merged(fp, mSleeve, fo);
       const cuff = taper(.037, .036, .03); cuff.translate(0, -LB + .02, 0);
       merged([cuff], mWhite, fo);
     }
     const hand = group(0, -LB, 0, fo);
+    if (P.fingers) return Object.assign(buildHand(side, hand, mSkin), { S, up, fo, hand, side, tgt: V3(), cur: V3(), ori: { f: V3(0, -1, 0), p: V3(0, 0, 1) }, curl: .2, curlT: .2, pole: V3(side * .45, -1, -.35), k: 9, set: false });
     const palm = [rbox(.062, .072, .026, 0, -.038, 0, .012)];
     const th = new THREE.CapsuleGeometry(.0115, .035, 3, 8); th.rotateZ(side * .7); th.translate(side * .038, -.035, .012); palm.push(th);
     merged(palm, mSkin, hand);
@@ -3595,7 +3720,7 @@ function aimBone(bone, A, B, C, bendSign, parentQ) {
 const _S = V3(), _T = V3(), _E = V3(), _TT = V3(), _pq = new THREE.Quaternion(), _hq = new THREE.Quaternion();
 const _inv = new THREE.Matrix4(), _pole = V3();
 function solveArm(F, arm, dt) {
-  arm.cur.lerp(arm.tgt, smoothK(arm.k, dt));
+  if (arm.snap) arm.cur.copy(arm.tgt); else arm.cur.lerp(arm.tgt, smoothK(arm.k, dt));
   arm.curl += (arm.curlT - arm.curl) * smoothK(10, dt);
   // цель в системе позвоночника
   F.pelvis.updateMatrix(); F.spine.updateMatrix();
@@ -3621,7 +3746,7 @@ function solveArm(F, arm, dt) {
   _m1.makeBasis(_xa, _ya, _za);
   _hq.setFromRotationMatrix(_m1);
   arm.hand.quaternion.copy(_pq.invert().multiply(_hq));
-  arm.fing.rotation.x = -arm.curl * 1.5;
+  if (arm.fingers) poseFingers(arm, dt); else arm.fing.rotation.x = -arm.curl * 1.5;
 }
 function solveLeg(F, lg) {
   F.pelvis.updateMatrix();
@@ -3725,7 +3850,8 @@ function updateFigure(F, t, dt) {
     }
   }
 }
-function updateFigures(t, dt) { for (const F of FIGS) if (!F.off) updateFigure(F, t, dt); }
+const PRE_FIG = [];
+function updateFigures(t, dt) { for (const f of PRE_FIG) f(t, dt); for (const F of FIGS) if (!F.off) updateFigure(F, t, dt); }
 /* взять предмет: он плавно переходит из своего места в руку */
 function grab(F, arm, obj, off, dur = .3) {
   const h = { arm, obj, off: off.clone(), from: obj.position.clone(), k: 0, tilt: 0 };
@@ -4569,7 +4695,7 @@ onTick((t, dt) => {
 /* ================= бармен: протирает бокал, ходит шагами, достаёт бутылки рукой ================= */
 const BT_Z = -3.4;
 const bt = makeFigure({ kind: "vest", body: "#2a0d13", shirt: "#e8e2d4", trousers: 0x121012, skin: 0xc28a68, hair: 0x140d09,
-  hairStyle: "slick", mustache: true, bowtie: 0x7a0f22, rolled: true });
+  hairStyle: "slick", mustache: true, bowtie: 0x7a0f22, rolled: true, fingers: true, garter: 0x5a0a18 });
 placeFig(bt, .9, BT_Z, 0);
 bt.maxSpeed = 1.35;
 const BT = { busy: false, mode: "polish", get x() { return bt.x; } };
@@ -4824,178 +4950,317 @@ async function idleLife() {
   }
 }
 
-/* ================= шоу бармена: каждый коктейль он готовит сам, в 3D, и всякий раз по-своему ================= */
-const SHOW = { on: false, gen: 0, fast: false, served: false, ran: false, glass: null, main: null, last: "" };
+/* ================= шоу бармена: предметы движутся по продуманным траекториям, пальцы их обхватывают ================= */
+const SHOW = { on: false, gen: 0, fast: false, served: false, ran: false, glassV: null, main: null, c: null, focus: V3(), force: null };
 const ABORT = { abort: true };
 let SG = 0;
 const rr = (a, b) => a + Math.random() * (b - a);
 const chance = p => Math.random() < p;
 const choose = list => list[Math.floor(Math.random() * list.length)];
 function live() { if (SHOW.gen !== SG) throw ABORT; }
-async function ws(s) { await sleep(SHOW.fast ? s * .05 : s); live(); }
+const SL = () => SHOW.slow || 1;
+async function ws(s) { await sleep(SHOW.fast ? Math.min(s, .01) : s * SL()); live(); }
 const PROG = () => Closeup.PROGRAMS;
+const NOM = { rum: "Ром", tequila: "Текила", gin: "Джин", whisky: "Виски", cognac: "Коньяк", wine: "Красное вино", triple: "Апельсиновый ликёр",
+  campari: "Кампари", vermouthR: "Красный вермут", vermouthD: "Сухой вермут", bitters: "Ангостура", tonic: "Тоник", soda: "Содовая",
+  cola: "Кола", oj: "Апельсиновый сок", pineapple: "Ананасовый сок", coconut: "Кокосовые сливки", lime: "Сок лайма",
+  lemon: "Лимонный сок", syrup: "Сахарный сироп", grenadine: "Гренадин" };
+const liqOf = ing => new THREE.Color((Closeup.LOOK[ing] || {}).liq || "#ffffff");
 
-/* ---------- материалы и реквизит ---------- */
+/* ---------- координаты: всё считается от места бармена (x — его левая рука, z — к гостю) ---------- */
+const ST = { bx: 1.2, bz: -3.0 };
+const B = (x, y, z) => V3(ST.bx + x, y, ST.bz + z);
+const TOP = () => CT.top;
+const Qe = (x = 0, y = 0, z = 0) => new THREE.Quaternion().setFromEuler(new THREE.Euler(x, y, z, "YXZ"));
+const Qz = a => new THREE.Quaternion().setFromAxisAngle(V3(0, 0, 1), a);
+const Qx = a => new THREE.Quaternion().setFromAxisAngle(V3(1, 0, 0), a);
+const _up = V3(0, 1, 0);
+
+/* ---------- материалы ---------- */
 const MX = {
-  glass: std({ color: 0xf2f6ff, transparent: true, opacity: .26, roughness: .02, envMapIntensity: 2.6, side: THREE.DoubleSide, depthWrite: false }),
-  ice: std({ color: 0xf4faff, transparent: true, opacity: .55, roughness: .05, envMapIntensity: 2, depthWrite: false }),
-  frost: std({ color: 0xdfe6ea, metalness: .55, roughness: .55, envMapIntensity: 1 }),
-  wood: std({ color: 0x5a3420, roughness: .6 }),
-  stream: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .85 })
+  glass: std({ color: 0xf2f6ff, transparent: true, opacity: .22, roughness: .02, envMapIntensity: 2.8, side: THREE.DoubleSide, depthWrite: false }),
+  rim: new THREE.MeshBasicMaterial({ color: 0xfff4e4, transparent: true, opacity: .55, depthWrite: false }),
+  ice: std({ color: 0xf4fbff, transparent: true, opacity: .62, roughness: .04, envMapIntensity: 2.4, emissive: 0x334450, depthWrite: false }),
+  frost: std({ color: 0xe6edf0, metalness: .45, roughness: .62, envMapIntensity: 1 }),
+  wood: std({ color: 0x5a3420, roughness: .55 }),
+  stream: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .92, depthWrite: false }),
+  core: new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending })
 };
-const cubeGeo = new RoundedBoxGeometry(.026, .026, .026, 2, .006);
-const smallCube = new RoundedBoxGeometry(.014, .014, .014, 1, .004);
-const P = {};
-function vesselMesh(profile, mat, liq) {
+const cubeGeo = new RoundedBoxGeometry(.024, .024, .024, 2, .006);
+const crushGeo = new RoundedBoxGeometry(.013, .011, .013, 1, .004);
+
+/* сосуд: стекло или металл, уровень жидкости, кольцо по краю, чтобы силуэт читался */
+function vessel(profile, mat, [r0, r1, y0, y1, cap], { rim = true, scale = 1 } = {}) {
   const g = new THREE.Group();
-  g.add(new THREE.Mesh(lathe(profile, 28), mat));
-  const V = { g, ml: 0, col: new THREE.Color(0xffffff), ice: [], liq: null, y0: liq[2], y1: liq[3], r: liq[1], cap: liq[4] || 200 };
-  const lg = new THREE.CylinderGeometry(liq[1], liq[0], 1, 24);
+  const body = new THREE.Mesh(lathe(profile, 32), mat);
+  body.renderOrder = 5;
+  g.add(body);
+  const mouthY = profile[profile.length - 1][1], mouthR = profile[profile.length - 1][0];
+  if (rim && mat === MX.glass) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(mouthR, .0011, 4, 40), MX.rim);
+    ring.rotation.x = Math.PI / 2; ring.position.y = mouthY; ring.renderOrder = 6;
+    g.add(ring);
+  }
+  const lg = new THREE.CylinderGeometry(r1, r0, 1, 28);
   lg.translate(0, .5, 0);
-  V.liq = new THREE.Mesh(lg, std({ color: 0xffffff, transparent: true, opacity: .82, roughness: .15, emissive: 0x000000 }));
-  V.liq.renderOrder = 4;
-  V.liq.position.y = liq[2];
-  V.liq.scale.y = .0001;
-  V.liq.visible = false;
-  g.add(V.liq);
-  g.children[0].renderOrder = 5;
-  V.mouthY = profile[profile.length - 1][1];
-  world.add(g);
+  const liq = new THREE.Mesh(lg, std({ color: 0xffffff, transparent: true, opacity: .88, roughness: .12, emissive: 0x000000 }));
+  liq.renderOrder = 4; liq.position.y = y0; liq.scale.y = .0001; liq.visible = false;
+  g.add(liq);
+  g.scale.setScalar(scale);
   g.visible = false;
-  return V;
+  world.add(g);
+  return { g, body, liq, ml: 0, cap, col: new THREE.Color(0xffffff), ice: [], y0, y1, r0, r1, mouthY, mouthR, scale };
 }
 function setLevel(V) {
-  if (!V.liq) return;
-  const f = clamp(V.ml / V.cap, 0, .93);
-  V.liq.visible = f > .002;
+  const f = clamp(V.ml / V.cap, 0, .94);
+  V.liq.visible = f > .004;
   V.liq.scale.y = Math.max(.0001, f * (V.y1 - V.y0));
   V.liq.material.color.copy(V.col);
-  V.liq.material.emissive.copy(V.col).multiplyScalar(.22);
+  V.liq.material.emissive.copy(V.col).multiplyScalar(.3);
 }
-const mouth = V => V.g.localToWorld(V3(0, V.mouthY, 0));
+const mouth = (V, dy = 0) => V.g.localToWorld(V3(0, V.mouthY + dy / V.scale, 0));
+const surface = V => V.g.localToWorld(V3(0, V.y0 + Math.max(.004, clamp(V.ml / V.cap, 0, .94) * (V.y1 - V.y0)), 0));
+
+/* ---------- реквизит ---------- */
+const P = {};
 (() => {
-  // шейкер: большой и малый стаканы
-  P.tin = vesselMesh([[0, 0], [.043, 0], [.044, .004], [.048, .175], [.05, .178]], M.chrome, [.04, .046, .004, .17, 520]);
-  P.tin.g.children[0].material = M.chrome;
+  P.tin = vessel([[0, 0], [.043, 0], [.044, .004], [.048, .175], [.05, .178]], M.chrome, [.04, .046, .004, .17, 520]);
   P.cap = { g: new THREE.Group() };
-  P.cap.g.add(new THREE.Mesh(lathe([[0, 0], [.036, 0], [.037, .004], [.042, .12], [.043, .123]], 24), M.chrome));
+  P.cap.g.add(new THREE.Mesh(lathe([[0, 0], [.036, 0], [.037, .004], [.042, .12], [.043, .123]], 28), M.chrome));
   world.add(P.cap.g); P.cap.g.visible = false;
-  P.mixer = vesselMesh([[0, 0], [.046, 0], [.047, .006], [.049, .15], [.05, .152]], MX.glass, [.043, .046, .008, .145, 420]);
-  // джиггер, ложка, стрейнер, мадлер
-  P.jig = { g: new THREE.Group(), top: .09 };
-  P.jig.g.add(new THREE.Mesh(lathe([[.017, 0], [.024, .002], [.009, .045], [.024, .088], [.025, .09]], 18), M.chrome));
-  P.jig.liq = mesh(new THREE.CylinderGeometry(.021, .012, .03, 14), std({ color: 0xffffff, transparent: true, opacity: .85 }), 0, .07, 0, P.jig.g);
+  P.mixer = vessel([[0, 0], [.048, 0], [.049, .008], [.05, .15], [.051, .152]], MX.glass, [.045, .047, .01, .145, 420]);
+  // джиггер: верхняя чаша 50 мл, нижняя 25 мл
+  P.jig = { g: new THREE.Group() };
+  P.jig.g.add(new THREE.Mesh(lathe([[.017, 0], [.019, .001], [.009, .043], [.009, .047], [.024, .088], [.026, .09]], 24), M.chrome));
+  const jl = new THREE.CylinderGeometry(.022, .01, 1, 18); jl.translate(0, .5, 0);
+  P.jig.liq = mesh(jl, std({ color: 0xffffff, transparent: true, opacity: .9, roughness: .1 }), 0, .049, 0, P.jig.g);
   P.jig.liq.visible = false;
   world.add(P.jig.g); P.jig.g.visible = false;
+  // барная ложка: витая ручка, капля на конце
   P.spoon = { g: new THREE.Group() };
-  const sp = [new THREE.CylinderGeometry(.0028, .0028, .3, 6)];
+  const nonIdx = x => x.index ? x.toNonIndexed() : x;
+  const sp = [new THREE.CylinderGeometry(.0026, .0026, .29, 6)];
   sp[0].translate(0, -.15, 0);
-  const bowl = new THREE.SphereGeometry(.011, 10, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2); bowl.scale(1, .5, 1.6); bowl.translate(0, -.302, 0); sp.push(bowl);
-  const knob = new THREE.SphereGeometry(.006, 8, 6); sp.push(knob);
-  P.spoon.g.add(new THREE.Mesh(mergeGeometries(sp.map(x => x.toNonIndexed())), M.chrome));
+  for (let i = 0; i < 22; i++) { const t = new THREE.TorusGeometry(.003, .0008, 3, 6); t.rotateX(Math.PI / 2); t.translate(0, -.04 - i * .0095, 0); sp.push(t); }
+  const bowl = new THREE.SphereGeometry(.011, 12, 6, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2); bowl.scale(1, .45, 1.7); bowl.translate(0, -.302, 0); sp.push(bowl);
+  sp.push(new THREE.SphereGeometry(.0065, 10, 8));
+  P.spoon.g.add(new THREE.Mesh(mergeGeometries(sp.map(nonIdx)), M.chrome));
   world.add(P.spoon.g); P.spoon.g.visible = false;
+  // стрейнер: диск, пружина по краю, ручка
   P.strainer = { g: new THREE.Group() };
-  const sg = [new THREE.CylinderGeometry(.047, .047, .003, 24), new THREE.TorusGeometry(.04, .004, 6, 20)];
+  const sg = [new THREE.CylinderGeometry(.047, .047, .003, 28), new THREE.TorusGeometry(.039, .0045, 6, 28), new THREE.BoxGeometry(.018, .003, .1)];
   sg[1].rotateX(Math.PI / 2); sg[1].translate(0, -.006, 0);
-  const handle = new THREE.BoxGeometry(.016, .003, .1); handle.translate(0, 0, .085); sg.push(handle);
-  P.strainer.g.add(new THREE.Mesh(mergeGeometries(sg.map(x => x.toNonIndexed())), M.chrome));
+  sg[2].translate(0, 0, .09);
+  for (let i = 0; i < 40; i++) { const a = i / 40 * 6.28, t = new THREE.TorusGeometry(.004, .0009, 3, 6); t.rotateY(a); t.translate(Math.cos(a) * .04, -.007, Math.sin(a) * .04); sg.push(t); }
+  P.strainer.g.add(new THREE.Mesh(mergeGeometries(sg.map(nonIdx)), M.chrome));
   world.add(P.strainer.g); P.strainer.g.visible = false;
+  // мадлер
   P.muddler = { g: new THREE.Group() };
-  const mg = new THREE.CylinderGeometry(.012, .016, .22, 12); mg.translate(0, -.11, 0);
-  P.muddler.g.add(new THREE.Mesh(mg, MX.wood));
+  P.muddler.g.add(new THREE.Mesh(lathe([[0, -.22], [.014, -.22], [.016, -.2], [.012, -.06], [.015, -.02], [.013, 0], [0, 0]], 14), MX.wood));
   world.add(P.muddler.g); P.muddler.g.visible = false;
+  // совок для льда: ковш вдоль +x, ручка вдоль −x
+  P.scoop = { g: new THREE.Group() };
+  const sc = new THREE.CylinderGeometry(.035, .035, .1, 20, 1, true, Math.PI * .4, Math.PI * 1.2); sc.rotateZ(Math.PI / 2); sc.translate(.05, 0, 0);
+  const scEnd = new THREE.CircleGeometry(.035, 20); scEnd.rotateY(Math.PI / 2);
+  const scH = new THREE.CylinderGeometry(.008, .009, .09, 10); scH.rotateZ(Math.PI / 2); scH.translate(-.045, .006, 0);
+  P.scoop.g.add(new THREE.Mesh(mergeGeometries([sc, scEnd, scH].map(nonIdx)), std({ color: 0xd8dde2, metalness: 1, roughness: .2, side: THREE.DoubleSide, envMapIntensity: 1.6 })));
+  P.scoop.cubes = [];
+  for (let i = 0; i < 5; i++) { const c = mesh(cubeGeo, MX.ice, .025 + (i % 3) * .022, -.014 + Math.floor(i / 3) * .018, (i % 2 - .5) * .018, P.scoop.g); c.rotation.set(rr(0, 2), rr(0, 2), 0); c.renderOrder = 5; c.visible = false; P.scoop.cubes.push(c); }
+  world.add(P.scoop.g); P.scoop.g.visible = false;
   // ведёрко со льдом
   P.bucket = { g: new THREE.Group() };
-  P.bucket.g.add(new THREE.Mesh(lathe([[0, 0], [.07, 0], [.075, .01], [.09, .14], [.094, .145]], 28), M.chrome));
-  const bi = new THREE.InstancedMesh(cubeGeo, MX.ice, 14), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
-  for (let i = 0; i < 14; i++) { m4.compose(V3(R(-.05, .05), .1 + R(0, .04), R(-.05, .05)), q.setFromEuler(e.set(R(0, 3), R(0, 3), 0)), V3(1, 1, 1)); bi.setMatrixAt(i, m4); }
+  P.bucket.g.add(new THREE.Mesh(lathe([[0, 0], [.07, 0], [.075, .01], [.09, .14], [.094, .145]], 32), M.chrome));
+  const bi = new THREE.InstancedMesh(cubeGeo, MX.ice, 18), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler();
+  for (let i = 0; i < 18; i++) { m4.compose(V3(rr(-.06, .06), .11 + rr(0, .03), rr(-.06, .06)), q.setFromEuler(e.set(rr(0, 3), rr(0, 3), 0)), V3(1.1, 1.1, 1.1)); bi.setMatrixAt(i, m4); }
+  bi.renderOrder = 5;
   P.bucket.g.add(bi);
   world.add(P.bucket.g); P.bucket.g.visible = false;
   // доска с гарниром
   P.tray = { g: new THREE.Group() };
   const t = P.tray.g;
-  t.add(new THREE.Mesh(new RoundedBoxGeometry(.24, .02, .14, 2, .006), MX.wood));
-  for (let i = 0; i < 3; i++) mesh(new THREE.CylinderGeometry(.024, .024, .006, 18), std({ color: 0x9fc23a, roughness: .5 }), -.08 + i * .03, .014 + i * .002, -.03, t).rotation.z = .2;
-  for (let i = 0; i < 3; i++) mesh(new THREE.SphereGeometry(.011, 10, 8), std({ color: 0x9a0f1e, roughness: .25 }), .04 + i * .022, .02, -.035, t);
-  for (let i = 0; i < 3; i++) { const o = mesh(new THREE.SphereGeometry(.011, 10, 8), std({ color: 0x7a8a2a, roughness: .35 }), .03 + i * .025, .02, .03, t); o.scale.set(1, .8, 1); }
-  mesh(new THREE.CylinderGeometry(.024, .024, .006, 18), std({ color: 0xf08a22, roughness: .5 }), -.06, .016, .035, t).rotation.z = -.15;
+  t.add(new THREE.Mesh(new RoundedBoxGeometry(.2, .018, .13, 2, .006), MX.wood));
+  for (let i = 0; i < 3; i++) mesh(new THREE.CylinderGeometry(.022, .022, .006, 20), std({ color: 0xa8c83e, roughness: .5, emissive: 0x1a2a00 }), -.07 + i * .028, .013 + i * .003, -.035, t).rotation.z = .2;
+  for (let i = 0; i < 3; i++) mesh(new THREE.SphereGeometry(.01, 12, 8), std({ color: 0xa8101e, roughness: .2 }), .03 + i * .02, .019, -.035, t);
+  for (let i = 0; i < 3; i++) mesh(new THREE.SphereGeometry(.01, 12, 8), std({ color: 0x8a9a30, roughness: .35 }), .03 + i * .02, .018, .03, t).scale.set(1, .8, 1);
+  mesh(new THREE.CylinderGeometry(.022, .022, .006, 20), std({ color: 0xf08a22, roughness: .5 }), -.05, .015, .035, t).rotation.z = -.15;
   world.add(t); t.visible = false;
-  // солонка для ободка
-  P.salt = mesh(new THREE.CylinderGeometry(.06, .055, .012, 24), std({ color: 0xf2f0ea, roughness: .9 }), 0, 0, 0);
+  P.salt = mesh(new THREE.CylinderGeometry(.065, .06, .012, 28), std({ color: 0xf4f1ea, roughness: .95 }), 0, 0, 0);
   P.salt.visible = false;
 })();
-const PROPS = () => [P.tin.g, P.cap.g, P.mixer.g, P.jig.g, P.spoon.g, P.strainer.g, P.muddler.g, P.bucket.g, P.tray.g, P.salt];
+const PROPS = () => [P.tin.g, P.cap.g, P.mixer.g, P.jig.g, P.spoon.g, P.strainer.g, P.muddler.g, P.scoop.g, P.bucket.g, P.tray.g, P.salt];
 
-/* бутылка для ингредиента: появляется из рейла под стойкой */
+/* ---------- бутылка с крупной этикеткой ---------- */
 const BKIND = { spirit: "tall", square: "square", flask: "flask", squat: "squat", wine: "bordeaux", dash: "bordeaux", soda: "round", squeeze: "squeeze", carafe: "carafe" };
+const LABELS = {};
+function bigLabel(ing) {
+  if (LABELS[ing]) return LABELS[ing];
+  const L = Closeup.LOOK[ing] || {};
+  const t = canvasTex(512, 160, (g, w, h) => {
+    g.fillStyle = L.label || "#efe6d2"; g.fillRect(0, 0, w, h);
+    g.strokeStyle = "rgba(201,148,74,.9)"; g.lineWidth = 5; g.strokeRect(146, 10, 220, h - 20);
+    g.fillStyle = L.ink || "#2a1a10"; g.textAlign = "center"; g.textBaseline = "middle";
+    const name = L.name || (NOM[ing] || "").toUpperCase();
+    g.font = `400 ${name.length > 7 ? 38 : 50}px Forum, serif`;
+    g.fillText(name, 256, 68);
+    g.font = "400 19px Literata, serif"; g.globalAlpha = .75; g.fillText("HACHEDEN · 1924", 256, 118);
+  });
+  return (LABELS[ing] = t);
+}
 function makeBottle(ing) {
   const L = Closeup.LOOK[ing] || { kind: "spirit", glass: "#2a1a10", liq: "#c27a1a" };
   const g = new THREE.Group();
-  let top = .3;
+  let top = .3, r = .035;
   if (L.kind === "carafe") {
-    g.add(new THREE.Mesh(lathe([[0, 0], [.045, 0], [.05, .02], [.05, .14], [.03, .2], [.028, .24], [.034, .25]], 24), MX.glass));
-    mesh(new THREE.CylinderGeometry(.046, .046, .12, 20), std({ color: L.liq, transparent: true, opacity: .85, roughness: .2 }), 0, .075, 0, g);
-    top = .25;
+    g.add(new THREE.Mesh(lathe([[0, 0], [.045, 0], [.05, .02], [.05, .14], [.03, .2], [.028, .24], [.034, .25]], 28), MX.glass));
+    mesh(new THREE.CylinderGeometry(.046, .046, .12, 24), std({ color: L.liq, transparent: true, opacity: .9, roughness: .2, emissive: new THREE.Color(L.liq).multiplyScalar(.2) }), 0, .075, 0, g);
+    top = .25; r = .05;
   } else if (L.kind === "squeeze") {
-    mesh(new THREE.CylinderGeometry(.032, .032, .15, 18), std({ color: L.glass, transparent: (L.op || 1) < 1, opacity: Math.max(.5, L.op || 1), roughness: .3 }), 0, .075, 0, g);
-    if ((L.op || 1) < .6) mesh(new THREE.CylinderGeometry(.03, .03, .1, 16), std({ color: L.liq, roughness: .3 }), 0, .052, 0, g);
+    mesh(new THREE.CylinderGeometry(.032, .032, .15, 24), std({ color: L.glass, transparent: (L.op || 1) < 1, opacity: Math.max(.5, L.op || 1), roughness: .3 }), 0, .075, 0, g);
+    if ((L.op || 1) < .6) mesh(new THREE.CylinderGeometry(.03, .03, .1, 18), std({ color: L.liq, roughness: .3 }), 0, .052, 0, g);
     mesh(new THREE.CylinderGeometry(.008, .02, .05, 12), std({ color: 0xe8e2d0, roughness: .4 }), 0, .175, 0, g);
-    if (L.label) mesh(new THREE.CylinderGeometry(.0325, .0325, .05, 18, 1, true), std({ color: L.label }), 0, .08, 0, g);
-    top = .2;
+    const lab = mesh(new THREE.CylinderGeometry(.0325, .0325, .06, 28, 1, true), std({ map: bigLabel(ing), roughness: .7 }), 0, .085, 0, g);
+    lab.rotation.y = Math.PI;
+    top = .2; r = .032;
   } else {
-    const shape = BKIND[L.kind] || "tall", s = L.kind === "dash" ? .55 : L.kind === "soda" ? .8 : 1;
-    const b = new THREE.Mesh(BGEO[shape], std({ color: L.glass, transparent: (L.op || 1) < 1, opacity: Math.max(.45, L.op || .95), roughness: .06, metalness: .1, envMapIntensity: 2 }));
+    const shape = BKIND[L.kind] || "tall", s = L.kind === "dash" ? .6 : L.kind === "soda" ? .85 : 1;
+    const b = new THREE.Mesh(BGEO[shape], std({ color: L.glass, transparent: (L.op || 1) < 1, opacity: Math.max(.5, L.op || .95), roughness: .05, metalness: .1, envMapIntensity: 2.4 }));
     b.scale.setScalar(s); g.add(b);
-    if (L.label) mesh(BOTTLE[shape].seg === 4 ? new THREE.BoxGeometry(bodyR(shape) * 1.3 * s, .07 * s, bodyR(shape) * 1.3 * s) : new THREE.CylinderGeometry(bodyR(shape) * 1.01 * s, bodyR(shape) * 1.01 * s, .07 * s, 20, 1, true), std({ color: L.label, roughness: .7 }), 0, .1 * s, 0, g);
+    r = bodyR(shape) * s;
+    const lh = .08 * s;
+    const lab = BOTTLE[shape].seg === 4
+      ? mesh(new THREE.BoxGeometry(r * 1.42, lh, r * 1.42), std({ map: bigLabel(ing), roughness: .7 }), 0, .11 * s, 0, g)
+      : mesh(new THREE.CylinderGeometry(r * 1.015, r * 1.015, lh, 32, 1, true), std({ map: bigLabel(ing), roughness: .7 }), 0, .11 * s, 0, g);
+    lab.rotation.y = Math.PI;
     top = neckTop(shape) * s;
-    mesh(new THREE.CylinderGeometry(.008, .006, .03, 8), M.chrome, 0, top + .012, 0, g);   // гейзер-носик
-    top += .026;
+    mesh(new THREE.CylinderGeometry(.007, .0055, .032, 10), M.chrome, 0, top + .013, 0, g);
+    top += .028;
   }
-  g.userData.top = top;
-  g.userData.col = new THREE.Color(L.liq || "#ffffff");
+  g.userData = { top, r, ing };
   world.add(g);
   return g;
 }
 
-/* ---------- струя ---------- */
-const streamMesh = mesh(new THREE.CylinderGeometry(.0035, .0028, 1, 8, 1, true), MX.stream, 0, 0, 0);
-streamMesh.visible = false;
-streamMesh.renderOrder = 6;
-const STREAM = { from: null, to: null, color: new THREE.Color() };
-const _sa = V3(), _sb = V3(), _sd = V3(), _up = V3(0, 1, 0);
-function streamOn(fromFn, toFn, color, width = 1) { STREAM.from = fromFn; STREAM.to = toFn; MX.stream.color.copy(color); streamMesh.scale.x = streamMesh.scale.z = width; streamMesh.visible = true; }
-function streamOff() { streamMesh.visible = false; STREAM.from = null; }
-
-/* ---------- прицел: держит предмет (или его точку) в нужном месте, подправляя руку ---------- */
-const AIMS = new Set();
-function aim(hold, pos, point = null, k = .35) {
-  for (const a of AIMS) if (a.hold === hold) AIMS.delete(a);
-  const a = { hold, pos: pos.clone(), point, k };
-  AIMS.add(a);
-  return a;
+/* ---------- движение предметов: путь с подъёмом, поворот по кратчайшей дуге ---------- */
+const TMP = new Set();
+onTick((t, dt) => { for (const f of TMP) f(t, dt); });
+function onTickTmp(fn) { TMP.add(fn); return () => TMP.delete(fn); }
+function place(o, p, q) { o.position.copy(p); if (q) o.quaternion.copy(q); o.visible = true; }
+function move(o, p, { q = null, dur = .5, e = ease.io, arc = 0 } = {}) {
+  const p0 = o.position.clone(), q0 = o.quaternion.clone(), p1 = p.clone(), q1 = q ? q.clone() : null;
+  const d = SHOW.fast ? .001 : dur * SL(), t0 = performance.now();
+  return new Promise(res => {
+    const stop = onTickTmp(() => {
+      const k = clamp((performance.now() - t0) / (d * 1000), 0, 1), v = e(k);
+      o.position.lerpVectors(p0, p1, v);
+      if (arc) o.position.y += Math.sin(Math.PI * v) * arc;
+      if (q1) o.quaternion.slerpQuaternions(q0, q1, v);
+      if (k >= 1) { stop(); res(); }
+    });
+  }).then(live);
 }
-function unaim(hold) { for (const a of AIMS) if (a.hold === hold) AIMS.delete(a); }
-const _ae = V3(), _ap = V3();
-onTick(() => {
-  for (const a of AIMS) {
-    const o = a.hold.obj;
+/* поворот вокруг точки предмета (горлышко, край): точка стоит на месте */
+function tiltAbout(o, pivotLocal, q1, dur = .4, e = ease.io) {
+  o.updateMatrixWorld(true);
+  const pw = o.localToWorld(pivotLocal.clone()), q0 = o.quaternion.clone(), qq = new THREE.Quaternion(), d = SHOW.fast ? .001 : dur * SL(), t0 = performance.now();
+  return new Promise(res => {
+    const stop = onTickTmp(() => {
+      const k = clamp((performance.now() - t0) / (d * 1000), 0, 1);
+      qq.slerpQuaternions(q0, q1, e(k));
+      o.quaternion.copy(qq);
+      o.position.copy(pw).sub(pivotLocal.clone().multiply(o.scale).applyQuaternion(qq));
+      if (k >= 1) { stop(); res(); }
+    });
+  }).then(live);
+}
+/* где поставить предмет, чтобы его точка оказалась в нужном месте */
+function posFor(o, local, at, q = o.quaternion) { return at.clone().sub(local.clone().multiply(o.scale).applyQuaternion(q)); }
+function waitTicks(dur, fn) {
+  const d = SHOW.fast ? .001 : dur * SL(), t0 = performance.now();
+  return new Promise(res => { const stop = onTickTmp(() => { const t = (performance.now() - t0) / 1000 / SL(), k = clamp(t * SL() / d, 0, 1); fn(k, t); if (k >= 1) { stop(); res(); } }); }).then(live);
+}
+
+/* ---------- кисти: рука держится за предмет, пальцы обхватывают ---------- */
+const HANDS = new Map();
+const _gq = new THREE.Quaternion(), _hc = V3(), _gf = V3(), _gn = V3(), _gw = V3();
+function dirToFig(v) { const c = Math.cos(-bt.face), s = Math.sin(-bt.face); return V3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c); }
+/* хват: p — точка на предмете, f — куда смотрят пальцы, n — куда смотрит ладонь (к предмету), r — толщина предмета */
+function grip(arm, obj, g, dur = .38) {
+  arm.manual = true;
+  handPose(arm, g.pose || "grip", g.r || .03);
+  const H = { obj, g: Object.assign({ r: .03 }, g), k: 0, from: arm.cur.clone(), lift: g.lift ?? .04 };
+  HANDS.set(arm, H);
+  if (SHOW.fast || dur <= 0) { H.k = 1; return Promise.resolve(); }
+  return tween(H, { k: 1 }, dur * SL(), ease.io).then(live);
+}
+function letGo(arm, pose = "relax") {
+  HANDS.delete(arm);
+  arm.snap = false; arm.k = 11;
+  handPose(arm, pose);
+}
+/* свободная рука: плавно в точку мира */
+function handTo(arm, p, f, n, pose = "relax", dur = .35) {
+  HANDS.delete(arm);
+  arm.snap = false; arm.k = 3.4 / Math.max(.1, dur * SL());
+  arm.manual = true;
+  handPose(arm, pose);
+  const l = toFig(bt, p);
+  reach(arm, l.x, l.y, l.z, dirToFig(f), dirToFig(n));
+  return ws(dur);
+}
+/* руки на стойке, ладонями вниз — спокойная поза между делом */
+function rest(arm) {
+  const s = arm.side;
+  return handTo(arm, B(s * .19, TOP() + .028, .3), V3(-s * .3, -.12, 1), V3(0, -1, 0), "relax", .45).catch(() => {});
+}
+PRE_FIG.push(() => {
+  if (!HANDS.size) return;
+  for (const [arm, H] of HANDS) {
+    const o = H.obj, g = H.g;
     o.updateMatrixWorld(true);
-    if (a.point) o.localToWorld(_ap.copy(a.point)); else _ap.copy(o.position);
-    _ae.subVectors(a.pos, _ap);
-    if (_ae.lengthSq() > .25) _ae.setLength(.5);
-    const c = Math.cos(-bt.face), s = Math.sin(-bt.face);
-    a.hold.arm.tgt.x += (_ae.x * c + _ae.z * s) * a.k;
-    a.hold.arm.tgt.y += _ae.y * a.k;
-    a.hold.arm.tgt.z += (-_ae.x * s + _ae.z * c) * a.k;
+    o.getWorldQuaternion(_gq);
+    o.localToWorld(_hc.copy(g.p));
+    _gf.copy(g.f).applyQuaternion(_gq).normalize();
+    _gn.copy(g.n).applyQuaternion(_gq).normalize();
+    // запястье: от точки хвата назад вдоль пальцев и от ладони
+    _gw.copy(_hc).addScaledVector(_gf, -(g.along ?? .048)).addScaledVector(_gn, -(.013 + g.r));
+    const l = toFig(bt, _gw);
+    if (H.k < 1) { l.lerpVectors(H.from, l, H.k); l.y += Math.sin(Math.PI * H.k) * H.lift; }
+    reach(arm, l.x, l.y, l.z, dirToFig(_gf), dirToFig(_gn));
+    arm.snap = true;
   }
-  if (streamMesh.visible && STREAM.from) {
-    STREAM.from(_sa); STREAM.to(_sb);
-    _sd.subVectors(_sb, _sa);
-    const len = _sd.length();
-    streamMesh.position.copy(_sa).addScaledVector(_sd, .5);
-    streamMesh.scale.y = Math.max(.001, len);
-    streamMesh.quaternion.setFromUnitVectors(_up, _sd.normalize());
+});
+/* хват для правой (s = -1) и левой (s = 1) руки: кисть заходит сзади-сбоку, пальцы обнимают предмет спереди */
+const wrap = (s, p, r, extra = {}) => Object.assign({ p, r, f: V3(s * .7, 0, .7), n: V3(-s * .7, 0, .7), pose: "grip" }, extra);
+
+/* ---------- струя ---------- */
+const streamMesh = mesh(new THREE.CylinderGeometry(.0042, .0034, 1, 10, 1, true), MX.stream, 0, 0, 0);
+const streamCore = mesh(new THREE.CylinderGeometry(.0016, .0012, 1, 6, 1, true), MX.core, 0, 0, 0);
+streamMesh.visible = streamCore.visible = false;
+streamMesh.renderOrder = 6; streamCore.renderOrder = 7;
+const splash = glowSprite(0xffffff, .05, 0, 0, 0, world, 0);
+const STREAM = { from: null, to: null, w: 1 };
+const _sa = V3(), _sb = V3(), _sd = V3();
+function streamOn(fromFn, toFn, color, w = 1) {
+  STREAM.from = fromFn; STREAM.to = toFn; STREAM.w = w;
+  MX.stream.color.copy(color).lerp(new THREE.Color(0xffffff), .12);
+  streamMesh.visible = streamCore.visible = true;
+  splash.material.color.copy(color).lerp(new THREE.Color(0xffffff), .5);
+}
+function streamOff() { streamMesh.visible = streamCore.visible = false; STREAM.from = null; splash.material.opacity = 0; }
+onTick(t => {
+  if (!streamMesh.visible || !STREAM.from) return;
+  STREAM.from(_sa); STREAM.to(_sb);
+  _sd.subVectors(_sb, _sa);
+  const len = _sd.length();
+  const wob = 1 + Math.sin(t * 40) * .08;
+  _sd.normalize();
+  for (const m of [streamMesh, streamCore]) {
+    m.position.copy(_sa).addScaledVector(_sd, len / 2);
+    m.scale.set(STREAM.w * wob, Math.max(.001, len), STREAM.w * wob);
+    m.quaternion.setFromUnitVectors(_up, _sd);
   }
+  splash.position.copy(_sb);
+  splash.material.opacity = .5 + Math.sin(t * 30) * .2;
 });
 
 /* ---------- звуки ---------- */
@@ -5008,73 +5273,86 @@ function noiseHit(t, dur, freq, q, gain, type = "bandpass") {
   s.connect(f).connect(g).connect(c.destination); s.start(c.currentTime + t);
 }
 const SND = {
-  clink: () => { const c = fx(); if (!c) return; const o = c.createOscillator(), g = c.createGain(), t = c.currentTime; o.frequency.value = rr(3200, 4200); g.gain.setValueAtTime(.06, t); g.gain.exponentialRampToValueAtTime(.0001, t + .25); o.connect(g).connect(c.destination); o.start(t); o.stop(t + .3); noiseHit(0, .05, 5000, 2, .08); },
-  pour: dur => { for (let i = 0; i < dur * 14; i++) noiseHit(i / 14, .08, rr(700, 1400), 4, .05); },
-  rattle: (dur, hz) => { for (let i = 0; i < dur * hz * 2; i++) noiseHit(i / (hz * 2), .06, rr(3500, 5200), 1.5, .13); },
-  tap: () => noiseHit(0, .05, 1800, 3, .25),
-  tick: () => noiseHit(0, .03, 2600, 5, .12),
-  clap: () => noiseHit(0, .07, 1500, 1, .35, "highpass"),
-  plop: () => { const c = fx(); if (!c) return; const o = c.createOscillator(), g = c.createGain(), t = c.currentTime; o.frequency.setValueAtTime(500, t); o.frequency.exponentialRampToValueAtTime(1100, t + .08); g.gain.setValueAtTime(.09, t); g.gain.exponentialRampToValueAtTime(.0001, t + .12); o.connect(g).connect(c.destination); o.start(t); o.stop(t + .14); },
-  tinkle: dur => { for (let i = 0; i < dur * 6; i++) setTimeout(() => SND.clink(), i * 170 + rr(0, 60)); }
+  clink: () => { if (SHOW.fast) return; const c = fx(); if (!c) return; const o = c.createOscillator(), g = c.createGain(), t = c.currentTime; o.frequency.value = rr(3200, 4200); g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.0001, t + .25); o.connect(g).connect(c.destination); o.start(t); o.stop(t + .3); noiseHit(0, .05, 5000, 2, .07); },
+  pour: dur => { if (SHOW.fast) return; for (let i = 0; i < dur * 14; i++) noiseHit(i / 14, .08, rr(700, 1400), 4, .05); },
+  rattle: (dur, hz) => { if (SHOW.fast) return; for (let i = 0; i < dur * hz * 2; i++) noiseHit(i / (hz * 2), .06, rr(3500, 5200), 1.5, .13); },
+  tap: () => { if (!SHOW.fast) noiseHit(0, .05, 1800, 3, .25); },
+  tick: () => { if (!SHOW.fast) noiseHit(0, .03, 2600, 5, .12); },
+  clap: () => { if (!SHOW.fast) noiseHit(0, .07, 1500, 1, .35, "highpass"); },
+  plop: () => { if (SHOW.fast) return; const c = fx(); if (!c) return; const o = c.createOscillator(), g = c.createGain(), t = c.currentTime; o.frequency.setValueAtTime(500, t); o.frequency.exponentialRampToValueAtTime(1100, t + .08); g.gain.setValueAtTime(.09, t); g.gain.exponentialRampToValueAtTime(.0001, t + .12); o.connect(g).connect(c.destination); o.start(t); o.stop(t + .14); },
+  tinkle: dur => { if (SHOW.fast) return; for (let i = 0; i < dur * 6; i++) setTimeout(() => SND.clink(), i * 170 + rr(0, 60)); }
 };
 
 /* ---------- станция ---------- */
-const ST = {};
 function station() {
-  const bx = SEAT.on ? SEAT_X + .02 : 1.2;
+  ST.bx = SEAT.on ? SEAT_X + .02 : 1.2;
+  ST.bz = -3.0;
+  const T = TOP();
   Object.assign(ST, {
-    bx, bz: -3.06,
-    glass: V3(bx - .15, CT.top, -2.58), serve: SEAT.on ? V3(SEAT_X + .08, CT.top, -2.12) : V3(bx - .15, CT.top, -2.24),
-    tin: V3(bx + .1, CT.top, -2.62), jig: V3(bx + .3, CT.top, -2.5), spoon: V3(bx + .22, CT.top + .005, -2.42),
-    strainer: V3(bx + .38, CT.top + .004, -2.42), bucket: V3(bx - .46, CT.top, -2.63), tray: V3(bx + .56, CT.top + .01, -2.55),
-    rail: V3(bx - .32, .82, -2.98), salt: V3(bx - .34, CT.top + .006, -2.42)
+    glass: B(-.07, T, .42), serve: SEAT.on ? V3(SEAT_X + .06, T, -2.14) : B(-.07, T, .78),
+    tin: B(.15, T, .38), cap: B(.29, T, .5), jig: B(.31, T, .36), spoon: B(.07, T + .005, .54), strainer: B(.36, T + .004, .53),
+    bucket: B(-.44, T, .27), scoop: B(-.3, T + .006, .25), tray: B(-.31, T + .01, .47), rail: B(-.22, T - .21, .17), salt: B(-.2, T + .006, .3)
   });
 }
-function home(obj, p) { obj.position.copy(p); obj.rotation.set(0, 0, 0); obj.visible = true; }
 
-/* ---------- камера: каждый шаг — свой ракурс ---------- */
-function angle(name) {
-  const G = ST.glass, T = ST.tin, bx = ST.bx;
-  if (SEAT.on) {
-    const base = seatShot();
-    if (name === "close") return framed({ pos: [SEAT_X + .05, 1.42, -1.62], tgt: [ST.bx - .05, 1.3, -2.9], span: 1.0, pull: .4 });
-    if (name === "top") return framed({ pos: [T.x - .1, 1.66, -2.12], tgt: [T.x - .1, 1.2, -2.62], span: .75, pull: .3 });
-    return base;
+/* ---------- камера-режиссёр: кадр строится вокруг точки действия и плавно её ведёт ---------- */
+const CD = { shot: "medium", fs: V3(), snap: true, side: 1 };
+function shot(name, focus, side = choose([-1, 1])) { CD.shot = SHOW.force || name; SHOW.focus.copy(focus); CD.side = side; CD.snap = true; }
+function follow(focus) { SHOW.focus.copy(focus); }
+function shotDef(name, f) {
+  const s = CD.side, bx = ST.bx, bz = ST.bz;
+  switch (name) {
+    case "macro": return { pos: f.clone().add(V3(s * .17, .01, .5)), tgt: f.clone().add(V3(0, .01, 0)), span: .44 };
+    case "low": return { pos: f.clone().add(V3(s * .24, -.04, .52)), tgt: f.clone().add(V3(0, .07, 0)), span: .55 };
+    case "top": return { pos: f.clone().add(V3(s * .06, .44, .3)), tgt: f.clone(), span: .4 };
+    case "side": return { pos: f.clone().add(V3(s * .62, .08, .34)), tgt: f.clone().add(V3(0, .03, 0)), span: .55 };
+    case "face": return { pos: V3(bx + s * .3, (f.y + 1.58) / 2 + .04, bz + 1.25), tgt: V3(bx + (f.x - bx) * .5, (f.y + 1.58) / 2, bz + .25), span: .85 };
+    default: return { pos: V3(bx + s * .22, 1.43, bz + 1.5), tgt: V3(bx + (f.x - bx) * .4, 1.31, bz + .33), span: 1.05 };
   }
-  const A = {
-    hero: { pos: [G.x + .2, 1.22, -1.98], tgt: [G.x - .02, 1.45, -2.85], span: .95, pull: .4 },
-    over: { pos: [bx + .12, 1.56, -1.5], tgt: [bx, 1.3, -2.9], span: 1.45, pull: .6 },
-    side: { pos: [bx + 1.3, 1.48, -2.4], tgt: [bx, 1.35, -2.8], span: 1.25, pull: .5 },
-    top: { pos: [T.x + .38, 1.86, -1.72], tgt: [T.x - .04, 1.18, -2.66], span: 1.0, pull: .4 },
-    face: { pos: [bx - .12, 1.6, -1.85], tgt: [bx, 1.55, -3.1], span: 1.1, pull: .5 },
-    low: { pos: [bx - .45, 1.18, -2.0], tgt: [bx, 1.42, -2.9], span: 1.2, pull: .4 }
-  }[name];
-  return framed(A);
 }
-const SHOTS = {
-  ice: ["over", "top", "side", "low"], jig: ["top", "hero", "side", "over", "low"], pour: ["hero", "side", "over"], top: ["hero", "side", "low"],
-  dash: ["top", "hero"], shake: ["face", "over", "side", "low"], stir: ["hero", "low", "side"], strain: ["hero", "side", "low"],
-  garnish: ["hero", "hero", "low", "top"], serve: ["over", "hero"], leaves: ["top", "over"], muddle: ["hero", "side"], squeeze: ["hero", "top"],
-  rim: ["side", "hero"], float: ["hero", "low"], stirIn: ["hero", "low"]
-};
-function cut(step) {
-  let list = SEAT.on ? (["shake", "jig", "garnish"].includes(step) ? ["seat", "close", "top", "seat"] : ["seat", "close", "seat"]) : (SHOTS[step] || ["over"]);
-  let name = SHOW.force || choose(list);
-  if (name === SHOW.last && list.length > 1) name = choose(list.filter(n => n !== name));
-  SHOW.last = name;
-  const s = angle(name);
-  if (SHOW.fast) { setCam(s); return; }
-  flyTo(s, rr(.8, 1.15), 0).then(() => {
-    // медленный проезд, как в кино
-    if (!SHOW.on) return;
-    const d = Object.assign({}, s);
-    d.px += rr(-.06, .06); d.py += rr(-.03, .03); d.pz += rr(-.05, .08);
-    flyTo(d, rr(3, 5), 0);
-  });
-}
+const _cp = V3(), _ct = V3(), CARD_W = 280;
+onTick((t, dt) => {
+  if (!SHOW.on || flight) return;
+  if (CD.snap) CD.fs.copy(SHOW.focus); else CD.fs.lerp(SHOW.focus, smoothK(3.2, dt));
+  const aspect = innerWidth / innerHeight;
+  let fov;
+  if (SEAT.on) {
+    const s = seatShot();
+    _cp.set(s.px, s.py, s.pz); _ct.copy(CD.fs).add(V3(0, .04, 0));
+    const dist = _cp.distanceTo(_ct), span = CD.shot === "face" || CD.shot === "medium" ? .95 : .62;
+    const need = 2 * Math.atan(span / 2 / dist) / D2R;
+    fov = clamp(aspect < 1 ? 2 * Math.atan(Math.tan(need * D2R / 2) / aspect) / D2R : need, 26, 62);
+    if (innerWidth > 640) {
+      const hf = 2 * Math.atan(Math.tan(fov / 2 * D2R) * aspect) / D2R;
+      _ct.addScaledVector(V3().subVectors(_ct, _cp).cross(_up).normalize(), 2 * dist * Math.tan(hf / 2 * D2R) * (CARD_W / 2 / innerWidth));
+    }
+  } else {
+    const d = shotDef(CD.shot, CD.fs);
+    const base = aspect < 1 ? 56 : 36;
+    const hf = 2 * Math.atan(Math.tan(base / 2 * D2R) * aspect) / D2R, mf = Math.min(base, hf);
+    const dist = d.span / 2 / Math.tan(mf / 2 * D2R);
+    const dir = d.pos.clone().sub(d.tgt).normalize();
+    _cp.copy(d.tgt).addScaledVector(dir, dist);
+    _cp.z = Math.max(_cp.z, CT.z0 + .45);
+    _cp.y = Math.max(_cp.y, 1.0);
+    _ct.copy(d.tgt); fov = base;
+    // справа карточка рецепта: действие сдвигаем левее центра
+    if (innerWidth > 640) {
+      const r = V3().subVectors(_ct, _cp).cross(_up).normalize();
+      const sh = 2 * dist * Math.tan(hf / 2 * D2R) * (CARD_W / 2 / innerWidth);
+      _cp.addScaledVector(r, sh); _ct.addScaledVector(r, sh);
+    }
+  }
+  if (CD.snap) { setCam({ px: _cp.x, py: _cp.y, pz: _cp.z, tx: _ct.x, ty: _ct.y, tz: _ct.z, fov }); CD.snap = false; return; }
+  const k = smoothK(2.4, dt), kt = smoothK(4, dt);
+  CAM.px += (_cp.x - CAM.px) * k; CAM.py += (_cp.y - CAM.py) * k; CAM.pz += (_cp.z - CAM.pz) * k;
+  CAM.tx += (_ct.x - CAM.tx) * kt; CAM.ty += (_ct.y - CAM.ty) * kt; CAM.tz += (_ct.z - CAM.tz) * kt;
+  CAM.fov += (fov - CAM.fov) * k;
+});
 
-/* ---------- подписи ---------- */
-const showUI = { root: document.getElementById("show-ui"), title: document.getElementById("show-title"), count: document.getElementById("show-count"), text: document.getElementById("show-text"), cap: document.getElementById("show-cap") };
+/* ---------- интерфейс: подписи, карточка рецепта, ярлык у бутылки ---------- */
+const showUI = { root: document.getElementById("show-ui"), title: document.getElementById("show-title"), count: document.getElementById("show-count"), text: document.getElementById("show-text"), cap: document.getElementById("show-cap"),
+  list: document.getElementById("sc-list"), sub: document.getElementById("sc-sub"), cup: document.getElementById("sc-cup"), tag: document.getElementById("show-tag") };
 document.getElementById("show-skip").addEventListener("click", () => { if (SHOW.on) { SHOW.fast = true; SHOW.gen++; } });
 addEventListener("keydown", e => { if (e.key === "Escape" && SHOW.on) { SHOW.fast = true; SHOW.gen++; } });
 function caption(count, text) {
@@ -5085,114 +5363,128 @@ function caption(count, text) {
 function stepCaption(st, c) {
   const { GEN, TOPACC, GNAME } = Closeup;
   switch (st[0]) {
-    case "ice": return st[2] ? "Засыпаем колотый лёд" : st[1] === "tin" ? "Лёд в шейкер" : st[1] === "mixer" ? "Лёд в стакан для смешивания" : "Лёд в бокал";
-    case "jig": return `${st[2]} мл ${GEN[st[1]]}, точно по джиггеру`;
-    case "pour": return `Наливаем ${st[2]} мл ${GEN[st[1]]}`;
+    case "ice": return st[2] ? "Колотый лёд доверху" : st[1] === "tin" ? "Лёд в шейкер" : st[1] === "mixer" ? "Лёд в стакан для смешивания" : "Лёд в бокал";
+    case "jig": return `${st[2]} мл ${GEN[st[1]]} — точно по джиггеру`;
+    case "pour": return `${st[2]} мл ${GEN[st[1]]}`;
     case "top": return `Доливаем ${TOPACC[st[1]]}`;
     case "dash": return `${st[2]} ${st[2] === 1 ? "капля" : "капли"} ангостуры`;
-    case "leaves": return "Свежая мята";
-    case "muddle": return "Мягко разминаем мяту, чтобы она отдала аромат";
+    case "leaves": return "Листья свежей мяты";
+    case "muddle": return "Мягко разминаем мяту — она отдаёт аромат";
     case "squeeze": return "Выжимаем лайм";
     case "rim": return "Солёный ободок";
     case "shake": return "Встряхиваем, пока шейкер не покроется инеем";
-    case "stir": return "Размешиваем барной ложкой: холодно и прозрачно";
+    case "stir": return "Размешиваем ложкой: холодно и прозрачно";
     case "stirIn": return "Перемешиваем";
     case "strain": return "Процеживаем через стрейнер";
-    case "float": return "Гренадин тяжелее: он опускается на дно";
+    case "float": return "Гренадин тяжелее — он опускается на дно";
     case "garnish": return `Финальный штрих: ${GNAME[c.garnish] || "украшение"}`;
     case "serve": return choose(["Готово. Приятного вечера!", "Ваш коктейль. Наслаждайтесь.", "Прошу. За ваш вечер!"]);
   }
   return "";
 }
-
-/* ---------- руки бармена ---------- */
-const W2F = p => toFig(bt, p);
-function handAt(arm, p, f, palm, curl) { const l = W2F(p); reach(arm, l.x, l.y, l.z, f, palm, curl); }
-function take(arm, obj, off = V3(0, -.05, .05), woff = null, dur = .22) { const h = grab(bt, arm, obj, off, dur); Object.assign(h, { tiltZ: 0, roll: 0, yaw: 0 }); if (woff) h.woff = woff; return h; }
-function drop(obj, p, dur = .25) { unaimObj(obj); return putDown(bt, obj, p, SHOW.fast ? .01 : dur); }
-function unaimObj(obj) { for (const a of AIMS) if (a.hold.obj === obj) AIMS.delete(a); }
-function holdOf(obj) { return bt.held.find(h => h.obj === obj); }
-function rest(arm) { arm === bt.L ? reach(bt.L, .24, .98, .14, DIR.down, V3(-1, 0, .3), .3) : reach(bt.R, -.24, .98, .14, DIR.down, V3(1, 0, .3), .3); }
-
-/* бутылку из рейла — в правую руку, иногда с трюком */
-async function fetchBottleFor(ing) {
-  const b = makeBottle(ing);
-  b.position.copy(ST.rail);
-  handAt(bt.R, ST.rail.clone().add(V3(0, .14, .04)), V3(0, -.2, 1), DIR.in(-1), .15);
-  await ws(.42);
-  bt.R.curlT = .85;
-  const h = take(bt.R, b, V3(0, -.04, .045), V3(0, -.13, 0), .2);
-  h.tilt = 0;
-  handAt(bt.R, V3(ST.bx - .26, 1.36, -2.78), V3(0, .2, 1), DIR.in(-1));
-  await ws(.38);
-  const r = Math.random();
-  if (r < .22 && !SHOW.fast) {
-    // крутит бутылку в ладони
-    await tween(h, { roll: Math.PI * 2 }, .55, ease.io); h.roll = 0;
-  } else if (r < .36 && !SHOW.fast) {
-    // подбрасывает и ловит
-    release(bt, b);
-    const y0 = b.position.y;
-    const spin = { a: 0 };
-    tween(spin, { a: Math.PI * 2 }, .62, ease.io);
-    const up = tween(b.position, { y: y0 + .34 }, .31, ease.out);
-    const tick = onTickTmp(() => { b.rotation.set(spin.a, bt.face, 0); });
-    await up; await tween(b.position, { y: y0 }, .31, ease.in); tick();
-    b.rotation.set(0, bt.face, 0);
-    const h2 = take(bt.R, b, V3(0, -.04, .045), V3(0, -.13, 0), 0); h2.k = 1; h2.tilt = 0;
-    SND.tap();
-    return { b, h: h2 };
+const GCOL = { wheel: 0xa8c83e, wedge: 0xa8c83e, lemon: 0xf2d24a, orange: 0xf08a22, mint: 0x3f8f3a, cherry: 0xa8101e, pineapple: 0xf2c84a, olive: 0x8a9a30 };
+/* строка карточки для шага рецепта */
+function cardRow(st, c) {
+  const { GNAME } = Closeup;
+  const ing = (n, a) => ({ name: NOM[n] || n, amt: a, col: "#" + liqOf(n).getHexString() });
+  const tech = (name, amt = "") => ({ name, amt, tech: true });
+  switch (st[0]) {
+    case "ice": return tech(st[2] ? "Колотый лёд" : "Лёд", st[1] === "tin" ? "в шейкер" : st[1] === "mixer" ? "в стакан" : "в бокал");
+    case "jig": case "pour": return ing(st[1], `${st[2]} мл`);
+    case "top": return ing(st[1], "доверху");
+    case "dash": return ing("bitters", `${st[2]} ${st[2] === 1 ? "капля" : "капли"}`);
+    case "float": return ing("grenadine", "15 мл");
+    case "leaves": return { name: "Мята", amt: "8 листьев", col: "#3f8f3a" };
+    case "squeeze": return { name: "Лайм", amt: "выжать", col: "#a8c83e" };
+    case "rim": return { name: "Соль", amt: "на ободок", col: "#f4f1ea" };
+    case "muddle": return tech("Размять");
+    case "shake": return tech("Взболтать", "со льдом");
+    case "stir": return tech("Размешать", "со льдом");
+    case "stirIn": return tech("Перемешать");
+    case "strain": return tech("Процедить", "в бокал");
+    case "garnish": { const g = GNAME[c.garnish] || "украшение"; return { name: g[0].toUpperCase() + g.slice(1), amt: "", col: "#" + new THREE.Color(GCOL[c.garnish] || 0x9fc23a).getHexString() }; }
   }
-  return { b, h };
+  return null;
 }
-function stowBottle(b) {
-  unaimObj(b);
-  release(bt, b);
-  tween(b.position, { y: ST.rail.y - .3 }, SHOW.fast ? .01 : .35, ease.in).then(() => { world.remove(b); });
-  handAt(bt.R, ST.rail.clone().add(V3(0, .2, .04)), V3(0, -.2, 1), DIR.in(-1), .2);
-}
-/* временный обработчик кадра */
-const TMP = new Set();
-onTick((t, dt) => { for (const f of TMP) f(t, dt); });
-function onTickTmp(fn) { TMP.add(fn); return () => TMP.delete(fn); }
-
-/* налить из того, что в руке (бутылка/джиггер/шейкер), в сосуд V */
-async function pourInto(hold, V, ml, color, { gap = .06, tilt = 2.15, side = false, rate = 1, spout = null } = {}) {
-  const target = mouth(V).add(V3(0, gap, 0));
-  const top = V3(0, spout || hold.obj.userData.top || .1, 0);
-  aim(hold, target, top, .3);
-  await ws(.3);
-  side ? tween(hold, { tiltZ: tilt }, .3) : tween(hold, { tilt }, .3);
-  await ws(.25);
-  const tf = V3(0, top.y, 0);
-  streamOn(o => hold.obj.localToWorld(o.copy(tf)), o => o.copy(mouth(V)).add(V3(0, -.04, 0)), color, ml > 60 ? 1.2 : 1);
-  const dur = (.35 + ml / 70) / rate;
-  SND.pour(Math.min(2.5, dur));
-  const m0 = V.ml, start = performance.now();
-  const stop = onTickTmp(() => {
-    const k = clamp((performance.now() - start) / (dur * 1000), 0, 1);
-    const w = (m0 + ml * k) || 1;
-    V.ml = m0 + ml * k;
-    V.col.lerp(color, clamp(ml * .016 / w * 60, 0, 1) * .08);
-    setLevel(V);
+const CUP_SVG = {
+  martini: { d: "M14 14 L86 14 L50 62 Z", stem: [62, 104], top: 14, bot: 62 },
+  coupe: { d: "M14 18 Q16 58 50 60 Q84 58 86 18 Z", stem: [60, 104], top: 18, bot: 60 },
+  wine: { d: "M26 10 Q20 60 50 64 Q80 60 74 10 Z", stem: [64, 104], top: 10, bot: 64 },
+  rocks: { d: "M22 44 L26 108 L74 108 L78 44 Z", stem: null, top: 44, bot: 108 },
+  highball: { d: "M30 8 L32 110 L68 110 L70 8 Z", stem: null, top: 8, bot: 110 },
+  shot: { d: "M36 60 L39 108 L61 108 L64 60 Z", stem: null, top: 60, bot: 108 },
+  snifter: { d: "M30 30 Q14 70 50 76 Q86 70 70 30 Z", stem: [76, 104], top: 30, bot: 76 }
+};
+const CARD = { rows: [], map: [], layers: [], total: 100, filled: 0, cup: null };
+function buildCard(c, prog) {
+  showUI.list.innerHTML = "";
+  CARD.rows = []; CARD.map = []; CARD.layers = []; CARD.filled = 0;
+  const kind = prog.some(s => s[0] === "shake") ? "shake" : prog.some(s => s[0] === "stir") ? "stir" : "build";
+  showUI.sub.textContent = { shake: "Взболтать в шейкере", stir: "Размешать со льдом", build: "Собрать в бокале" }[kind];
+  prog.forEach((st, i) => {
+    const r = cardRow(st, c);
+    if (!r) { CARD.map[i] = -1; return; }
+    const li = document.createElement("li");
+    if (r.tech) li.className = "tech";
+    li.innerHTML = `<i${r.col ? ` style="background:${r.col}"` : ""}></i><span class="n"></span><span class="a"></span>`;
+    li.querySelector(".n").textContent = r.name; li.querySelector(".a").textContent = r.amt;
+    showUI.list.appendChild(li);
+    CARD.map[i] = CARD.rows.length;
+    CARD.rows.push(li);
   });
-  await ws(dur);
-  stop(); V.ml = m0 + ml; setLevel(V);
-  streamOff();
-  side ? tween(hold, { tiltZ: 0, roll: (hold.roll || 0) + (chance(.6) ? 1.1 : 0) }, .3) : tween(hold, { tilt: 0, roll: (hold.roll || 0) + (chance(.6) ? 1.1 : 0) }, .3);
-  await ws(.28);
-  hold.roll = 0;
-  unaim(hold);
+  CARD.total = prog.reduce((s, st) => s + (st[0] === "jig" || st[0] === "pour" ? st[2] : st[0] === "top" ? 70 : st[0] === "float" ? 15 : st[0] === "squeeze" ? 10 : st[0] === "dash" ? 4 : 0), 0) || 100;
+  const cup = CUP_SVG[c.cup] || CUP_SVG.rocks;
+  const stem = cup.stem ? `<path d="M50 ${cup.stem[0]} L50 ${cup.stem[1]}" class="st"/><ellipse cx="50" cy="${cup.stem[1] + 3}" rx="17" ry="3" class="st"/>` : "";
+  showUI.cup.innerHTML = `<defs><clipPath id="sc-clip"><path d="${cup.d}"/></clipPath></defs><g clip-path="url(#sc-clip)" id="sc-fill"></g><path d="${cup.d}" class="gl"/>${stem}`;
+  CARD.cup = cup;
 }
+function cardStep(i) {
+  const k = CARD.map[i];
+  if (k === undefined || k < 0) return;
+  CARD.rows.forEach((li, j) => { li.classList.toggle("now", j === k); if (j < k) li.classList.add("done"); });
+  const li = CARD.rows[k];
+  if (li && li.scrollIntoView && showUI.list.scrollHeight > showUI.list.clientHeight) li.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+function cardDone() { CARD.rows.forEach(li => { li.classList.remove("now"); li.classList.add("done"); }); }
+/* слой в маленьком бокале на карточке */
+function cardLayer(col, ml) {
+  const cup = CARD.cup, fill = document.getElementById("sc-fill");
+  if (!cup || !fill) return;
+  const H = cup.bot - cup.top, h = H * .88 * ml / CARD.total;
+  const y = cup.bot - CARD.filled - h;
+  CARD.filled += h;
+  const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  r.setAttribute("x", 0); r.setAttribute("y", y.toFixed(2)); r.setAttribute("width", 100); r.setAttribute("height", (h + .6).toFixed(2));
+  r.setAttribute("fill", "#" + col.getHexString());
+  r.classList.add("ly");
+  fill.appendChild(r);
+  CARD.layers.push(r);
+}
+function cardMix(col) { const h = "#" + new THREE.Color(col).getHexString(); CARD.layers.forEach(r => r.setAttribute("fill", h)); }
+/* ярлык у бутылки: «Текила · 50 мл» рядом с этикеткой */
+const TAG = { obj: null };
+function tagOn(obj, text) { TAG.obj = obj; showUI.tag.textContent = text; showUI.tag.classList.add("show"); }
+function tagOff() { TAG.obj = null; showUI.tag.classList.remove("show"); }
+const _tp = V3();
+onTick(() => {
+  if (!TAG.obj || !SHOW.on) return;
+  TAG.obj.updateMatrixWorld(true);
+  TAG.obj.localToWorld(_tp.set(0, TAG.obj.userData.top * .5, 0)).project(camera);
+  const x = (_tp.x * .5 + .5) * innerWidth, y = (-_tp.y * .5 + .5) * innerHeight;
+  const W = showUI.tag.offsetWidth || 140;
+  const left = innerWidth <= 640 ? x - W - 30 : x < innerWidth * .5 ? x + 40 : x - W - 40;
+  showUI.tag.style.transform = `translate(${clamp(left, 8, innerWidth - W - 8).toFixed(0)}px, ${clamp(y - 16, 70, innerHeight - 170).toFixed(0)}px)`;
+});
 
 /* ---------- лёд ---------- */
 function iceSpot(V, crushed) {
-  const n = V.ice.length, r = V === SHOW.glassV ? .02 : .022;
-  const a = n * 2.4, ring = (n % 4) / 4;
-  return V3(Math.cos(a) * r * ring + rr(-.005, .005), V.y0 + .016 + Math.floor(n / 4) * (crushed ? .012 : .024), Math.sin(a) * r * ring);
+  const n = V.ice.length, r = Math.max(.006, Math.min(V.r0, V.r1) * .55);
+  const a = n * 2.39996, per = crushed ? 6 : 3;
+  const ring = n % per === 0 ? .2 : 1;
+  return V3(Math.cos(a) * r * ring, V.y0 + .013 + Math.floor(n / per) * (crushed ? .011 : .02), Math.sin(a) * r * ring);
 }
 async function dropCube(V, from, crushed) {
-  const cube = new THREE.Mesh(crushed ? smallCube : cubeGeo, MX.ice);
+  const cube = new THREE.Mesh(crushed ? crushGeo : cubeGeo, MX.ice);
   cube.renderOrder = 5;
   cube.position.copy(from);
   cube.rotation.set(rr(0, 3), rr(0, 3), 0);
@@ -5200,551 +5492,554 @@ async function dropCube(V, from, crushed) {
   const local = iceSpot(V, crushed);
   V.ice.push(cube);
   const dst = V.g.localToWorld(local.clone());
-  await tween(cube.position, { x: dst.x, y: dst.y, z: dst.z }, SHOW.fast ? .01 : rr(.16, .24), ease.in);
+  await tween(cube.position, { x: dst.x, y: dst.y, z: dst.z }, SHOW.fast ? .001 : rr(.16, .24), ease.in);
   V.g.attach(cube);
   SND.clink();
 }
 async function stepIce(st) {
   const V = st[1] === "tin" ? P.tin : st[1] === "mixer" ? P.mixer : SHOW.glassV, crushed = !!st[2];
+  const n = crushed ? 12 : V === SHOW.glassV ? (SHOW.c.cup === "rocks" ? 3 : 5) : 7;
+  const S = P.scoop.g, R = bt.R;
+  shot(choose(["macro", "low", "medium"]), ST.bucket.clone().add(V3(.15, .12, .05)));
+  bt.look = ST.bucket;
+  // совок за ручку: ладонь сверху, пальцы вдоль ручки
+  await grip(R, S, { p: V3(-.06, .006, 0), r: .009, f: V3(0, 0, 1), n: V3(0, -1, 0), pose: "grip", along: .045 }, .45);
+  const inB = ST.bucket.clone().add(V3(.02, .11, 0));
+  await move(S, inB.clone().add(V3(0, .09, 0)), { q: Qe(0, .25, -.5), dur: .4, arc: .03 });
+  await move(S, inB, { q: Qe(0, .25, -.7), dur: .2, e: ease.in });
+  P.scoop.cubes.forEach((c, i) => { c.visible = i < Math.min(5, n); c.geometry = crushed ? crushGeo : cubeGeo; });
+  SND.clink();
+  await move(S, inB.clone().add(V3(0, .1, 0)), { q: Qe(0, .25, .2), dur: .25, e: ease.out });
+  follow(mouth(V));
   bt.look = mouth(V);
-  const n = crushed ? 9 : V === SHOW.glassV ? (["rocks"].includes(SHOW.c.cup) ? 2 : 4) : 6;
-  if (crushed || chance(.6)) {
-    // совком
-    handAt(bt.R, ST.bucket.clone().add(V3(0, .16, .02)), V3(0, -.9, .4), DIR.in(-1), .6);
-    await ws(.45);
-    handAt(bt.R, ST.bucket.clone().add(V3(0, .09, .02)), V3(0, -.9, .4), DIR.in(-1), .8);
-    await ws(.25);
-    handAt(bt.R, mouth(V).add(V3(-.02, .16, -.04)), V3(0, -.4, 1), DIR.down, .8);
-    await ws(.45);
-    const from = mouth(V).add(V3(0, .1, 0));
-    for (let i = 0; i < n; i++) { dropCube(V, from.clone().add(V3(rr(-.015, .015), rr(0, .03), rr(-.015, .015))), crushed); await ws(.07); }
-    await ws(.25);
-  } else {
-    // по одному кубику, щипцами пальцев
-    for (let i = 0; i < Math.min(n, 3); i++) {
-      handAt(bt.R, ST.bucket.clone().add(V3(0, .14, .02)), V3(0, -.9, .4), DIR.in(-1), .5);
-      await ws(.3);
-      handAt(bt.R, mouth(V).add(V3(0, .12, -.03)), V3(0, -.6, .8), DIR.in(-1), .9);
-      await ws(.3);
-      dropCube(V, mouth(V).add(V3(0, .07, 0)), false);
-      await ws(.12);
-    }
-  }
+  // над сосудом и наклон ковшом вниз
+  const over = mouth(V, .06).add(V3(-.04, 0, 0));
+  await move(S, over, { q: Qe(0, 0, .2), dur: .55, arc: .05 });
+  await move(S, over.clone().add(V3(.01, -.01, 0)), { q: Qe(0, 0, -.9), dur: .25 });
+  P.scoop.cubes.forEach(c => { c.visible = false; });
+  const from = mouth(V, .04);
+  for (let i = 0; i < n; i++) { dropCube(V, from.clone().add(V3(rr(-.012, .012), rr(0, .03), rr(-.012, .012))), crushed); await ws(crushed ? .03 : .06); }
+  await ws(.2);
+  await move(S, over.clone().add(V3(0, .03, 0)), { q: Qe(0, 0, .1), dur: .25 });
+  await move(S, ST.scoop, { q: Qe(0, 0, 0), dur: .45, arc: .05 });
+  letGo(R);
+  await rest(R);
+}
+
+/* ---------- бутылка: из рейла, показать этикетку, налить ---------- */
+async function bottleUp(ing, label) {
+  const b = makeBottle(ing), u = b.userData, R = bt.R;
+  place(b, ST.rail, Qe(0, 0, 0));
+  bt.look = b.position.clone().add(V3(0, .3, 0));
+  await grip(R, b, wrap(-1, V3(0, u.top * .5, 0), u.r), .4);
+  // поднимает и на миг показывает этикетку гостю
+  const show = B(-.17, TOP() + .1, .36);
+  await move(b, show, { q: Qe(0, rr(-.15, .15), 0), dur: .5, arc: .04 });
+  tagOn(b, `${NOM[ing] || ""}${label ? " · " + label : ""}`);
+  const r = Math.random();
+  if (r < .25 && !SHOW.fast) {
+    // прокрутка в ладони
+    await move(b, show.clone().add(V3(0, .02, 0)), { q: Qe(0, Math.PI * 2 - .01, 0), dur: .55 });
+  } else if (r < .42 && !SHOW.fast) {
+    // подброс с переворотом и ловля
+    const H = HANDS.get(R); HANDS.delete(R);
+    handPose(R, "open");
+    await move(b, show.clone().add(V3(0, .26, 0)), { q: Qe(Math.PI, 0, 0), dur: .3, e: ease.out });
+    await move(b, show, { q: Qe(Math.PI * 2 - .001, 0, 0), dur: .3, e: ease.in });
+    b.quaternion.identity();
+    HANDS.set(R, H); handPose(R, "grip", u.r);
+    SND.tap();
+  } else await ws(.35);
+  return b;
+}
+async function bottleDown(b) {
+  tagOff();
+  await move(b, ST.rail.clone().add(V3(0, .06, 0)), { q: Qe(0, 0, 0), dur: .45, arc: .03 });
+  letGo(bt.R);
+  move(b, ST.rail.clone().add(V3(0, -.35, 0)), { dur: .3, e: ease.in }).then(() => world.remove(b), () => world.remove(b));
   rest(bt.R);
+}
+/* налить из предмета с носиком: носик подходит к цели, поворот вокруг носика, струя */
+async function pourFrom(o, spoutLocal, to, ml, col, { gap = .05, ang = -2.25, rate = 1, fill = null, approach = .5, w = 1 } = {}) {
+  const tgt = to().add(V3(0, gap, 0));
+  const q1 = Qz(ang * .45);
+  await move(o, posFor(o, spoutLocal, tgt.clone().add(V3(ang < 0 ? -.03 : .03, .03, 0)), q1), { q: q1, dur: approach, arc: .03 });
+  await tiltAbout(o, spoutLocal, Qz(ang), .32);
+  const spout = v => v.copy(o.localToWorld(spoutLocal.clone()));
+  streamOn(spout, v => v.copy(to()), col, w * (ml > 60 ? 1.25 : 1));
+  const dur = (.45 + ml / 65) / rate;
+  SND.pour(Math.min(2.5, dur));
+  await waitTicks(dur, k => { if (fill) fill(k); });
+  streamOff();
+  // отсекает струю: горлышко вверх
+  await tiltAbout(o, spoutLocal, Qz(ang * .4), .22);
 }
 
 /* ---------- джиггер ---------- */
-let jigHold = null;
+let jigOn = false;
+const JIG_WAIST = V3(0, .046, 0);
+async function jiggerUp(V) {
+  const L = bt.L, J = P.jig.g;
+  if (!jigOn) {
+    await grip(L, J, wrap(1, JIG_WAIST, .01, { pose: "pinch", along: .05 }), .4);
+    jigOn = true;
+  }
+  await move(J, posFor(J, JIG_WAIST, mouth(V, .05).add(V3(.035, 0, -.005)), Qe(0, 0, 0)), { q: Qe(0, 0, 0), dur: .4, arc: .03 });
+}
+async function jiggerPark() {
+  if (!jigOn) return;
+  await move(P.jig.g, ST.jig, { q: Qe(0, 0, 0), dur: .4, arc: .04 });
+  letGo(bt.L); jigOn = false;
+  await rest(bt.L);
+}
 async function stepJig(st) {
   const [, ing, ml, into] = st;
   const V = into === "glass" ? SHOW.glassV : SHOW.main;
-  const col = new THREE.Color((Closeup.LOOK[ing] || {}).liq || "#ffffff");
-  const { b, h } = await fetchBottleFor(ing);
-  if (!jigHold) {
-    handAt(bt.L, ST.jig.clone().add(V3(.02, .06, -.02)), V3(-.3, -.5, 1), DIR.in(1), .2);
-    await ws(.35);
-    bt.L.curlT = .85;
-    jigHold = take(bt.L, P.jig.g, V3(0, -.045, .04), V3(0, -.045, 0), .2);
-    jigHold.tilt = 0;
-  }
-  // джиггер над сосудом, бутылка над джиггером
-  const jtop = mouth(V).add(V3(.03, .08, 0));
-  aim(jigHold, jtop, V3(0, .09, 0), .3);
-  bt.look = jtop;
-  await ws(.35);
-  const fake = { g: P.jig.g, mouthY: .09 };
+  const col = liqOf(ing), J = P.jig.g, jl = P.jig.liq;
+  shot(choose(["macro", "low", "side", "macro"]), mouth(V, .12).add(V3(-.06, 0, 0)));
+  const [b] = await Promise.all([bottleUp(ing, `${ml} мл`), jiggerUp(V)]);
+  const full = .039 * clamp(ml / 50, .25, 1);
+  const jSurf = () => J.localToWorld(V3(0, .049 + Math.max(.004, jl.scale.y), 0));
+  follow(J.localToWorld(V3(0, .1, 0)));
+  bt.look = J.position;
   const high = chance(.35) && ml >= 20;
-  P.jig.liq.material.color.copy(col);
-  // наливаем в джиггер (уровень в нём растёт)
-  const jV = { g: P.jig.g, ml: 0, cap: 60, col: col.clone(), liq: null, y0: .05, y1: .09 };
-  const stopJ = onTickTmp(() => { P.jig.liq.visible = jV.ml > 1; P.jig.liq.scale.y = clamp(jV.ml / 45, .05, 1); });
-  const tmpV = Object.assign(jV, { mouthY: .09 });
-  await pourInto(h, tmpV, ml, col, { gap: high ? rr(.18, .28) : rr(.04, .07), tilt: rr(2.0, 2.3), rate: high ? .8 : 1 });
-  stopJ();
+  jl.material.color.copy(col); jl.material.emissive = col.clone().multiplyScalar(.3);
+  await pourFrom(b, V3(0, b.userData.top, 0), jSurf, ml, col, {
+    gap: high ? rr(.18, .26) : rr(.05, .08), rate: high ? .85 : 1,
+    fill: k => { jl.visible = k > .02; jl.scale.y = Math.max(.0001, full * k); }
+  });
   if (high) bt.look = camera.position;
-  stowBottle(b);
-  // джиггер в сосуд
-  aim(jigHold, mouth(V).add(V3(.02, .05, 0)), V3(0, .09, 0), .3);
-  await ws(.25);
-  tween(jigHold, { tilt: 2.4 }, .2);
-  await ws(.12);
-  streamOn(o => P.jig.g.localToWorld(o.set(0, .09, 0)), o => o.copy(mouth(V)), col, .9);
+  bottleDown(b);
+  // джиггер переворачивается над сосудом
+  follow(mouth(V, .04));
+  bt.look = mouth(V);
+  const flip = 2.5;
+  await tiltAbout(J, JIG_WAIST, Qz(flip), .26, ease.in);
+  streamOn(v => v.copy(J.localToWorld(V3(-.025, .089, 0))), v => v.copy(surface(V)), col, .95);
   const m0 = V.ml;
-  P.jig.liq.visible = false;
-  await ws(.25);
+  await waitTicks(.34, k => { jl.scale.y = Math.max(.0001, full * (1 - k)); V.ml = m0 + ml * k; if (V !== P.tin) { V.col.lerp(col, .08); setLevel(V); } });
   streamOff();
-  V.ml = m0 + ml; V.col.lerp(col, ml / Math.max(V.ml, 1)); if (V.liq) setLevel(V);
-  tween(jigHold, { tilt: 0 }, .2);
-  await ws(.2);
-  unaim(jigHold);
-  // небрежно крутит джиггер в пальцах
-  if (chance(.25) && !SHOW.fast) { await tween(jigHold, { roll: Math.PI * 2 }, .45); jigHold.roll = 0; }
-  rest(bt.R);
+  jl.visible = false;
+  V.ml = m0 + ml; V.col.lerp(col, ml / Math.max(V.ml, 1)); setLevel(V);
+  cardLayer(col, ml);
+  await tiltAbout(J, JIG_WAIST, Qz(0), .24);
+  // иногда небрежно крутит джиггер пальцами
+  if (chance(.25) && !SHOW.fast) await move(J, J.position.clone().add(V3(0, .02, 0)), { q: Qe(0, Math.PI * 2 - .01, 0), dur: .45 });
 }
-async function parkJigger() {
-  if (!jigHold) return;
-  unaim(jigHold);
-  handAt(bt.L, ST.jig.clone().add(V3(.02, .07, -.02)), V3(-.3, -.5, 1), DIR.in(1), .8);
-  await ws(.3);
-  await drop(P.jig.g, ST.jig);
-  P.jig.g.rotation.set(0, 0, 0);
-  jigHold = null;
-  rest(bt.L);
-}
-async function stepPour(st, top = false) {
-  const [, ing, ml] = st;
-  const col = new THREE.Color((Closeup.LOOK[ing] || {}).liq || "#ffffff");
-  const { b, h } = await fetchBottleFor(ing);
-  bt.look = mouth(SHOW.glassV);
-  await pourInto(h, SHOW.glassV, top ? 60 : ml, col, { gap: top ? rr(.03, .06) : rr(.08, .2), tilt: rr(1.9, 2.25), rate: top ? .8 : 1.2 });
-  stowBottle(b);
+async function stepPour(st, isTop = false) {
+  const [, ing, ml0] = st, ml = isTop ? 70 : ml0;
+  const V = SHOW.glassV, col = liqOf(ing);
+  await jiggerPark();
+  shot(choose(["side", "macro", "low"]), mouth(V, .05));
+  const b = await bottleUp(ing, isTop ? "доверху" : `${ml} мл`);
+  bt.look = mouth(V);
+  follow(mouth(V, .08));
+  const m0 = V.ml;
+  await pourFrom(b, V3(0, b.userData.top, 0), () => surface(V), ml, col, {
+    gap: isTop ? rr(.04, .07) : rr(.1, .2), rate: isTop ? .75 : 1.1,
+    fill: k => { V.ml = m0 + ml * k; V.col.lerp(col, .05); setLevel(V); }
+  });
+  cardLayer(col, ml);
+  await bottleDown(b);
 }
 async function stepDash(st) {
   const V = st[3] === "glass" ? SHOW.glassV : SHOW.main;
-  const { b, h } = await fetchBottleFor("bitters");
-  aim(h, mouth(V).add(V3(0, .08, 0)), V3(0, b.userData.top, 0), .3);
-  await ws(.35);
+  await jiggerPark();
+  shot("macro", mouth(V, .06));
+  const b = await bottleUp("bitters", `${st[2]} ${st[2] === 1 ? "капля" : "капли"}`);
+  const top = V3(0, b.userData.top, 0), q = Qz(-2.4);
+  follow(mouth(V, .06));
+  await move(b, posFor(b, top, mouth(V, .09), q), { q, dur: .45, arc: .03 });
   for (let i = 0; i < (st[2] || 1); i++) {
-    tween(h, { tilt: 2.5 }, .1); await ws(.14);
-    // капля
-    const d = mesh(new THREE.SphereGeometry(.004, 6, 4), std({ color: 0x5a1a0c }), 0, 0, 0);
-    b.localToWorld(d.position.set(0, b.userData.top, 0));
-    tween(d.position, { y: mouth(V).y - .05 }, .2, ease.in).then(() => world.remove(d));
-    tween(h, { tilt: 1.6 }, .1); await ws(.16);
+    const p0 = b.position.clone();
+    await move(b, p0.clone().add(V3(0, -.03, 0)), { dur: .08, e: ease.in });
+    const d = mesh(new THREE.SphereGeometry(.004, 8, 6), std({ color: 0x5a1a0c }), 0, 0, 0);
+    b.localToWorld(d.position.copy(top));
+    tween(d.position, { y: surface(V).y }, .18, ease.in).then(() => world.remove(d));
+    await move(b, p0, { dur: .14, e: ease.out });
+    await ws(.12);
   }
-  tween(h, { tilt: 0 }, .2); await ws(.2);
-  unaim(h);
-  stowBottle(b);
+  cardLayer(new THREE.Color(0x5a1a0c), 4);
+  await bottleDown(b);
 }
 
 /* ---------- шейк ---------- */
 async function stepShake() {
-  const V = P.tin;
-  await parkJigger();
-  // накрываем малым стаканом
-  handAt(bt.R, P.cap.g.position.clone().add(V3(0, .08, -.03)), V3(0, -.5, 1), DIR.in(-1), .2);
-  await ws(.35);
-  bt.R.curlT = .85;
-  const ch = take(bt.R, P.cap.g, V3(0, -.05, .05), V3(0, -.06, 0), .2);
-  ch.tilt = 0;
-  await ws(.15);
-  tween(ch, { tilt: Math.PI }, .3);
-  aim(ch, mouth(V).add(V3(0, .1, 0)), null, .3);
-  await ws(.4);
-  aim(ch, mouth(V).add(V3(0, .075, 0)), null, .35);
-  await ws(.2);
+  const V = P.tin, T = V.g, C = P.cap.g, R = bt.R, L = bt.L;
+  await jiggerPark();
+  shot(choose(["macro", "low"]), mouth(V, .05));
+  bt.look = mouth(V);
+  // малый стакан: левой рукой, переворот и сверху на шейкер
+  await grip(L, C, wrap(1, V3(0, .07, 0), .04), .38);
+  const qC = Qx(Math.PI);
+  await move(C, posFor(C, V3(0, .123, 0), mouth(V, .05), qC), { q: qC, dur: .45, arc: .05 });
+  await move(C, posFor(C, V3(0, .123, 0), mouth(V, -.03), qC), { dur: .16, e: ease.in });
+  T.attach(C);
+  // ладонью прихлопывает
+  letGo(L, "flat");
+  const capTop = () => C.localToWorld(V3(0, 0, 0));
+  await handTo(L, capTop().add(V3(0, .06, -.03)), V3(0, 0, 1), V3(0, -1, 0), "flat", .16);
+  await handTo(L, capTop().add(V3(0, .03, -.03)), V3(0, 0, 1), V3(0, -1, 0), "flat", .08);
   SND.tap();
-  release(bt, P.cap.g); unaimObj(P.cap.g);
-  P.cap.g.position.copy(mouth(V).add(V3(0, .068, 0)));
-  P.cap.g.rotation.set(Math.PI, 0, 0);
-  V.g.attach(P.cap.g);
-  // обе руки на шейкер
-  handAt(bt.R, V.g.position.clone().add(V3(-.02, .07, -.05)), V3(0, -.2, 1), DIR.in(-1), .2);
-  handAt(bt.L, V.g.position.clone().add(V3(.02, .22, -.04)), V3(0, .2, 1), DIR.in(1), .2);
-  await ws(.38);
-  bt.R.curlT = .9; bt.L.curlT = .7;
-  const th = take(bt.R, V.g, V3(0, -.05, .05), V3(0, -.08, 0), .2);
-  th.tilt = 0;
-  const style = choose(["shoulder", "front", "hard", "shoulder"]);
-  const tinPos = () => V.g.position;
-  // иногда — подброс шейкера перед встряской
-  if (chance(.25) && !SHOW.fast) {
-    aim(th, V3(ST.bx - .05, 1.38, -2.72), null, .3);
-    await ws(.3);
-    release(bt, V.g); unaimObj(V.g);
-    const y0 = V.g.position.y, spin = { a: 0 };
-    tween(spin, { a: Math.PI * 2 }, .6, ease.io);
-    const stop = onTickTmp(() => V.g.rotation.set(0, spin.a, 0));
-    await tween(V.g.position, { y: y0 + .3 }, .3, ease.out);
-    await tween(V.g.position, { y: y0 }, .3, ease.in);
-    stop();
+  // обе руки: правая на корпусе, левая на дне малого стакана
+  const tl = T.worldToLocal(capTop());
+  await Promise.all([
+    grip(R, T, wrap(-1, V3(0, .07, 0), .047), .35),
+    grip(L, T, { p: tl.clone().add(V3(0, .004, 0)), r: .012, f: V3(0, 0, 1), n: V3(0, -1, 0), pose: "hook", along: .05 }, .35)
+  ]);
+  const style = choose(["shoulder", "shoulder", "front", "hard"]);
+  // иногда подброс: шейкер переворачивается в воздухе
+  if (chance(.22) && !SHOW.fast) {
+    const hold = [HANDS.get(R), HANDS.get(L)]; HANDS.clear();
+    handPose(R, "open"); handPose(L, "open");
+    const p0 = T.position.clone();
+    await move(T, p0.clone().add(V3(0, .3, .02)), { q: Qe(0, Math.PI, 0), dur: .32, e: ease.out });
+    await move(T, p0.clone().add(V3(0, .12, 0)), { q: Qe(0, Math.PI * 2 - .001, 0), dur: .28, e: ease.in });
+    T.quaternion.identity();
+    HANDS.set(R, hold[0]); HANDS.set(L, hold[1]); handPose(R, "grip", .047); handPose(L, "hook");
     SND.tap();
-    const t2 = take(bt.R, V.g, V3(0, -.05, .05), V3(0, -.08, 0), 0); t2.k = 1; t2.tilt = 0;
-    Object.assign(th, t2);
   }
-  const hold = holdOf(V.g);
-  bt.look = chance(.55) ? camera.position : null;
+  shot(choose(["face", "medium", "face"]), B(-.05, 1.42, .3));
+  bt.look = chance(.6) ? camera.position : null;
   BT.nod = 1;
-  const dur = SHOW.fast ? .05 : rr(2.3, 3.1), hz = rr(2.6, 3.4), amp = rr(.07, .11);
+  // ось шейкера: корпус у плеча, малый стакан к гостю
+  const axis = { shoulder: V3(.25, -.06, .97), front: V3(.05, .97, .22), hard: V3(.3, .1, .95) }[style].normalize();
+  const base = { shoulder: B(-.17, 1.46, .12), front: B(-.03, 1.2, .3), hard: B(-.16, 1.4, .13) }[style];
+  const ctr = base.clone().addScaledVector(axis, .14);
+  const q = new THREE.Quaternion().setFromUnitVectors(_up, axis);
+  await move(T, base, { q, dur: .5, arc: .04 });
+  follow(ctr);
+  const dur = rr(2.4, 3.1), hz = rr(2.6, 3.3), amp = rr(.06, .085);
   SND.rattle(Math.min(dur, 3), hz);
-  const base = { shoulder: V3(-.2, 1.5, .2), front: V3(-.02, 1.34, .38), hard: V3(-.08, 1.42, .3) }[style];
-  const tiltBase = { shoulder: -1.2, front: -1.5, hard: -1.3 }[style];
-  hold.tilt = tiltBase;
-  const t0 = performance.now();
-  unaim(hold);
-  const stop = onTickTmp(() => {
-    const t = (performance.now() - t0) / 1000, ph = t * hz * Math.PI * 2;
+  const side = V3().crossVectors(axis, V3(1, 0, 0)).normalize();
+  await waitTicks(dur, (k, t) => {
+    const ph = t * hz * Math.PI * 2;
     let o;
-    if (style === "hard") { const k = (ph / (Math.PI * 2)) % 1, i = Math.floor(k * 3); o = [V3(-.05, .1, -.06), V3(.03, 0, .06), V3(-.02, -.08, .1)][i]; }
-    else if (style === "shoulder") o = V3(-.04, .08, -.1).multiplyScalar(Math.sin(ph) * amp / .1);
-    else o = V3(0, .02, .12).multiplyScalar(Math.sin(ph) * amp / .1);
-    reach(bt.R, base.x + o.x, base.y + o.y, base.z + o.z, V3(0, .6, .5), DIR.in(-1), .95);
-    reach(bt.L, base.x + o.x + .06, base.y + o.y + .14, base.z + o.z - .02, V3(0, .9, .2), DIR.in(1), .8);
-    hold.tilt = tiltBase + Math.sin(ph) * .12;
-    bt.spine.position.y = Math.sin(ph) * .006;
-    bt.leanT = .08 + Math.sin(ph * .5) * .03;
+    if (style === "hard") { const i = Math.floor(((ph / (Math.PI * 2)) % 1) * 3); o = [axis.clone().multiplyScalar(amp), side.clone().multiplyScalar(-.04), axis.clone().multiplyScalar(-amp * .8)][i]; }
+    else o = axis.clone().multiplyScalar(Math.sin(ph) * amp).addScaledVector(side, Math.cos(ph) * .015);
+    T.position.copy(base).add(o);
+    T.quaternion.copy(q).multiply(Qx(Math.sin(ph) * .08));
+    bt.spine.position.y = Math.sin(ph) * .005;
+    bt.leanT = .1 + Math.sin(ph * .5) * .02;
   });
-  bt.R.k = bt.L.k = 18;
-  await ws(dur);
-  stop();
-  bt.R.k = bt.L.k = 9;
-  BT.nod = 0;
-  // на стойку, иней, хлопок ладонью, снимаем малый стакан
-  V.g.children[0].material = MX.frost;
-  tween(hold, { tilt: 0 }, .35);
-  aim(hold, ST.tin, null, .3);
-  await ws(.5);
-  await drop(V.g, ST.tin, .15);
-  V.g.rotation.set(0, 0, 0);
-  handAt(bt.L, V.g.position.clone().add(V3(.07, .2, 0)), V3(0, .3, 1), DIR.in(1), 0);
-  await ws(.18);
-  handAt(bt.L, V.g.position.clone().add(V3(.04, .2, 0)), V3(0, .3, 1), DIR.in(1), 0);
+  BT.nod = 0; bt.spine.position.y = 0; bt.leanT = .1;
+  cardMix(SHOW.c.pour);
+  // на стойку: металл в инее
+  T.children[0].material = MX.frost;
+  shot(choose(["macro", "low"]), mouth(V, .09));
+  await move(T, ST.tin, { q: Qe(0, 0, 0), dur: .5, arc: .05 });
   SND.tap();
-  await ws(.2);
-  handAt(bt.L, V.g.position.clone().add(V3(.02, .25, -.03)), V3(0, -.5, 1), DIR.in(1), .3);
-  await ws(.3);
-  bt.L.curlT = .85;
-  world.attach(P.cap.g);
-  const cap = take(bt.L, P.cap.g, V3(0, -.05, .05), V3(0, .04, 0), .2);
-  cap.tilt = Math.PI;
-  await ws(.25);
-  tween(cap, { tilt: 0 }, .3);
-  await drop(P.cap.g, ST.tin.clone().add(V3(.16, 0, .1)), .3);
-  P.cap.g.rotation.set(0, 0, 0);
-  rest(bt.L); rest(bt.R);
+  // ладонью по стыку, малый стакан снимается
+  letGo(L, "flat");
+  const seam = mouth(V, .0);
+  await handTo(L, seam.clone().add(V3(.13, .02, -.02)), V3(0, .3, 1), V3(-1, 0, 0), "flat", .2);
+  await handTo(L, seam.clone().add(V3(.075, .02, -.02)), V3(0, .3, 1), V3(-1, 0, 0), "flat", .07);
+  SND.tap();
+  world.attach(C);
+  await grip(L, C, wrap(1, V3(0, .06, 0), .04), .3);
+  await move(C, C.position.clone().add(V3(.02, .08, 0)), { q: Qx(Math.PI).multiply(Qe(0, .6, 0)), dur: .3 });
+  await move(C, ST.cap, { q: Qe(0, 0, 0), dur: .45, arc: .06 });
+  letGo(L); letGo(R);
+  await Promise.all([rest(L), rest(R)]);
 }
 
 /* ---------- стир ---------- */
+const SPOON_GRIP = { p: V3(0, -.05, 0), r: .004, f: V3(0, -1, .25), n: V3(-1, 0, 0), pose: "pinch", along: .07 };
 async function stepStir() {
-  const V = P.mixer;
-  await parkJigger();
-  handAt(bt.L, V.g.position.clone().add(V3(.06, .05, -.01)), V3(-.2, -.2, 1), DIR.in(1), .7);
-  handAt(bt.R, ST.spoon.clone().add(V3(0, .06, 0)), V3(0, -.6, 1), DIR.down, .2);
-  await ws(.38);
-  bt.R.curlT = .7;
-  const sp = take(bt.R, P.spoon.g, V3(0, -.04, .03), null, .2);
-  sp.tilt = 0;
-  const c = mouth(V).add(V3(0, .21, 0));
-  aim(sp, mouth(V).add(V3(0, .18, 0)), V3(0, 0, 0), .3);
+  const V = P.mixer, S = P.spoon.g, R = bt.R, L = bt.L;
+  await jiggerPark();
+  shot(choose(["macro", "low", "side"]), mouth(V, .03));
   bt.look = mouth(V);
-  await ws(.45);
-  unaim(sp);
-  const dur = SHOW.fast ? .05 : rr(2.2, 3), w = rr(9, 12), t0 = performance.now(), cl = W2F(c);
+  await grip(L, V.g, wrap(1, V3(0, .05, 0), .05), .35);
+  place(S, ST.spoon, Qx(Math.PI / 2));
+  await grip(R, S, SPOON_GRIP, .4);
+  const c0 = mouth(V);
+  await move(S, c0.clone().add(V3(0, .32, 0)), { q: Qe(0, 0, 0), dur: .45, arc: .04 });
+  await move(S, c0.clone().add(V3(.026, .155, 0)), { dur: .3, e: ease.in });
+  const dur = rr(2.4, 3), w = rr(8.5, 11);
   SND.tinkle(Math.min(dur, 3));
-  const stop = onTickTmp(() => {
-    const t = (performance.now() - t0) / 1000;
-    reach(bt.R, cl.x + Math.cos(t * w) * .016, cl.y, cl.z + Math.sin(t * w) * .016, V3(0, -.3, 1), DIR.down, .7);
-    sp.roll = t * w;
-    V.ice.forEach((cube, i) => { cube.rotation.y += .05; cube.position.x = Math.cos(t * 2 + i) * .016; cube.position.z = Math.sin(t * 2 + i) * .016; });
+  await waitTicks(dur, (k, t) => {
+    const a = t * w;
+    // ложка идёт по стенке, спинкой к стеклу
+    S.position.set(c0.x + Math.cos(a) * .026, c0.y + .155, c0.z + Math.sin(a) * .026);
+    S.quaternion.copy(Qe(0, -a, 0)).multiply(Qz(.06));
+    V.ice.forEach((cube, i) => { cube.rotation.y += .06; const b = a * .35 + i * 1.9, rr_ = (i % 3) ? .022 : .006; cube.position.x = Math.cos(b) * rr_; cube.position.z = Math.sin(b) * rr_; });
   });
-  bt.R.k = 16;
-  await ws(dur);
-  stop();
-  bt.R.k = 9;
-  if (chance(.4) && !SHOW.fast) { reach(bt.R, cl.x, cl.y + .18, cl.z, V3(0, -.3, 1), DIR.down, .7); await tween(sp, { roll: sp.roll + Math.PI * 4 }, .55); }
-  V.col.lerp(new THREE.Color(SHOW.c.pour), .7); setLevel(V);
-  await drop(P.spoon.g, ST.spoon, .3);
-  P.spoon.g.rotation.set(Math.PI / 2, 0, 0);
-  rest(bt.L); rest(bt.R);
+  V.col.lerp(new THREE.Color(SHOW.c.pour), .8); setLevel(V);
+  cardMix(SHOW.c.pour);
+  await move(S, c0.clone().add(V3(0, .34, 0)), { q: Qe(0, 0, 0), dur: .35, e: ease.out });
+  if (chance(.35) && !SHOW.fast) await move(S, c0.clone().add(V3(0, .36, 0)), { q: Qe(0, Math.PI * 4 - .01, 0), dur: .55 });
+  await move(S, ST.spoon, { q: Qx(Math.PI / 2), dur: .45, arc: .04 });
+  letGo(R); letGo(L);
+  await Promise.all([rest(R), rest(L)]);
 }
 async function stepStirIn() {
-  const V = SHOW.glassV;
-  handAt(bt.R, ST.spoon.clone().add(V3(0, .06, 0)), V3(0, -.6, 1), DIR.down, .2);
-  await ws(.35);
-  bt.R.curlT = .7;
-  const sp = take(bt.R, P.spoon.g, V3(0, -.04, .03), null, .2);
-  sp.tilt = 0;
-  const c = mouth(V).add(V3(0, .19, 0)), cl = W2F(c);
-  aim(sp, mouth(V).add(V3(0, .15, 0)), V3(0, 0, 0), .3);
-  await ws(.4);
-  unaim(sp);
-  const t0 = performance.now(), dur = SHOW.fast ? .05 : rr(1.1, 1.6);
-  const stop = onTickTmp(() => { const t = (performance.now() - t0) / 1000; reach(bt.R, cl.x + Math.cos(t * 8) * .01, cl.y, cl.z + Math.sin(t * 8) * .01, V3(0, -.3, 1), DIR.down, .7); sp.roll = t * 8; });
+  const V = SHOW.glassV, S = P.spoon.g, R = bt.R;
+  await jiggerPark();
+  shot(choose(["macro", "low"]), mouth(V, .03));
+  place(S, ST.spoon, Qx(Math.PI / 2));
+  await grip(R, S, SPOON_GRIP, .4);
+  const c0 = mouth(V);
+  await move(S, c0.clone().add(V3(0, .34, 0)), { q: Qe(0, 0, 0), dur: .45, arc: .04 });
+  const knob = V.g.position.y + .305 + .015;
+  await move(S, V3(c0.x, knob, c0.z), { dur: .3, e: ease.in });
+  const dur = rr(1.2, 1.7);
   SND.tinkle(dur);
-  await ws(dur);
-  stop();
-  V.col.lerp(new THREE.Color(SHOW.c.pour), .8); setLevel(V);
-  await drop(P.spoon.g, ST.spoon, .3);
-  P.spoon.g.rotation.set(Math.PI / 2, 0, 0);
-  rest(bt.R);
+  await waitTicks(dur, (k, t) => { const a = t * 9; S.position.set(c0.x + Math.cos(a) * .012, knob + Math.sin(t * 6) * .01, c0.z + Math.sin(a) * .012); S.quaternion.copy(Qe(0, -a, 0)); });
+  V.col.lerp(new THREE.Color(SHOW.c.pour), .85); setLevel(V);
+  cardMix(SHOW.c.pour);
+  await move(S, c0.clone().add(V3(0, .36, 0)), { q: Qe(0, 0, 0), dur: .3 });
+  await move(S, ST.spoon, { q: Qx(Math.PI / 2), dur: .4, arc: .04 });
+  letGo(R);
+  await rest(R);
 }
 
 /* ---------- процеживание ---------- */
 async function stepStrain() {
-  const S = SHOW.main, G = SHOW.glassV;
-  await parkJigger();
-  // стрейнер на шейкер левой рукой
-  handAt(bt.L, ST.strainer.clone().add(V3(0, .06, 0)), V3(0, -.6, 1), DIR.down, .2);
-  await ws(.35);
-  bt.L.curlT = .6;
-  const st = take(bt.L, P.strainer.g, V3(0, -.04, .04), null, .2);
-  st.tilt = 0;
-  aim(st, mouth(S).add(V3(0, .004, 0)), null, .3);
-  await ws(.4);
-  unaimObj(P.strainer.g); release(bt, P.strainer.g);
-  P.strainer.g.position.copy(mouth(S).add(V3(0, .003, 0)));
-  P.strainer.g.rotation.set(0, Math.PI, 0);
-  S.g.attach(P.strainer.g);
-  handAt(bt.R, S.g.position.clone().add(V3(-.02, .07, -.05)), V3(0, -.2, 1), DIR.in(-1), .2);
-  handAt(bt.L, mouth(S).add(V3(.03, .02, -.02)), V3(0, -.3, 1), DIR.down, .6);
-  await ws(.35);
-  bt.R.curlT = .9;
-  const h = take(bt.R, S.g, V3(0, -.05, .05), V3(0, -.08, 0), .2);
-  h.tilt = 0;
-  const high = chance(.4);
+  const S = SHOW.main, G = SHOW.glassV, R = bt.R, L = bt.L, SR = P.strainer.g;
+  await jiggerPark();
+  shot(choose(["macro", "low"]), mouth(S, .03));
+  bt.look = mouth(S);
+  // стрейнер на край, ручкой к бармену
+  place(SR, ST.strainer, Qe(0, 0, 0));
+  await grip(L, SR, { p: V3(0, 0, .11), r: .004, f: V3(0, 0, -1), n: V3(0, -1, 0), pose: "pinch", along: .05 }, .35);
+  await move(SR, mouth(S, .004), { q: Qe(0, Math.PI, 0), dur: .45, arc: .05 });
+  S.g.attach(SR);
+  letGo(L);
+  const high = chance(.3);
+  // правая рука: корпус, указательный прижимает стрейнер
+  await grip(R, S.g, wrap(-1, V3(0, .12, 0), .048), .35);
+  R.ft = [.12, .55, .62, .7];
+  // левая придерживает бокал у основания
+  grip(L, G.g, wrap(1, V3(0, .012, 0), .015, { pose: "pinch", along: .05 }), .4).catch(() => {});
+  shot(choose(["side", "macro", "low"]), mouth(G, .09));
   bt.look = mouth(G);
-  // левая рука держит стрейнер вместе с шейкером
-  const stopL = onTickTmp(() => { const m = W2F(mouth(S)); reach(bt.L, m.x + .03, m.y + .02, m.z - .02, V3(0, -.3, 1), DIR.down, .6); });
-  const col = new THREE.Color(SHOW.c.pour);
-  const ml = Math.max(40, S.ml * .85);
+  const spout = V3(-S.mouthR, S.mouthY, 0);
+  const col = new THREE.Color(SHOW.c.pour), ml = Math.max(40, S.ml * .82), m0 = G.ml;
   G.col.copy(col);
-  await pourInto(h, G, ml, col, { gap: high ? rr(.15, .24) : rr(.05, .08), tilt: rr(1.75, 2.05), side: true, spout: S.mouthY, rate: .9 });
-  stopL();
+  await pourFrom(S.g, spout, () => surface(G), ml, col, {
+    gap: high ? rr(.12, .16) : rr(.05, .08), ang: 1.75, rate: .9,
+    fill: k => { G.ml = m0 + ml * k; setLevel(G); }
+  });
   S.ml = 0;
-  aim(h, ST.tin, null, .3);
-  await ws(.4);
-  await drop(S.g, ST.tin, .15);
-  S.g.rotation.set(0, 0, 0);
-  world.attach(P.strainer.g);
-  P.strainer.g.visible = false;
-  rest(bt.L); rest(bt.R);
+  letGo(L);
+  rest(L);
+  await move(S.g, ST.tin, { q: Qe(0, 0, 0), dur: .5, arc: .05 });
+  letGo(R);
+  world.attach(SR);
+  SR.visible = false;
+  await rest(R);
 }
 
 /* ---------- мята, мадлер, лайм, ободок, гренадин ---------- */
+function leafMesh() { const l = mesh(new THREE.SphereGeometry(.013, 10, 6), std({ color: 0x3f8f3a, roughness: .55, emissive: 0x0a2a08 }), 0, 0, 0); l.scale.set(1, .22, .55); return l; }
+const PINCH = (p = V3(0, 0, 0)) => ({ p, r: .006, f: V3(.2, -.45, .85).normalize(), n: V3(.95, 0, .25).normalize(), pose: "pinch", along: .068 });
 async function stepLeaves() {
-  const G = SHOW.glassV;
-  handAt(bt.R, ST.tray.clone().add(V3(0, .07, 0)), V3(0, -.6, 1), DIR.down, .3);
-  await ws(.35);
-  bt.R.curlT = .8;
-  handAt(bt.R, mouth(G).add(V3(0, .1, -.03)), V3(0, -.4, 1), DIR.down, .8);
-  await ws(.4);
-  for (let i = 0; i < 5; i++) {
-    const l = mesh(new THREE.SphereGeometry(.012, 8, 6), std({ color: 0x3f8f3a, roughness: .6 }), 0, 0, 0);
-    l.scale.set(1, .25, .6);
-    l.position.copy(mouth(G).add(V3(rr(-.01, .01), .06, rr(-.01, .01))));
-    const dst = G.g.localToWorld(V3(rr(-.015, .015), G.y0 + .01 + i * .004, rr(-.015, .015)));
-    tween(l.position, { x: dst.x, y: dst.y, z: dst.z }, .25, ease.in).then(() => G.g.attach(l));
-    l.rotation.set(rr(0, 1), rr(0, 3), 0);
-    await ws(.06);
-  }
-  bt.R.curlT = .3;
-  rest(bt.R);
+  const G = SHOW.glassV, R = bt.R;
+  shot(choose(["macro", "low"]), mouth(G, .04));
+  bt.look = ST.tray;
+  const bunch = new THREE.Group();
+  for (let i = 0; i < 6; i++) { const l = leafMesh(); world.remove(l); l.position.set(rr(-.008, .008), i * .006, rr(-.008, .008)); l.rotation.set(rr(0, 1), rr(0, 3), 0); bunch.add(l); }
+  world.add(bunch);
+  place(bunch, ST.tray.clone().add(V3(.04, .02, 0)));
+  await grip(R, bunch, PINCH(V3(0, .01, 0)), .4);
+  await move(bunch, mouth(G, .06), { dur: .5, arc: .06 });
+  bt.look = mouth(G);
+  letGo(R, "open");
+  [...bunch.children].forEach((l, i) => {
+    world.attach(l);
+    const d = G.g.localToWorld(V3(rr(-.012, .012), G.y0 + .006 + i * .003, rr(-.012, .012)));
+    tween(l.position, { x: d.x, y: d.y, z: d.z }, SHOW.fast ? .001 : .3 + i * .03, ease.in).then(() => G.g.attach(l));
+  });
+  world.remove(bunch);
+  await ws(.45);
+  await rest(R);
 }
 async function stepMuddle() {
-  const G = SHOW.glassV;
-  P.muddler.g.visible = true;
-  P.muddler.g.position.copy(ST.spoon.clone().add(V3(.05, .004, -.05)));
-  P.muddler.g.rotation.set(Math.PI / 2, 0, 0);
-  handAt(bt.R, P.muddler.g.position.clone().add(V3(0, .06, 0)), V3(0, -.6, 1), DIR.down, .2);
-  handAt(bt.L, G.g.position.clone().add(V3(.05, .05, -.01)), V3(-.2, -.2, 1), DIR.in(1), .7);
-  await ws(.38);
-  bt.R.curlT = .9;
-  const h = take(bt.R, P.muddler.g, V3(0, -.03, .04), null, .2);
-  h.tilt = 0;
+  const G = SHOW.glassV, MD = P.muddler.g, R = bt.R, L = bt.L;
+  shot(choose(["macro", "low"]), mouth(G, .04));
+  const home = ST.spoon.clone().add(V3(.02, .012, -.05));
+  place(MD, home, Qz(Math.PI / 2));
+  await Promise.all([grip(R, MD, { p: V3(0, -.03, 0), r: .014, f: V3(0, 0, 1), n: V3(1, 0, 0), pose: "grip" }, .4), grip(L, G.g, wrap(1, V3(0, .04, 0), .035), .4)]);
+  const c0 = mouth(G);
+  await move(MD, c0.clone().add(V3(0, .26, 0)), { q: Qe(0, 0, 0), dur: .45, arc: .03 });
+  const low = G.g.localToWorld(V3(0, G.y0 + .015, 0)).add(V3(0, .22, 0));
   for (let i = 0; i < 4; i++) {
-    aim(h, mouth(G).add(V3(0, .13, 0)), V3(0, -.22, 0), .35); await ws(.22);
-    aim(h, G.g.localToWorld(V3(0, G.y0 + .01 + .22, 0)), V3(0, -.22, 0), .4); h.roll = (h.roll || 0) + .8; await ws(.22);
+    await move(MD, low, { q: Qe(0, i * .9 + .9, 0), dur: .22, e: ease.in });
     SND.tick();
+    await move(MD, low.clone().add(V3(0, .05, 0)), { q: Qe(0, i * .9 + .5, 0), dur: .18, e: ease.out });
   }
-  unaim(h);
   G.col.set(0xbfdc8a);
-  await drop(P.muddler.g, ST.spoon.clone().add(V3(.05, .004, -.05)), .3);
-  P.muddler.g.rotation.set(Math.PI / 2, 0, 0);
-  rest(bt.L); rest(bt.R);
+  await move(MD, home, { q: Qz(Math.PI / 2), dur: .45, arc: .05 });
+  letGo(R); letGo(L);
+  MD.visible = false;
+  await Promise.all([rest(R), rest(L)]);
 }
 async function stepSqueeze() {
-  const G = SHOW.glassV;
-  handAt(bt.R, ST.tray.clone().add(V3(-.07, .06, -.03)), V3(0, -.6, 1), DIR.down, .3);
-  await ws(.35);
-  const wedge = mesh(new THREE.CylinderGeometry(.024, .024, .02, 12, 1, false, 0, Math.PI), std({ color: 0x9fc23a, roughness: .5 }), 0, 0, 0);
-  const h = take(bt.R, wedge, V3(0, -.05, .04), null, .15);
-  h.tilt = .5;
-  aim(h, mouth(G).add(V3(0, .08, 0)), null, .3);
-  await ws(.45);
-  bt.R.curlT = 1;
-  for (let i = 0; i < 6; i++) {
-    const d = mesh(new THREE.SphereGeometry(.003, 6, 4), std({ color: 0xd9e8a0 }), 0, 0, 0);
+  const G = SHOW.glassV, R = bt.R;
+  shot(choose(["macro", "low"]), mouth(G, .06));
+  const wedge = mesh(new THREE.CylinderGeometry(.024, .024, .022, 14, 1, false, 0, Math.PI), std({ color: 0xa8c83e, roughness: .5, emissive: 0x1a2a00 }), 0, 0, 0);
+  place(wedge, ST.tray.clone().add(V3(-.04, .02, -.02)), Qz(Math.PI / 2));
+  await grip(R, wedge, PINCH(), .4);
+  await move(wedge, mouth(G, .07), { q: Qz(Math.PI / 2).multiply(Qx(.4)), dur: .5, arc: .05 });
+  handPose(R, "fist");
+  for (let i = 0; i < 8; i++) {
+    const d = mesh(new THREE.SphereGeometry(.0028, 6, 4), std({ color: 0xe0eeb0, emissive: 0x3a4a10 }), 0, 0, 0);
     d.position.copy(wedge.position);
-    tween(d.position, { y: mouth(G).y - .04, x: d.position.x + rr(-.01, .01) }, .25, ease.in).then(() => world.remove(d));
-    await ws(.05);
+    tween(d.position, { y: surface(G).y, x: d.position.x + rr(-.01, .01) }, .22, ease.in).then(() => world.remove(d));
+    await ws(.04);
   }
-  unaim(h);
-  release(bt, wedge);
-  const dst = G.g.localToWorld(V3(.01, G.y0 + .03, 0));
-  await tween(wedge.position, { x: dst.x, y: dst.y, z: dst.z }, .2, ease.in);
+  letGo(R, "open");
+  const dst = G.g.localToWorld(V3(.008, G.y0 + .03, 0));
+  await tween(wedge.position, { x: dst.x, y: dst.y, z: dst.z }, SHOW.fast ? .001 : .22, ease.in);
   G.g.attach(wedge);
   SND.plop();
-  bt.R.curlT = .3;
-  rest(bt.R);
+  cardLayer(new THREE.Color(0xd9e8a0), 10);
+  await rest(R);
 }
 async function stepRim() {
-  const G = SHOW.glassV;
-  home(P.salt, ST.salt);
-  handAt(bt.R, G.g.position.clone().add(V3(-.05, .06, -.01)), V3(.2, -.2, 1), DIR.in(-1), .2);
-  await ws(.38);
-  bt.R.curlT = .85;
-  const h = take(bt.R, G.g, V3(0, -.05, .05), V3(0, -.05, 0), .2);
-  h.tilt = 0;
-  aim(h, ST.salt.clone().add(V3(0, .1, 0)), null, .3);
-  await ws(.4);
-  tween(h, { tilt: 2.4 }, .3);
-  await ws(.3);
-  await tween(h, { yaw: Math.PI * 2 }, SHOW.fast ? .01 : .9);
-  h.yaw = 0;
-  const rim = mesh(new THREE.TorusGeometry(G.r + .002, .003, 6, 24), std({ color: 0xf2f0ea, roughness: .9 }), 0, G.mouthY - .004, 0, G.g);
+  const G = SHOW.glassV, R = bt.R;
+  place(P.salt, ST.salt);
+  shot(choose(["macro", "side"]), ST.salt.clone().add(V3(0, .1, 0)));
+  bt.look = ST.salt;
+  await grip(R, G.g, wrap(-1, V3(0, .03, 0), .008, { pose: "pinch", along: .05 }), .4);
+  const lip = V3(0, G.mouthY, 0), over = ST.salt.clone().add(V3(0, .008, 0)), qInv = Qx(Math.PI * .82);
+  await move(G.g, posFor(G.g, lip, over.clone().add(V3(0, .05, 0)), qInv), { q: qInv, dur: .55, arc: .08 });
+  await move(G.g, posFor(G.g, lip, over, qInv), { dur: .18 });
+  await waitTicks(.9, k => { G.g.quaternion.copy(Qe(0, k * Math.PI * 2, 0)).multiply(qInv); G.g.position.copy(posFor(G.g, lip, over)); });
+  const rim = mesh(new THREE.TorusGeometry(G.mouthR + .0015, .0032, 6, 32), std({ color: 0xf4f1ea, roughness: .95 }), 0, G.mouthY - .004, 0, G.g);
   rim.rotation.x = Math.PI / 2;
-  tween(h, { tilt: 0 }, .3);
-  aim(h, ST.glass, null, .3);
-  await ws(.45);
-  await drop(G.g, ST.glass, .15);
-  G.g.rotation.set(0, 0, 0);
+  await move(G.g, ST.glass, { q: Qe(0, 0, 0), dur: .6, arc: .06 });
+  letGo(R);
   P.salt.visible = false;
-  rest(bt.R);
+  await rest(R);
 }
 async function stepFloat() {
   const G = SHOW.glassV;
-  const { b, h } = await fetchBottleFor("grenadine");
-  const layer = mesh(new THREE.CylinderGeometry(G.r * .9, G.r * .7, 1, 20), std({ color: 0xb3122a, transparent: true, opacity: .9, roughness: .2 }), 0, G.y0, 0, G.g);
-  layer.geometry.translate(0, .5, 0);
-  layer.scale.y = .0001;
-  layer.renderOrder = 4;
-  const sink = onTickTmp(() => {});
-  aim(h, mouth(G).add(V3(0, .05, 0)), V3(0, b.userData.top, 0), .3);
-  await ws(.35);
-  tween(h, { tilt: 2.0 }, .3); await ws(.25);
-  streamOn(o => b.localToWorld(o.set(0, b.userData.top, 0)), o => o.copy(mouth(G)).add(V3(0, -.03, 0)), new THREE.Color(0xb3122a), .8);
-  await tween(layer.scale, { y: (G.y1 - G.y0) * .3 }, SHOW.fast ? .01 : 1.3);
-  streamOff(); sink();
-  tween(h, { tilt: 0 }, .3); await ws(.3);
-  unaim(h);
-  stowBottle(b);
+  await jiggerPark();
+  shot(choose(["side", "macro"]), mouth(G, -.03));
+  const b = await bottleUp("grenadine", "15 мл");
+  const col = new THREE.Color(0xb3122a);
+  const layer = mesh(new THREE.CylinderGeometry(G.r0 * .98, G.r0 * .96, 1, 24), std({ color: col, transparent: true, opacity: .92, roughness: .2, emissive: col.clone().multiplyScalar(.3) }), 0, G.y0, 0, G.g);
+  layer.geometry.translate(0, .5, 0); layer.scale.y = .0001; layer.renderOrder = 4;
+  await pourFrom(b, V3(0, b.userData.top, 0), () => mouth(G, -.02).add(V3(-.015, 0, 0)), 15, col, { gap: .04, ang: -2.0, rate: .6, fill: k => { layer.scale.y = Math.max(.0001, (G.y1 - G.y0) * .28 * k); } });
+  cardLayer(col, 15);
+  await bottleDown(b);
 }
 
 /* ---------- гарнир ---------- */
 function garnishMesh(kind) {
-  const col = { wheel: 0x9fc23a, wedge: 0x9fc23a, lemon: 0xf2d24a, orange: 0xf08a22, mint: 0x3f8f3a, cherry: 0x9a0f1e, pineapple: 0xf2c84a, olive: 0x7a8a2a }[kind] || 0x9fc23a;
+  const col = GCOL[kind] || 0x9fc23a;
   const g = new THREE.Group();
+  const m = std({ color: col, roughness: kind === "cherry" ? .15 : .45, emissive: new THREE.Color(col).multiplyScalar(.15) });
   if (kind === "olive" || kind === "cherry") {
-    mesh(new THREE.SphereGeometry(.012, 12, 8), std({ color: col, roughness: kind === "cherry" ? .2 : .35 }), 0, 0, 0, g).scale.set(1, kind === "olive" ? .8 : 1, 1);
-    if (kind === "olive") mesh(new THREE.CylinderGeometry(.0012, .0012, .1, 4), std({ color: 0xe8dcc0 }), 0, .03, 0, g);
-    else mesh(new THREE.CylinderGeometry(.001, .001, .03, 4), std({ color: 0x3a5a1a }), 0, .018, 0, g);
+    mesh(new THREE.SphereGeometry(.011, 16, 12), m, 0, 0, 0, g).scale.set(1, kind === "olive" ? .8 : 1, 1);
+    if (kind === "olive") { mesh(new THREE.CylinderGeometry(.0011, .0011, .11, 6), std({ color: 0xd8c08a, roughness: .5 }), 0, .035, 0, g); mesh(new THREE.SphereGeometry(.003, 8, 6), std({ color: 0xa8101e }), 0, 0, .009, g); }
+    else { const s = mesh(new THREE.CylinderGeometry(.0009, .0009, .035, 4), std({ color: 0x3a5a1a }), 0, .02, 0, g); s.rotation.z = .3; }
   } else if (kind === "mint") {
-    for (let i = 0; i < 5; i++) { const l = mesh(new THREE.SphereGeometry(.014, 8, 6), std({ color: col, roughness: .6 }), rr(-.01, .01), i * .008, rr(-.01, .01), g); l.scale.set(1, .35, .6); l.rotation.set(rr(0, 1), rr(0, 3), 0); }
+    mesh(new THREE.CylinderGeometry(.0015, .0015, .06, 4), std({ color: 0x2a5a1a }), 0, .02, 0, g);
+    for (let i = 0; i < 7; i++) { const l = leafMesh(); world.remove(l); l.position.set(rr(-.012, .012), .01 + i * .007, rr(-.012, .012)); l.rotation.set(rr(-.6, .6), rr(0, 3), rr(-.6, .6)); g.add(l); }
   } else if (kind === "lemon") {
-    const peel = new THREE.TorusGeometry(.02, .004, 6, 16, Math.PI * 1.4);
-    mesh(peel, std({ color: col, roughness: .5 }), 0, 0, 0, g);
+    const curve = new THREE.CatmullRomCurve3(Array.from({ length: 12 }, (_, i) => V3(Math.cos(i * .9) * .012, -i * .006, Math.sin(i * .9) * .012)));
+    mesh(new THREE.TubeGeometry(curve, 40, .004, 6), m, 0, .03, 0, g);
   } else {
-    mesh(new THREE.CylinderGeometry(.024, .024, .005, 18, 1, false, 0, kind === "wedge" ? Math.PI : Math.PI * 2), std({ color: col, roughness: .5 }), 0, 0, 0, g).rotation.z = Math.PI / 2;
+    const w = mesh(new THREE.CylinderGeometry(.024, .024, .005, 22, 1, false, 0, kind === "wedge" ? Math.PI : Math.PI * 2), m, 0, 0, 0, g);
+    w.rotation.x = Math.PI / 2;
+    mesh(new THREE.CylinderGeometry(.019, .019, .0055, 22), std({ color: new THREE.Color(col).lerp(new THREE.Color(0xffffff), .45), roughness: .6 }), 0, 0, 0, g).rotation.x = Math.PI / 2;
   }
   world.add(g);
   return g;
 }
 async function stepGarnish(c) {
-  const G = SHOW.glassV, kind = c.garnish || "wheel", rw = G.r * G.g.scale.x;
-  handAt(bt.R, ST.tray.clone().add(V3(0, .07, 0)), V3(0, -.6, 1), DIR.down, .3);
+  const G = SHOW.glassV, kind = c.garnish || "wheel", R = bt.R, L = bt.L;
+  const rw = G.mouthR * G.scale, m = mouth(G);
+  shot(choose(["macro", "low", "side"]), m.clone().add(V3(0, .06, 0)));
   bt.look = ST.tray;
-  await ws(.4);
   const gm = garnishMesh(kind);
-  gm.position.copy(ST.tray.clone().add(V3(0, .02, 0)));
-  bt.R.curlT = .9;
-  const h = take(bt.R, gm, V3(0, -.07, .03), null, .2);
-  h.tilt = 0;
-  const m = mouth(G);
+  place(gm, ST.tray.clone().add(V3(.03, .02, 0)));
+  const pinch = PINCH(V3(0, kind === "olive" ? .07 : 0, 0));
+  await grip(R, gm, pinch, .42);
   if (kind === "olive" || kind === "cherry") {
-    // поднимает высоко над бокалом и смотрит на гостя
-    aim(h, m.clone().add(V3(0, .26, 0)), null, .3);
-    await ws(.5);
+    // высоко над бокалом: пауза для гостя, затем медленно вниз
+    await move(gm, m.clone().add(V3(0, .22, 0)), { dur: .55, arc: .04 });
     bt.look = camera.position;
-    await ws(SHOW.fast ? 0 : rr(.5, .9));
-    if (kind === "cherry" || chance(.4)) {
-      unaim(h); release(bt, gm);
-      const dst = G.g.localToWorld(V3(0, G.y0 + Math.max(.012, (G.y1 - G.y0) * .6), 0));
-      await tween(gm.position, { x: dst.x, y: dst.y, z: dst.z }, SHOW.fast ? .01 : .3, ease.in);
+    follow(m.clone().add(V3(0, .12, 0)));
+    await ws(rr(.5, .8));
+    bt.look = m;
+    if (kind === "cherry" || chance(.35)) {
+      letGo(R, "open");
+      const dst = G.g.localToWorld(V3(0, G.y0 + Math.max(.012, (G.y1 - G.y0) * .55), 0));
+      await tween(gm.position, { x: dst.x, y: dst.y, z: dst.z }, SHOW.fast ? .001 : .3, ease.in);
       SND.plop();
+      for (let i = 0; i < 6; i++) { const s = mesh(new THREE.SphereGeometry(.003, 6, 4), std({ color: new THREE.Color(c.pour), transparent: true, opacity: .9 }), 0, 0, 0); s.position.copy(dst).add(V3(0, .02, 0)); tween(s.position, { x: s.position.x + rr(-.03, .03), y: s.position.y + rr(.02, .05), z: s.position.z + rr(-.03, .03) }, .25, ease.out).then(() => world.remove(s)); }
     } else {
-      aim(h, G.g.localToWorld(V3(0, G.y1 - .01, 0)), null, .25);
-      await ws(.7);
-      unaim(h); release(bt, gm);
+      const dst = G.g.localToWorld(V3(0, G.y0 + (G.y1 - G.y0) * .4, 0));
+      await move(gm, dst, { q: Qz(.3), dur: 1.1, e: ease.out });
       SND.plop();
+      letGo(R, "open");
     }
-    gm.rotation.set(0, 0, .35);
   } else if (kind === "mint") {
-    // хлопок ладонями — мята отдаёт аромат
-    const mid = V3(ST.bx - .05, 1.32, -2.72);
-    aim(h, mid, null, .3);
-    handAt(bt.L, mid.clone().add(V3(.12, 0, 0)), V3(0, .3, 1), DIR.in(1), 0);
-    await ws(.4);
-    handAt(bt.L, mid.clone().add(V3(.03, 0, 0)), V3(0, .3, 1), DIR.in(1), 0);
-    await ws(.12);
+    // хлопок: мята между ладонями отдаёт аромат
+    const mid = B(-.05, 1.33, .38);
+    await move(gm, mid, { q: Qx(-.3), dur: .5, arc: .04 });
+    letGo(R, "flat");
+    await Promise.all([handTo(R, mid.clone().add(V3(-.03, 0, 0)), V3(0, 1, .2), V3(1, 0, 0), "flat", .2), handTo(L, mid.clone().add(V3(.13, 0, 0)), V3(0, 1, .2), V3(-1, 0, 0), "flat", .3)]);
+    await handTo(L, mid.clone().add(V3(.035, 0, 0)), V3(0, 1, .2), V3(-1, 0, 0), "flat", .1);
     SND.clap();
-    rest(bt.L);
-    aim(h, m.clone().add(V3(.01, .05, 0)), null, .3);
-    await ws(.45);
-    unaim(h); release(bt, gm);
-    gm.position.copy(m.clone().add(V3(.01, -.01, 0)));
+    await ws(.15);
+    rest(L);
+    await grip(R, gm, pinch, .25);
+    await move(gm, m.clone().add(V3(.01, .01, 0)), { q: Qe(0, 0, 0), dur: .5 });
+    letGo(R, "open");
   } else if (kind === "lemon") {
-    // скручивает цедру: брызги эфирного масла над бокалом
-    aim(h, m.clone().add(V3(0, .08, 0)), null, .3);
-    await ws(.45);
-    await tween(h, { roll: Math.PI }, .35);
-    for (let i = 0; i < 10; i++) {
-      const s = glowSprite(0xfff0a0, .03, gm.position.x, gm.position.y, gm.position.z, world, .9);
-      tween(s.position, { x: s.position.x + rr(-.04, .04), y: s.position.y - rr(.03, .07), z: s.position.z + rr(-.04, .04) }, .4).then(() => world.remove(s));
+    // скручивает цедру над бокалом: брызги эфирного масла
+    await move(gm, m.clone().add(V3(0, .1, 0)), { dur: .5, arc: .04 });
+    await move(gm, m.clone().add(V3(0, .1, 0)), { q: Qe(0, Math.PI * 1.5, 0), dur: .45 });
+    for (let i = 0; i < 12; i++) {
+      const s = glowSprite(0xfff0a0, .035, gm.position.x, gm.position.y, gm.position.z, world, .9);
+      tween(s.position, { x: s.position.x + rr(-.05, .05), y: s.position.y - rr(.03, .08), z: s.position.z + rr(-.05, .05) }, .45).then(() => world.remove(s));
     }
     await ws(.3);
-    unaim(h); release(bt, gm);
-    gm.position.copy(m.clone().add(V3(rw * .9, -.01, 0)));
-    gm.rotation.set(0, 0, Math.PI / 2);
+    await move(gm, m.clone().add(V3(rw * .85, -.012, 0)), { q: Qz(.4), dur: .4 });
+    letGo(R, "open");
   } else {
-    // долька на край бокала
-    aim(h, m.clone().add(V3(rw, .06, 0)), null, .3);
-    await ws(.45);
-    aim(h, m.clone().add(V3(rw, -.004, 0)), null, .3);
-    await ws(.3);
-    unaim(h); release(bt, gm);
-    gm.position.copy(m.clone().add(V3(rw - .004, -.006, 0)));
+    // кружок на край бокала: надрез садится на стекло
+    await move(gm, m.clone().add(V3(rw, .08, 0)), { q: Qe(0, Math.PI / 2, 0), dur: .5, arc: .04 });
+    await move(gm, m.clone().add(V3(rw - .004, -.008, 0)), { dur: .3, e: ease.in });
+    letGo(R, "open");
   }
   G.g.attach(gm);
-  bt.R.curlT = .3;
-  rest(bt.R);
+  await ws(.2);
+  await rest(R);
 }
 
 /* ---------- подача ---------- */
 async function stepServe() {
-  const G = SHOW.glassV;
-  handAt(bt.R, G.g.position.clone().add(V3(-.04, .05, -.04)), V3(.2, -.4, 1), DIR.in(-1), .2);
+  const G = SHOW.glassV, R = bt.R;
+  shot(SEAT.on ? "medium" : choose(["medium", "low"]), G.g.position.clone().add(V3(0, .1, .15)));
   bt.look = G.g.position;
-  await ws(.4);
-  bt.R.curlT = .5;
-  const h = take(bt.R, G.g, V3(0, -.05, .05), V3(0, -.04, 0), .15);
-  h.tilt = 0;
-  // скользит по стойке к гостю
-  const to = ST.serve.clone();
-  const a = aim(h, G.g.position.clone(), null, .35);
-  const from = G.g.position.clone(), t0 = performance.now(), dur = SHOW.fast ? .01 : .8;
-  const stop = onTickTmp(() => { const k = ease.io(clamp((performance.now() - t0) / (dur * 1000), 0, 1)); a.pos.lerpVectors(from, to, k); a.pos.y = CT.top; });
-  await ws(dur + .15);
-  stop();
-  await drop(G.g, to, .1);
-  G.g.rotation.set(0, 0, 0);
-  // открытая ладонь, взгляд на гостя, лёгкий кивок
-  reach(bt.R, -.05, 1.12, .42, V3(-.3, 0, 1), V3(.2, 1, 0), .1);
+  // двумя пальцами за основание — бокал скользит к гостю
+  await grip(R, G.g, { p: V3(0, .004, -.03), r: .006, f: V3(0, -.45, .9).normalize(), n: V3(0, -.9, -.45).normalize(), pose: "hook", along: .065 }, .4);
+  follow(ST.serve.clone().add(V3(0, .1, 0)));
+  await move(G.g, ST.serve, { dur: .9, e: ease.io });
+  letGo(R, "flat");
+  // открытая ладонь: «прошу»
   bt.look = camera.position;
+  await handTo(R, B(-.16, TOP() + .1, .55), V3(-.3, .1, 1), V3(0, 1, .2), "flat", .4);
   bt.nod = .08;
   await ws(.35);
   bt.nod = 0;
-  await ws(.5);
+  await ws(.45);
 }
 
-/* ---------- маленькие жесты между шагами: каждый раз разные ---------- */
+/* ---------- маленькие жесты между шагами ---------- */
 const FLOURISH = [
-  async () => { bt.look = camera.position; bt.nod = .07; await ws(.3); bt.nod = 0; await ws(.3); bt.look = null; },
-  async () => { reach(bt.L, .12, 1.0, .2, V3(-.4, -.6, .6), DIR.in(1), .5); reach(bt.R, -.12, 1.0, .2, V3(.4, -.6, .6), DIR.in(-1), .5); await ws(.3); reach(bt.L, .1, .98, .22, V3(-.4, -.6, .6), DIR.in(1), .5); await ws(.25); rest(bt.L); rest(bt.R); },
-  async () => { for (let i = 0; i < 2; i++) { reach(bt.R, -.1, CT.top + .05, .52, V3(0, -.6, 1), DIR.down, .4); await ws(.12); reach(bt.R, -.1, CT.top + .01, .52, V3(0, -.6, 1), DIR.down, .4); SND.tick(); await ws(.12); } rest(bt.R); },
-  async () => { reach(bt.L, .05, 1.52, .14, V3(-.3, .9, .2), V3(-.3, 0, 1), .6); reach(bt.R, -.05, 1.52, .14, V3(.3, .9, .2), V3(.3, 0, 1), .6); bt.look = null; await ws(.45); rest(bt.L); rest(bt.R); },
-  async () => { bt.tilt = rr(-.12, .12); bt.look = camera.position; await ws(.6); bt.tilt = 0; bt.look = null; }
+  async () => { bt.look = camera.position; bt.nod = .07; await ws(.3); bt.nod = 0; await ws(.25); bt.look = null; },
+  async () => { await Promise.all([handTo(bt.L, B(.04, 1.5, .12), V3(-.4, .8, .3), V3(-.4, 0, 1), "pinch", .35), handTo(bt.R, B(-.04, 1.5, .12), V3(.4, .8, .3), V3(.4, 0, 1), "pinch", .35)]); await ws(.3); await Promise.all([rest(bt.L), rest(bt.R)]); },
+  async () => { for (let i = 0; i < 3; i++) { await handTo(bt.R, B(-.19, TOP() + .05, .3), V3(.3, -.3, 1), V3(0, -1, 0), "relax", .1); await handTo(bt.R, B(-.19, TOP() + .028, .3), V3(.3, -.3, 1), V3(0, -1, 0), "relax", .08); SND.tick(); } await rest(bt.R); },
+  async () => { bt.tilt = rr(-.12, .12); bt.look = camera.position; await ws(.55); bt.tilt = 0; bt.look = null; }
 ];
-async function flourish() { if (!SHOW.fast && chance(.38)) await choose(FLOURISH)(); }
+async function flourish() { if (!SHOW.fast && chance(.3)) await choose(FLOURISH)(); }
 
 /* ---------- сцена целиком ---------- */
 const STEP = {
@@ -5756,14 +6051,12 @@ function buildGlass(c) {
   const cup = CUPS[c.cup] || CUPS.rocks;
   const prof = cup.p.map(([r, y]) => [r / 100, y / 100]);
   const [r0, r1, y0, y1] = cup.liq.map(v => v / 100);
-  const cap = (Closeup.CAP_ML[c.cup] || 150) * (c.cup === "rocks" || c.cup === "highball" ? 1 : 1.05);
-  const V = vesselMesh(prof, MX.glass, [r0, r1, y0, y1, cap]);
-  V.g.scale.setScalar(1.35);
+  const V = vessel(prof, MX.glass, [r0, r1, y0, y1, Closeup.CAP_ML[c.cup] || 150], { scale: 1.35 });
   V.g.visible = true;
   return V;
 }
 function resetVessel(V) {
-  V.ml = 0; V.col.set(0xffffff); if (V.liq) setLevel(V);
+  V.ml = 0; V.col.set(0xffffff); setLevel(V);
   V.ice.forEach(i => i.parent && i.parent.remove(i)); V.ice = [];
 }
 async function setupStation(c) {
@@ -5771,47 +6064,48 @@ async function setupStation(c) {
   BT.busy = true;
   BT.mode = "free";
   if (bt.held.some(h => h.obj === btGlass)) await stash();
+  btGlass.visible = btRag.visible = false;
   STATIC_TOOLS.forEach(o => { o.visible = false; });
   resetVessel(P.tin); resetVessel(P.mixer);
   P.tin.g.children[0].material = M.chrome;
-  world.attach(P.cap.g);
-  home(P.bucket.g, ST.bucket); home(P.tray.g, ST.tray);
-  home(P.jig.g, ST.jig); home(P.spoon.g, ST.spoon); P.spoon.g.rotation.set(Math.PI / 2, 0, 0);
-  home(P.strainer.g, ST.strainer);
+  world.attach(P.cap.g); world.attach(P.strainer.g);
+  for (const o of PROPS()) { o.visible = false; o.quaternion.identity(); }
+  place(P.bucket.g, ST.bucket); place(P.tray.g, ST.tray); place(P.scoop.g, ST.scoop, Qe(0, 0, 0));
+  place(P.jig.g, ST.jig); place(P.spoon.g, ST.spoon, Qx(Math.PI / 2));
+  place(P.strainer.g, ST.strainer);
+  P.jig.liq.visible = false;
   const prog = PROG()[c.id] || [];
   const shaken = prog.some(s => s[0] === "shake"), stirred = prog.some(s => s[0] === "stir");
   SHOW.main = shaken ? P.tin : stirred ? P.mixer : null;
-  P.tin.g.visible = P.cap.g.visible = shaken;
-  P.mixer.g.visible = stirred;
-  if (shaken) { home(P.tin.g, ST.tin); home(P.cap.g, ST.tin.clone().add(V3(.16, 0, .1))); }
-  if (stirred) home(P.mixer.g, ST.tin);
+  if (shaken) { place(P.tin.g, ST.tin); place(P.cap.g, ST.cap); }
+  if (stirred) place(P.mixer.g, ST.tin);
   if (SHOW.glassV) world.remove(SHOW.glassV.g);
   SHOW.glassV = buildGlass(c);
-  SHOW.glassV.g.position.copy(ST.glass);
+  place(SHOW.glassV.g, ST.glass);
   if (!SHOW.main) SHOW.main = SHOW.glassV;
-  // всё появляется на стойке с лёгким «приземлением»
-  for (const o of [P.bucket.g, P.tray.g, P.jig.g, P.spoon.g, P.strainer.g, P.tin.g, P.cap.g, P.mixer.g, SHOW.glassV.g]) {
+  for (const o of [P.bucket.g, P.tray.g, P.jig.g, P.spoon.g, P.strainer.g, P.tin.g, P.cap.g, P.mixer.g, P.scoop.g, SHOW.glassV.g]) {
     if (!o.visible) continue;
     const y = o.position.y; o.position.y += .03;
-    tween(o.position, { y }, SHOW.fast ? .01 : .35, ease.out);
+    tween(o.position, { y }, SHOW.fast ? .001 : .35, ease.out);
   }
+  shot("medium", B(0, 1.3, .35), 1);
   await walkTo(ST.bx, ST.bz, 0);
   await turnTo(0);
-  rest(bt.L); rest(bt.R);
+  bt.leanT = .1;
+  await Promise.all([rest(bt.L), rest(bt.R)]);
 }
 function cleanup(c, aborted) {
   for (const t of TMP) TMP.delete(t);
-  AIMS.clear();
-  streamOff();
-  bt.held = bt.held.filter(h => !PROPS().includes(h.obj) && !(SHOW.glassV && h.obj === SHOW.glassV.g));
-  for (const h of [...bt.held]) if (h.obj !== btGlass && h.obj !== btRag) { release(bt, h.obj); if (h.obj.parent === world && !PROPS().includes(h.obj)) world.remove(h.obj); }
-  jigHold = null;
-  bt.R.k = bt.L.k = 9;
+  HANDS.clear();
+  for (const a of [bt.L, bt.R]) { a.manual = false; a.snap = false; a.k = 9; }
+  streamOff(); tagOff();
+  jigOn = false;
   BT.nod = 0; bt.nod = 0; bt.tilt = 0;
-  // реквизит убирается, бокал остаётся гостю
   world.attach(P.cap.g); world.attach(P.strainer.g);
-  PROPS().forEach(o => { o.visible = false; });
+  PROPS().forEach(o => { o.visible = false; o.quaternion.identity(); });
   STATIC_TOOLS.forEach(o => { o.visible = true; });
+  btGlass.visible = btRag.visible = true;
+  for (const o of [...world.children]) if (o.userData && o.userData.ing) world.remove(o);
   if (aborted || !SHOW.glassV) {
     if (SHOW.glassV) world.remove(SHOW.glassV.g);
     SHOW.glassV = null;
@@ -5820,34 +6114,38 @@ function cleanup(c, aborted) {
     if (servedGlass && servedGlass !== SHOW.glassV.g) world.remove(servedGlass);
     const V = SHOW.glassV;
     if (V.ml < V.cap * .5) { V.ml = V.cap * .82; V.col.set(c.pour); setLevel(V); }
-    V.g.position.copy(ST.serve);
+    V.g.position.copy(ST.serve); V.g.quaternion.identity();
     servedGlass = V.g;
     SHOW.glassV = null;
   }
   SHOW.served = true;
   bt.leanT = .07; bt.spine.position.y = 0;
-  rest(bt.L); rest(bt.R);
+  reach(bt.L, .23, .92, .06, DIR.down, V3(-1, 0, .3), .25);
+  reach(bt.R, -.23, .92, .06, DIR.down, V3(1, 0, .3), .25);
 }
 async function playShow(c) {
-  SHOW.on = true; SHOW.ran = true; SHOW.fast = false; SHOW.served = false; SHOW.c = c; SHOW.last = "";
+  SHOW.on = true; SHOW.ran = true; SHOW.fast = false; SHOW.served = false; SHOW.c = c;
   SG = ++SHOW.gen;
+  const prog = (PROG()[c.id] || [["garnish"]]).concat([["serve"]]);
   showUI.title.textContent = c.name;
+  buildCard(c, prog);
   showUI.root.hidden = false;
   app.classList.add("showing");
   caption("", choose(["Бармен берётся за дело", "Сейчас будет красиво", "Минуту — и готово"]));
   let aborted = false;
   try {
     await setupStation(c);
-    const prog = (PROG()[c.id] || [["garnish"]]).concat([["serve"]]);
     const total = prog.length - 1;
     for (let i = 0; i < prog.length; i++) {
       const st = prog[i];
       caption(st[0] === "serve" ? "" : `Шаг ${i + 1} из ${total}`, stepCaption(st, c));
-      cut(st[0]);
+      cardStep(i);
       await STEP[st[0]](st, c);
-      if (st[0] !== "serve" && (prog[i + 1] || [])[0] !== "jig") { if (jigHold && (prog[i + 1] || [])[0] !== "jig") await parkJigger(); }
+      const next = (prog[i + 1] || [])[0];
+      if (jigOn && next !== "jig") await jiggerPark();
       if (i < prog.length - 2) await flourish();
     }
+    cardDone();
   } catch (e) {
     if (e !== ABORT) console.error(e);
     aborted = true;
@@ -5864,7 +6162,7 @@ async function playShow(c) {
 /* крупный план теперь живёт в 3D: подменяем старое 2D-представление */
 Closeup.play = c => playShow(c);
 Object.defineProperty(Closeup, "active", { get: () => SHOW.on, configurable: true });
-Object.assign(H3D, { show: SHOW });
+Object.assign(H3D, { show: SHOW, bt, handPose, HANDS });
 
 /* ================= живая компания: гости у стойки, в курилке и в читальне ================= */
 const GUESTS = [];

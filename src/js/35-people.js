@@ -63,6 +63,81 @@ function torsoTex(o) {
   return (CLOTH[key] = t);
 }
 
+/* ---------- кисть с пальцами: ладонь, четыре пальца по три фаланги, большой палец из двух ---------- */
+const NAIL = std({ color: 0xe8c2b0, roughness: .3 });
+const FINGER_MAX = [1.35, 1.55, 1.05];
+function buildHand(side, hand, mSkin) {
+  // ладонь: чуть сужается к запястью, с подушечкой у большого пальца
+  const palmG = new RoundedBoxGeometry(.078, .084, .026, 3, .011);
+  const pp = palmG.attributes.position;
+  for (let i = 0; i < pp.count; i++) { const y = pp.getY(i); pp.setX(i, pp.getX(i) * (1 - Math.max(0, y) * 2.2)); }
+  palmG.computeVertexNormals();
+  palmG.translate(0, -.044, 0);
+  merged([palmG, sph(.019, side * .022, -.03, .009, 1, 1.35, .75, 12, 10), sph(.021, 0, -.004, -.002, 1.6, .7, .8, 12, 8)], mSkin, hand);
+  const spec = [[side * .027, .95, .06], [side * .009, 1, .0], [-side * .009, .95, -.05], [-side * .026, .78, -.11]];
+  const fingers = spec.map(([x, len, spread]) => {
+    const segs = [];
+    let parent = group(x, -.084, 0, hand);
+    parent.rotation.z = spread * side * .5;
+    const root = parent;
+    [.043, .027, .022].forEach((L0, i) => {
+      const L = L0 * len, r = [.0088, .0081, .0074][i] * (len < .9 ? .92 : 1);
+      const seg = i === 0 ? root : group(0, 0, 0, parent);
+      const cap = new THREE.CapsuleGeometry(r, Math.max(.001, L - r * 1.2), 3, 8);
+      cap.translate(0, -L / 2, 0);
+      const parts = [cap];
+      merged(parts, mSkin, seg);
+      if (i === 2) mesh(new RoundedBoxGeometry(r * 1.5, L * .5, .002, 1, .0009), NAIL, 0, -L * .62, -r * .86, seg);
+      segs.push(seg);
+      parent = group(0, -L, 0, seg);
+      seg.userData.next = parent;
+    });
+    // фаланги вкладываются: каждая следующая — в конце предыдущей
+    for (let i = 1; i < 3; i++) segs[i - 1].userData.next.add(segs[i]);
+    return segs;
+  });
+  // большой палец
+  const tRoot = group(side * .03, -.018, .01, hand);
+  const t1 = group(0, 0, 0, tRoot);
+  merged([(() => { const c = new THREE.CapsuleGeometry(.0105, .022, 3, 8); c.translate(0, -.016, 0); return c; })()], mSkin, t1);
+  const t2 = group(0, -.032, 0, t1);
+  merged([(() => { const c = new THREE.CapsuleGeometry(.0095, .016, 3, 8); c.translate(0, -.013, 0); return c; })()], mSkin, t2);
+  mesh(new RoundedBoxGeometry(.013, .011, .002, 1, .0009), NAIL, 0, -.02, -.0085, t2);
+  return { fingers, thumb: [tRoot, t1, t2], fc: [.25, .25, .25, .25], ft: [.25, .25, .25, .25], tc: .2, tt: .2, ts: .3, tst: .3 };
+}
+/* позы кисти: насколько согнуты пальцы и куда смотрит большой */
+function handPose(arm, name, r = .03) {
+  if (!arm.fingers) { arm.curlT = { open: .05, flat: 0, relax: .3, pinch: .8, fist: 1, point: .8 }[name] ?? clamp(.09 / r / 4.1, .25, 1); return; }
+  let f, t, s;
+  switch (name) {
+    case "flat": f = [.02, .02, .02, .04]; t = 0; s = 0; break;
+    case "open": f = [.1, .12, .15, .2]; t = .1; s = .1; break;
+    case "relax": f = [.28, .32, .38, .45]; t = .25; s = .3; break;
+    case "pinch": f = [.48, .62, .78, .85]; t = .75; s = .9; break;
+    case "hook": f = [.55, .6, .65, .7]; t = .2; s = .2; break;
+    case "fist": f = [1, 1, 1, 1]; t = .7; s = .8; break;
+    case "point": f = [.05, .9, .95, .95]; t = .6; s = .7; break;
+    default: { const c = clamp(.088 / r / 4, .22, 1); f = [c, c * 1.04, c * 1.08, c * 1.12].map(v => Math.min(1, v)); t = clamp(c * .9, .3, .85); s = .75; }
+  }
+  arm.ft = f; arm.tt = t; arm.tst = s;
+}
+function poseFingers(arm, dt) {
+  if (!arm.manual) { const c = arm.curl; arm.ft = [c * .95, c, c * 1.05, Math.min(1, c * 1.12)]; arm.tt = c * .6; arm.tst = .3 + c * .4; }
+  const k = smoothK(arm.manual ? 16 : 30, dt);
+  for (let i = 0; i < 4; i++) {
+    arm.fc[i] += (arm.ft[i] - arm.fc[i]) * k;
+    const segs = arm.fingers[i];
+    for (let j = 0; j < 3; j++) segs[j].rotation.x = -arm.fc[i] * FINGER_MAX[j];
+  }
+  arm.tc += (arm.tt - arm.tc) * k;
+  arm.ts += (arm.tst - arm.ts) * k;
+  const [root, t1, t2] = arm.thumb, sd = arm.side;
+  // от «в сторону» к «напротив ладони»
+  root.rotation.set(-arm.ts * .9, sd * arm.ts * .5, sd * (.85 - arm.ts * .55));
+  t1.rotation.x = -arm.tc * .5;
+  t2.rotation.x = -arm.tc * .95;
+}
+
 /* профиль торса: от пояса (0) до основания шеи */
 const TORSO_PROFILE = [[0, -.03], [.14, -.03], [.142, .02], [.146, .07], [.152, .12], [.16, .17], [.168, .22], [.174, .27], [.178, .32], [.179, .37], [.176, .41], [.166, .445], [.14, .47], [.095, .49], [.058, .505], [0, .51]];
 
@@ -143,19 +218,23 @@ function makeFigure(o) {
   const arm = side => {
     const S = V3(side * .2, .425, -.005);
     const up = group(S.x, S.y, S.z, spine);
-    merged([sph(.05, 0, -.01, 0), taper(.05, .043, LA)], mSleeve, up);
+    const slim = !!P.fingers;
+    merged([sph(slim ? .046 : .05, 0, -.01, 0), taper(slim ? .046 : .05, slim ? .039 : .043, LA)], mSleeve, up);
+    if (P.garter) { const gt = new THREE.TorusGeometry(slim ? .044 : .047, .007, 6, 20); gt.rotateX(Math.PI / 2); gt.translate(0, -.11, 0); merged([gt], std({ color: P.garter, roughness: .4, metalness: .2 }), up); }
     const fo = group(0, -LA, 0, up);
-    const fp = [sph(.045, 0, 0, 0), taper(.044, .034, LB)];
+    const fp = [sph(slim ? .038 : .045, 0, 0, 0), taper(slim ? .036 : .044, slim ? .025 : .034, LB)];
     if (P.rolled) {
       merged(fp, mSkin, fo);
-      const cuff = new THREE.TorusGeometry(.05, .02, 8, 16); cuff.rotateX(Math.PI / 2); cuff.translate(0, .01, 0);
-      merged([cuff], mWhite, fo);
+      const cuff = new THREE.TorusGeometry(slim ? .043 : .05, slim ? .016 : .02, 8, 18); cuff.rotateX(Math.PI / 2); cuff.translate(0, slim ? -.005 : .01, 0);
+      const cuff2 = new THREE.TorusGeometry(slim ? .04 : .046, .012, 8, 18); cuff2.rotateX(Math.PI / 2); cuff2.translate(0, slim ? -.03 : -.015, 0);
+      merged(slim ? [cuff, cuff2] : [cuff], mWhite, fo);
     } else {
       merged(fp, mSleeve, fo);
       const cuff = taper(.037, .036, .03); cuff.translate(0, -LB + .02, 0);
       merged([cuff], mWhite, fo);
     }
     const hand = group(0, -LB, 0, fo);
+    if (P.fingers) return Object.assign(buildHand(side, hand, mSkin), { S, up, fo, hand, side, tgt: V3(), cur: V3(), ori: { f: V3(0, -1, 0), p: V3(0, 0, 1) }, curl: .2, curlT: .2, pole: V3(side * .45, -1, -.35), k: 9, set: false });
     const palm = [rbox(.062, .072, .026, 0, -.038, 0, .012)];
     const th = new THREE.CapsuleGeometry(.0115, .035, 3, 8); th.rotateZ(side * .7); th.translate(side * .038, -.035, .012); palm.push(th);
     merged(palm, mSkin, hand);
@@ -231,7 +310,7 @@ function aimBone(bone, A, B, C, bendSign, parentQ) {
 const _S = V3(), _T = V3(), _E = V3(), _TT = V3(), _pq = new THREE.Quaternion(), _hq = new THREE.Quaternion();
 const _inv = new THREE.Matrix4(), _pole = V3();
 function solveArm(F, arm, dt) {
-  arm.cur.lerp(arm.tgt, smoothK(arm.k, dt));
+  if (arm.snap) arm.cur.copy(arm.tgt); else arm.cur.lerp(arm.tgt, smoothK(arm.k, dt));
   arm.curl += (arm.curlT - arm.curl) * smoothK(10, dt);
   // цель в системе позвоночника
   F.pelvis.updateMatrix(); F.spine.updateMatrix();
@@ -257,7 +336,7 @@ function solveArm(F, arm, dt) {
   _m1.makeBasis(_xa, _ya, _za);
   _hq.setFromRotationMatrix(_m1);
   arm.hand.quaternion.copy(_pq.invert().multiply(_hq));
-  arm.fing.rotation.x = -arm.curl * 1.5;
+  if (arm.fingers) poseFingers(arm, dt); else arm.fing.rotation.x = -arm.curl * 1.5;
 }
 function solveLeg(F, lg) {
   F.pelvis.updateMatrix();
@@ -361,7 +440,8 @@ function updateFigure(F, t, dt) {
     }
   }
 }
-function updateFigures(t, dt) { for (const F of FIGS) if (!F.off) updateFigure(F, t, dt); }
+const PRE_FIG = [];
+function updateFigures(t, dt) { for (const f of PRE_FIG) f(t, dt); for (const F of FIGS) if (!F.off) updateFigure(F, t, dt); }
 /* взять предмет: он плавно переходит из своего места в руку */
 function grab(F, arm, obj, off, dur = .3) {
   const h = { arm, obj, off: off.clone(), from: obj.position.clone(), k: 0, tilt: 0 };

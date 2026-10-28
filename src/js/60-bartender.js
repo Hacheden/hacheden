@@ -1,7 +1,7 @@
 /* ================= бармен: протирает бокал, ходит шагами, достаёт бутылки рукой ================= */
 const BT_Z = -3.4;
 const bt = makeFigure({ kind: "vest", body: "#2a0d13", shirt: "#e8e2d4", trousers: 0x121012, skin: 0xc28a68, hair: 0x140d09,
-  hairStyle: "slick", mustache: true, bowtie: 0x7a0f22, rolled: true });
+  hairStyle: "slick", mustache: true, bowtie: 0x7a0f22, rolled: true, fingers: true, garter: 0x5a0a18 });
 placeFig(bt, .9, BT_Z, 0);
 bt.maxSpeed = 1.35;
 const BT = { busy: false, mode: "polish", get x() { return bt.x; } };

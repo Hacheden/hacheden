@@ -329,6 +329,7 @@ function makeGlass(cup, color, { garnish = null, ice = false, op = .85 } = {}) {
 }
 
 /* на стойке: свечи, лаймы, шейкер, карта коктейлей */
+const STATIC_TOOLS = [];
 (() => {
   for (const x of [-2.95, 2.95]) {
     mesh(new THREE.CylinderGeometry(.04, .036, .08, 16), std({ color: 0x7a1a20, transparent: true, opacity: .55, roughness: .1 }), x, CT.top + .04, -2.25);
@@ -343,6 +344,7 @@ function makeGlass(cup, color, { garnish = null, ice = false, op = .85 } = {}) {
   // шейкер и джиггер у рабочего места
   const tin = mesh(lathe([[0, 0], [.04, 0], [.045, .16], [.046, .17]], 20), M.chrome, 1.05, CT.top, -2.55);
   const jig = mesh(lathe([[.018, 0], [.024, .002], [.01, .045], [.024, .09]], 16), M.chrome, 1.17, CT.top, -2.5);
+  STATIC_TOOLS.push(tin, jig);
   const mat = box(.75, 1.4, CT.top, CT.top + .006, -2.68, -2.3, std({ color: 0x141012, roughness: .9 }), world, 0);
   // меню на подставке: открывает барную карту
   const menu = group(-.35, CT.top, -2.15);

@@ -189,11 +189,13 @@ window.makeCocktail = async id => {
   pendingCocktail = COCKTAIL_BY_ID[id];
   await baseMake(id);
 };
-H3D.prep = () => { if (!STILL) { if (!SEAT.on) flyTo(framed(1, .9), 1.2, 0); prepCocktail(); } };
+H3D.prep = () => { if (!STILL) BT.busy = true; };
 H3D.done = () => {
-  if (pendingCocktail) placeServed(pendingCocktail);
+  if (pendingCocktail && !SHOW.served) placeServed(pendingCocktail);
+  const showed = SHOW.served;
+  SHOW.served = false;
   if (STILL) return;
-  presentCocktail();
+  if (!showed) presentCocktail();
   dlg.addEventListener("close", () => {
     if (SEAT.on) { flyTo(seatShot(true), 1.3, 0); relax().then(afterServe); }
     else { flyTo(framed(1), 1.3, 0); relax(); }

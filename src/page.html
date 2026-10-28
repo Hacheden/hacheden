@@ -55,6 +55,24 @@
     pointer-events: none; opacity: 0; transition: opacity .25s; }
   .bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #f3e8d2; }
   .bubble.show { opacity: 1; }
+  /* шоу бармена: название сверху, шаги снизу, всё остальное убрано */
+  .show-ui { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+  .show-title { position: absolute; top: 20px; left: 0; right: 0; margin: 0; padding: 0 130px; text-align: center;
+    font: 400 clamp(26px, 3.6vw, 40px)/1.1 var(--font-display); letter-spacing: .05em; color: #ffe6ea;
+    text-shadow: 0 0 4px #fff, 0 0 14px #ff5c7a, 0 0 30px #ff2a55; }
+  .show-skip { position: absolute; top: 18px; left: 18px; pointer-events: auto; appearance: none; padding: 10px 18px; border-radius: 999px;
+    border: 1px solid rgba(214,170,92,.5); background: rgba(14,5,8,.72); color: var(--cream); font: 400 16px/1 var(--font-display); cursor: pointer; }
+  .show-skip:hover { border-color: var(--brass); color: var(--brass); }
+  .show-skip:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .show-cap { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; padding: 70px 16px calc(26px + env(safe-area-inset-bottom, 0px)); text-align: center;
+    background: linear-gradient(rgba(8,2,4,0), rgba(8,2,4,.8) 60%); }
+  .show-cap.show { animation: cap-rise .45s cubic-bezier(.2,.8,.2,1) both; }
+  .show-count { display: block; min-height: 18px; color: var(--muted); font-size: 14px; }
+  .show-text { display: block; margin-top: 6px; font: 400 clamp(20px, 2.8vw, 30px)/1.25 var(--font-display); color: var(--cream); text-shadow: 0 2px 12px rgba(0,0,0,.7); }
+  @keyframes cap-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .app.showing .hud, .app.showing .zone-title, .app.showing #order { opacity: 0; visibility: hidden; }
+  .hud { transition: opacity .6s, visibility .6s; }
+  @media (max-width: 640px) { .show-title { top: 74px; padding: 0 16px; font-size: 28px; } }
   /* на улице: только подсказка и ответы, без навигации по залам */
   .app.street .nav, .app.street .spots, .app.street .zone-title, .app.street #order { opacity: 0; visibility: hidden; pointer-events: none; }
   .nav, .spots, .zone-title, #order { transition: opacity .8s, visibility .8s; }
@@ -134,6 +152,11 @@
     </nav>
   </div>
   <div class="tip" id="tip" aria-hidden="true"></div>
+  <div class="show-ui" id="show-ui" hidden>
+    <h2 class="show-title" id="show-title"></h2>
+    <button class="show-skip" id="show-skip" type="button">Пропустить</button>
+    <p class="show-cap" id="show-cap" aria-live="polite"><span class="show-count" id="show-count"></span><span class="show-text" id="show-text"></span></p>
+  </div>
   <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
   <div class="served" id="served" hidden></div>
   <!--@@BUTTONS@@-->

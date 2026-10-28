@@ -1535,7 +1535,7 @@
       root.hidden = true;
       root.classList.remove("out");
     }
-    return { play, get active() { return alive; } };
+    return { play, get active() { return alive; }, PROGRAMS, LOOK, GEN, TOPACC, GNAME, CAP_ML };
   })();
 
   

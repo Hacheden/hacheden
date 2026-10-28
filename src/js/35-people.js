@@ -353,7 +353,12 @@ function updateFigure(F, t, dt) {
     if (h.woff) _w0.add(h.woff);
     if (k >= 1) h.obj.position.copy(_w0);
     else h.obj.position.lerpVectors(h.from, _w0, k);
-    if (h.tilt !== undefined) h.obj.rotation.set(0, F.face, 0), h.obj.rotateX(h.tilt);
+    if (h.tilt !== undefined) {
+      h.obj.rotation.set(0, F.face + (h.yaw || 0), 0);
+      h.obj.rotateX(h.tilt);
+      if (h.tiltZ) h.obj.rotateZ(h.tiltZ);
+      if (h.roll) h.obj.rotateY(h.roll);
+    }
   }
 }
 function updateFigures(t, dt) { for (const F of FIGS) if (!F.off) updateFigure(F, t, dt); }

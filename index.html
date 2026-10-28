@@ -5453,19 +5453,13 @@ const SDOOR = { g: group(-.6, 0, FZ + .12, street) };
   SDOOR.eyes.visible = false;
   SDOOR.anchor = group(.6, 1.48, .1, g);   // отсюда «говорит» швейцар
   SDOOR.voice = { head: SDOOR.anchor };
-  // табличка и подсказка мелом
+  // табличка с часами работы
   const plate = canvasTex(256, 96, (c, w, h) => {
     c.fillStyle = "#b8864a"; c.fillRect(0, 0, w, h); c.strokeStyle = "#5a3a18"; c.lineWidth = 4; c.strokeRect(6, 6, w - 12, h - 12);
     c.fillStyle = "#2a1408"; c.textAlign = "center"; c.font = "30px Forum, Georgia, serif"; c.fillText("HACHEDEN", w / 2, 44);
     c.font = "18px Literata, Georgia, serif"; c.fillText("с 17:00 до 3:00", w / 2, 72);
   });
   mesh(new THREE.PlaneGeometry(.34, .13), std({ map: plate, metalness: .4, roughness: .4 }), 1.14, 1.55, FZ + .33, street);
-  const chalk = canvasTex(256, 96, (c, w, h) => {
-    c.fillStyle = "rgba(240,236,224,.85)"; c.font = "italic 34px Georgia, serif"; c.textAlign = "center";
-    c.save(); c.translate(w / 2, 56); c.rotate(-.06); c.fillText("тише воды…", 0, 0); c.restore();
-    c.strokeStyle = "rgba(240,236,224,.6)"; c.lineWidth = 2; c.beginPath(); c.moveTo(40, 74); c.lineTo(210, 70); c.stroke();
-  });
-  mesh(new THREE.PlaneGeometry(.42, .16), basic({ map: chalk, transparent: true, opacity: .85 }), -1.35, .78, FZ + .225, street);
 })();
 // тёплый проём за дверью: виден, когда она открыта
 const doorway = mesh(new THREE.PlaneGeometry(1.2, 2.42), basic({ color: 0xffb070, transparent: true, opacity: 0, toneMapped: false, depthWrite: false }), 0, 1.21, FZ - .02, street);
@@ -5635,9 +5629,12 @@ function streetLights(on) {
     w.position.copy(STREET_LIGHT.w); w.color.copy(STREET_LIGHT.wc);
   }
 }
-let pass = false;
-try { pass = localStorage.getItem("hacheden-pass") === "1"; } catch (e) {}
-const PASSWORDS = [["Я от Гэтсби", "Гэтсби тут все знают. А пароль?"], ["Тише воды, ниже травы", null], ["Мне бы просто погреться", "Погреться можно и у фонаря. Пароль?"]];
+/* швейцар помнит тех, кто уже заходил */
+let greeted = false;
+try { greeted = localStorage.getItem("hacheden-visited") === "1"; } catch (e) {}
+const GREET = () => OWNER ? "Хозяин! Проходите, всё готово."
+  : greeted ? pickOne(["С возвращением. Ваше место ждёт.", "Рады снова видеть. Проходите.", "А, это вы. Проходите, у нас тепло."])
+  : pickOne(["Добрый вечер. Добро пожаловать в Hacheden.", "Добрый вечер. Проходите, вас ждут.", "Добро пожаловать. Музыка уже играет."]);
 
 function streetIntro() {
   STREET.on = true;
@@ -5658,38 +5655,18 @@ async function knockStreet() {
   if (STREET.step !== "outside") return;
   STREET.step = "knock";
   streetTalk([]);
+  hintEl.textContent = "";
   await flyTo(framed(SHOT.door), STILL ? 0 : 1.8, 0);
   knock();
   await sleep(1.2);
   SDOOR.eyes.visible = true;
   tween(SDOOR.flap.position, { y: SDOOR.flapY + .11 }, .35, ease.out);
   await sleep(.6);
-  if (OWNER) { await doormanSays("Хозяин! Проходите, всё готово.", 4); await sleep(1.4); return openDoor(); }
-  if (pass) { await doormanSays("А, это снова ты. Проходи.", 4); await sleep(1.4); return openDoor(); }
-  await doormanSays("Пароль?");
-  askPassword();
-}
-function askPassword() {
-  STREET.step = "password";
-  streetTalk(PASSWORDS.map(([label, reply]) => [label, () => answer(label, reply)]));
-}
-async function answer(label, reply) {
-  streetTalk([]);
-  if (!reply) {
-    try { localStorage.setItem("hacheden-pass", "1"); } catch (e) {}
-    pass = true;
-    await doormanSays("Верно. Добро пожаловать в Hacheden.", 4);
-    await sleep(1.3);
-    return openDoor();
-  }
-  STREET.wrong++;
-  if (STREET.wrong >= 2) {
-    await doormanSays("Ладно, вижу — свой. Проходи, но пароль запомни: он написан мелом у двери.", 5);
-    await sleep(2.2);
-    return openDoor();
-  }
-  await doormanSays(reply);
-  askPassword();
+  await doormanSays(GREET(), 4);
+  try { localStorage.setItem("hacheden-visited", "1"); } catch (e) {}
+  greeted = true;
+  await sleep(1.5);
+  return openDoor();
 }
 async function openDoor() {
   if (STREET.step === "inside") return;

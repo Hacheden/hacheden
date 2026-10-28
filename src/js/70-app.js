@@ -102,7 +102,9 @@ let hovered = null, chipHover = null, pointer = null, mouseAt = null, needRay = 
 function pick(x, y) {
   ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1);
   ray.setFromCamera(ndc, camera);
-  const hit = ray.intersectObjects(hotMeshes, false)[0];
+  const hits = ray.intersectObjects(hotMeshes, false);
+  // на улице кликается только своё, внутри — только бар
+  const hit = hits.find(h => (h.object.userData.hotRoot.userData.hot.zone === "street") === STREET.on);
   return hit ? hit.object.userData.hotRoot : null;
 }
 const modalOpen = () => dlg.open || Book.isOpen || (typeof Closeup !== "undefined" && Closeup.active);
@@ -110,7 +112,8 @@ async function activate(root) {
   const h = root.userData.hot;
   if (modalOpen()) return;
   if (busy && h.zone !== 1) return;
-  if (SEAT.on && !h.noChip) return;   // сидя у стойки, можно только перекинуться словом с соседом
+  if (SEAT.on && !h.noChip) return;
+  if (STREET.on || h.zone === "street") { if (STREET.on && h.zone === "street") h.act(); return; }   // сидя у стойки, можно только перекинуться словом с соседом
   if (h.zone !== curZone) await goZone(h.zone);
   h.act();
 }
@@ -146,7 +149,7 @@ canvas.addEventListener("pointercancel", () => { pointer = null; app.classList.r
 canvas.addEventListener("pointerleave", () => { if (!pointer) { mouseAt = null; needRay = true; } });
 function hideTip() { tip.classList.remove("show"); }
 addEventListener("keydown", e => {
-  if (modalOpen() || mixDlg.open || busy) return;
+  if (modalOpen() || mixDlg.open || busy || STREET.on) return;
   if (e.target.closest && e.target.closest("input, textarea")) return;
   if (e.key === "ArrowLeft") { e.preventDefault(); goZone(curZone - 1); }
   if (e.key === "ArrowRight") { e.preventDefault(); goZone(curZone + 1); }
@@ -323,7 +326,7 @@ function tick(now) {
   NOOK.flash = Math.max(0, NOOK.flash - dt * 2.2);
   rainMat.uniforms.uFlash.value = NOOK.flash;
   const sky = rainMat.uniforms.uSky.value;
-  LIGHTS.window.intensity = LIGHTS.window.userData.base * (1 + sky * 2.5) + NOOK.flash * 30;
+  if (!STREET.on) LIGHTS.window.intensity = LIGHTS.window.userData.base * (1 + sky * 2.5) + NOOK.flash * 30;
   LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
@@ -373,7 +376,7 @@ addEventListener("resize", resize);
 let started = false;
 const intro = document.getElementById("intro"), enter = document.getElementById("enter");
 resize();
-setCam(framed(INTRO_CAM));
+setCam(framed(SHOT.wide));
 CAM.fov = framed(1).fov;
 progress(.7);
 bakeEnvironment();
@@ -398,7 +401,7 @@ const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a)
 function applyTime() {
   const d = sceneDate(), sky = skyLight(d), late = lateness(d);
   rainMat.uniforms.uSky.value = sky;
-  LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
+  if (!STREET.on) LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
   for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late);
 }
 function showClosed(afterVisit) {
@@ -468,8 +471,8 @@ enter.addEventListener("click", async () => {
   if (pref !== "off" && !Music.on) setMusic(true);
   renderer.toneMappingExposure = STILL ? 1.2 : .15;
   if (!STILL) tween(renderer, { toneMappingExposure: 1.2 }, 2.2, ease.out);
-  setCam(framed(INTRO_CAM));
-  await flyTo(framed(1), 3.2, .4);
+  if (!idleStarted) { idleStarted = true; idleLife(); companyLife(); }
+  streetIntro();
   if (!idleStarted) { idleStarted = true; idleLife(); companyLife(); }
 });
 let idleStarted = false;

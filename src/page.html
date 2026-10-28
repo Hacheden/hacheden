@@ -55,6 +55,9 @@
     pointer-events: none; opacity: 0; transition: opacity .25s; }
   .bubble::after { content: ""; position: absolute; left: 50%; bottom: -7px; margin-left: -7px; border: 7px solid transparent; border-bottom: 0; border-top-color: #f3e8d2; }
   .bubble.show { opacity: 1; }
+  /* на улице: только подсказка и ответы, без навигации по залам */
+  .app.street .nav, .app.street .spots, .app.street .zone-title, .app.street #order { opacity: 0; visibility: hidden; pointer-events: none; }
+  .nav, .spots, .zone-title, #order { transition: opacity .8s, visibility .8s; }
 
   /* за стойкой: ответы бармену вместо подсказок */
   .app.seated .spots, .app.seated .hint { display: none; }

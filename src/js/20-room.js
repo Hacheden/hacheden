@@ -41,7 +41,10 @@ box(-3.8, 3.8, 0, ROOM.h, -5.1, -5, W.bar, world, WALL_UV);
 box(3.8, 8, 0, ROOM.h, -5.1, -5, W.smoke, world, WALL_UV);
 box(-8.1, -8, 0, ROOM.h, -5, 6, W.nook, world, WALL_UV);
 box(8, 8.1, 0, ROOM.h, -5, 6, W.smoke, world, WALL_UV);
-box(-8, 8, 0, ROOM.h, 6, 6.1, W.bar, world, WALL_UV);
+/* передняя стена с проёмом входной двери */
+box(-8, -.62, 0, ROOM.h, 6, 6.1, W.bar, world, WALL_UV);
+box(.62, 8, 0, ROOM.h, 6, 6.1, W.bar, world, WALL_UV);
+box(-.62, .62, 2.42, ROOM.h, 6, 6.1, W.bar, world, WALL_UV);
 
 /* деревянные панели снизу стен, плинтус и карниз */
 (() => {
@@ -65,7 +68,7 @@ box(-8, 8, 0, ROOM.h, 6, 6.1, W.bar, world, WALL_UV);
   };
   run("x", -8, -3.8, -5, 1); run("x", 3.8, 8, -5, 1); run("x", -3.8, 3.8, -5, 1);
   run("z", -5, 6, -8, 1); run("z", -5, 6, 8, -1);
-  run("x", -8, 8, 6, -1);
+  run("x", -8, -.75, 6, -1); run("x", .75, 8, 6, -1);
   merged(geos, M.panel);
   merged(rails, M.darkwood);
 })();
@@ -111,3 +114,7 @@ point("window", 0x6f8cff, 1.2, 6.5, -6, 2, -4.3);
 point("fill", 0xffa070, 16, 10, 0, 2.5, .2);
 /* заполняющий свет переезжает в ту зону, где сейчас камера */
 const FILL_AT = [V3(-4.6, 2.7, -1.6), V3(0, 2.5, .2), V3(5.0, 2.7, -2.4)];
+/* наличник входной двери изнутри */
+box(-.76, -.62, 0, 2.56, 5.94, 6.0, M.walnut, world, .8);
+box(.62, .76, 0, 2.56, 5.94, 6.0, M.walnut, world, .8);
+box(-.76, .76, 2.42, 2.56, 5.94, 6.0, M.walnut, world, .8);

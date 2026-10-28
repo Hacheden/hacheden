@@ -4789,20 +4789,25 @@ let bubble = null;
 function say(F, text, dur = 5) {
   bubble = { F, until: NOW + dur * 1000 };
   bubbleEl.textContent = text;
-  bubbleEl.classList.add("show");
   F.look = camera.position;
   clearTimeout(F._sayT);
   F._sayT = setTimeout(() => { if (F.look === camera.position) F.look = null; }, dur * 1000);
 }
+const _hp = V3();
 onTick(() => {
   if (!bubble) return;
   if (NOW > bubble.until || modalOpen()) { bubbleEl.classList.remove("show"); bubble = null; return; }
-  const p = bubble.F.head.getWorldPosition(_w0);
-  p.y += .26;
-  p.project(camera);
+  // облачко видно, только пока голова говорящего в кадре: отвернулся — реплика прячется
+  bubble.F.head.getWorldPosition(_hp);
+  _hp.y += .12;
+  const h = _hp.clone().project(camera);
+  const inView = h.z < 1 && Math.abs(h.x) < .98 && h.y > -.95 && h.y < 1.02;
+  bubbleEl.classList.toggle("show", inView);
+  if (!inView) return;
+  const p = _hp.add(_w0.set(0, .14, 0)).project(camera);
   const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
-  bubbleEl.style.transform = `translate(${clamp(x, 140, innerWidth - 140)}px, ${clamp(y, 90, innerHeight - 200)}px) translate(-50%, -100%)`;
-  bubbleEl.style.visibility = p.z < 1 ? "visible" : "hidden";
+  const half = bubbleEl.offsetWidth / 2 + 8;
+  bubbleEl.style.transform = `translate(${clamp(x, half, innerWidth - half)}px, ${clamp(y, bubbleEl.offsetHeight + 12, innerHeight - 160)}px) translate(-50%, -100%)`;
 });
 const lineOf = F => { F._li = ((F._li ?? -1) + 1) % F.lines.length; return F.lines[F._li]; };
 
@@ -5296,6 +5301,7 @@ addEventListener("keydown", e => { if (e.key === "Escape" && SEAT.on && !modalOp
   hot(hit, 1, "Сесть за стойку", () => sitDown(), { grow: 0 });
   HOT.unshift(HOT.pop());   // первая кнопка в ряду: так её видно и на телефоне
 }
+Object.assign(H3D, { sit: () => sitDown() });
 
 /* ================= камера по точкам, клики, интерфейс и главный цикл ================= */
 const ZONES = [

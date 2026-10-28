@@ -168,3 +168,4 @@ addEventListener("keydown", e => { if (e.key === "Escape" && SEAT.on && !modalOp
   hot(hit, 1, "Сесть за стойку", () => sitDown(), { grow: 0 });
   HOT.unshift(HOT.pop());   // первая кнопка в ряду: так её видно и на телефоне
 }
+Object.assign(H3D, { sit: () => sitDown() });

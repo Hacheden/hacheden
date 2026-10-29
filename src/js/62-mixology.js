@@ -1163,7 +1163,7 @@ function cleanup(c, aborted) {
     const V = SHOW.glassV;
     if (V.ml < V.cap * .5) { V.ml = V.cap * .82; V.col.set(c.pour); setLevel(V); }
     V.g.position.copy(ST.serve); V.g.quaternion.identity();
-    servedGlass = V.g;
+    servedGlass = V.g; servedV = V;
     SHOW.glassV = null;
   }
   SHOW.served = true;
@@ -1172,6 +1172,7 @@ function cleanup(c, aborted) {
   reach(bt.R, -.23, .92, .06, DIR.down, V3(1, 0, .3), .25);
 }
 async function playShow(c) {
+  abortSip();
   SHOW.on = true; SHOW.ran = true; SHOW.fast = false; SHOW.served = false; SHOW.c = c;
   SG = ++SHOW.gen;
   const prog = (PROG()[c.id] || [["garnish"]]).concat([["serve"]]);

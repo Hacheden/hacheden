@@ -313,6 +313,7 @@ function makeGlass(cup, color, { garnish = null, ice = false, op = .85 } = {}) {
   const [r0, r1, y0, y1] = c.liq.map(v => v / 100);
   const liq = mesh(new THREE.CylinderGeometry(r1, r0, y1 - y0, 24), std({ color, transparent: true, opacity: op, roughness: .15, emissive: new THREE.Color(color), emissiveIntensity: .25 }), 0, (y0 + y1) / 2, 0, gr);
   liq.renderOrder = 4;
+  gr.userData.liq = { mesh: liq, y0, y1 };
   if (ice) for (let i = 0; i < 2; i++) {
     const cube = mesh(new RoundedBoxGeometry(.028, .028, .028, 2, .006), std({ color: 0xffffff, transparent: true, opacity: .35, roughness: .05 }), R(-.012, .012), y1 - .016 - i * .02, R(-.012, .012), gr);
     cube.rotation.set(R(0, 1), R(0, 1), 0);
@@ -354,8 +355,10 @@ const STATIC_TOOLS = [];
   mesh(new THREE.BoxGeometry(.12, .01, .06), M.brass, 0, .005, -.02, menu);
   hot(menu, 1, "Барная карта", () => openMix(), { grow: .1 });
 })();
-let servedGlass = null;
+let servedGlass = null, servedV = null;
 function placeServed(c) {
+  abortSip();
+  servedV = null;
   if (servedGlass) world.remove(servedGlass);
   servedGlass = makeGlass(c.cup, c.pour, { garnish: c.garnish, ice: c.cup === "rocks" || c.cup === "highball", op: c.pourOp || .88 });
   // сидящему гостю — прямо перед ним

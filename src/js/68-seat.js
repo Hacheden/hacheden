@@ -143,14 +143,17 @@ async function afterServe() {
   await walkTo(SEAT_X + .04, BT_Z + .1, 0);
   if (g !== SEAT.gen) return;
   bt.look = camera.position;
+  prepSip();
   await btSay("Приятного вечера. Если что — я рядом.");
-  answers([["Ещё по одной", () => { flyTo(seatShot(), 1, 0); btSay("С удовольствием. Какое теперь настроение?").then(askMood); answers([]); }], standBtn]);
+  if (g !== SEAT.gen) return;
+  seatAnswers();
 }
 /* встать: чистим всё, что связано с местом у стойки (камеру двигает вызывающий) */
 function leaveSeat() {
   if (!SEAT.on) return;
   SEAT.on = false;
   SEAT.gen++;
+  abortSip();
   answers([]);
   quietBubble();
   app.classList.remove("seated");

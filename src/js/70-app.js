@@ -247,7 +247,7 @@ function tick(now) {
     LOOK.py = lerp(LOOK.py, -(mouseAt.x / innerWidth - .5) * .07, .05);
     LOOK.pp = lerp(LOOK.pp, -(mouseAt.y / innerHeight - .5) * .04, .05);
   } else { LOOK.py = lerp(LOOK.py, 0, .03); LOOK.pp = lerp(LOOK.pp, 0, .03); }
-  yaw += LOOK.yaw + LOOK.py; pitch += LOOK.pitch + LOOK.pp;
+  yaw += LOOK.yaw + LOOK.py; pitch += LOOK.pitch + LOOK.pp + SIP.pitch;
   if (!STILL) { _p.y += Math.sin(t * .8) * .006; _p.x += Math.sin(t * .37) * .008; }
   camera.position.copy(_p);
   camera.lookAt(_p.x + Math.sin(yaw) * Math.cos(pitch), _p.y + Math.sin(pitch), _p.z + Math.cos(yaw) * Math.cos(pitch));

@@ -57,6 +57,8 @@ const glowPanelTex = canvasTex(256, 512, (g, w, h) => {
 });
 glowPanelTex.wrapS = glowPanelTex.wrapT = THREE.ClampToEdgeWrapping;
 const glowPanelMat = basic({ map: glowPanelTex, color: 0xd8b0b0 });
+/* подсветка задней стенки: гаснет в конце смены */
+const BACKLIT = { panel: glowPanelMat };
 for (const [x0, x1] of [[-3.1, -1.09], [-1.01, 1.01], [1.09, 3.1]]) {
   const p = mesh(new THREE.PlaneGeometry(x1 - x0, 1.72), glowPanelMat, (x0 + x1) / 2, 1.06 + .86, BB.z0 + .01);
 }
@@ -73,7 +75,7 @@ for (const [x0, x1] of [[-3.1, -1.09], [-1.01, 1.01], [1.09, 3.1]]) {
   // светодиодные ленты под полками
   const led = [];
   for (const y of BB.shelves.concat([BB.cor])) for (const [x0, x1] of [[-3.135, -1.095], [-1.005, 1.005], [1.095, 3.135]]) led.push(boxAt(x0, x1, y - .042, y - .03, BB.z0 + .26, BB.z0 + .29, 0));
-  mesh(mergeGeometries(led.map(g => g.toNonIndexed())), basic({ color: 0xff5a70, toneMapped: false }));
+  BACKLIT.led = mesh(mergeGeometries(led.map(g => g.toNonIndexed())), basic({ color: 0xff5a70, toneMapped: false })).material;
 })();
 
 /* неоновая вывеска Hacheden */
@@ -270,8 +272,8 @@ for (const x of [-1.7, 1.7]) {
   const bulb = mesh(new THREE.SphereGeometry(.05, 16, 10), basic({ color: 0xfff0d0, toneMapped: false }), x, 2.62, z);
   const cone = mesh(new THREE.CylinderGeometry(.17, .85, 1.45, 28, 1, true), coneMat, x, 2.6 - .73, z);
   cone.userData.noHit = true;
-  glowSprite(0xffc080, .6, x, 2.56, z, world, .4);
-  pendants.push({ x, z, cone, bulb });
+  const glow = glowSprite(0xffc080, .6, x, 2.56, z, world, .4);
+  pendants.push({ x, z, cone, bulb, glow });
 }
 
 /* стеклянная полка с бокалами над задней частью стойки */

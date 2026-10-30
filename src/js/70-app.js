@@ -350,8 +350,9 @@ function tick(now) {
   let nb = 1;
   if (neonT < 0 && neonT > -.5) nb = .35 + .65 * (Math.sin(-neonT * 60) > 0 ? 1 : 0);
   else if (neonT <= -.5) neonT = 7 + Math.random() * 9;
+  nb *= SHUT.neon;
   neonMat.opacity = nb; neonGlow.material.opacity = .35 * nb;
-  LIGHTS.red.intensity = LIGHTS.red.userData.base * (.8 + .2 * nb);
+  LIGHTS.red.intensity = LIGHTS.red.userData.base * (.8 + .2 * nb) * (.08 + .92 * SHUT.back);
   // пыль
   for (let i = 0; i < DUST.N; i++) {
     const b = DUST.base[i];
@@ -408,17 +409,19 @@ ownerOut.addEventListener("click", () => {
   location.reload();
 });
 const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
+/* конец смены: лампы и неон гаснут по одной (1 — горит, 0 — погашено) */
+const SHUT = { pendL: 1, pendC: 1, pendR: 1, fill: 1, neon: 1, back: 1 };
 function applyTime() {
   const d = sceneDate(), sky = skyLight(d), late = lateness(d);
   rainMat.uniforms.uSky.value = sky;
   if (!STREET.on) LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
-  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late);
+  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k];
 }
 function showClosed(afterVisit) {
   intro.classList.add("closed");
   const min = minutesUntil(OPEN_H);
   introTitle.classList.add("off");
-  introText.textContent = afterVisit
+  introText.textContent = afterVisit || intro.dataset.after
     ? "Бар закрылся. Спасибо, что заглянул! Ждём тебя снова."
     : "Сейчас закрыто. Бар открывается каждый день в 17:00 и работает до 3:00 ночи.";
   statusEl.textContent = `Откроемся в 17:00, через ${spell(min)}`;
@@ -458,7 +461,7 @@ setInterval(() => {
     ZONES.forEach(z => { z.hint = `Последний заказ: в 3:00 бар закрывается. ${z.hint}`; });
     if (!busy && !mixDlg.open) hintEl.textContent = ZONES[curZone].hint;
   }
-  if (!open) closeBar();
+  if (!open && !CLOSING.on) playClosing();
 }, 15000);
 function closeBar() {
   if (closedNow) return;

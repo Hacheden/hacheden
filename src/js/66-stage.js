@@ -1,7 +1,7 @@
 /* ================= сцена: джаз-бэнд играет ровно те ноты, что звучат ================= */
 const STG = { x0: -7.6, x1: -2.0, z0: 3.85, z1: 5.95, h: .3, active: false };
 const BANDH = hoursOf(sceneDate());
-const BAND_HERE = OWNER || BANDH >= 19 || BANDH < 3;
+let BAND_HERE = OWNER || BANDH >= 19 || BANDH < 3;
 
 /* ---------- подмостки, занавес, вывеска, свет ---------- */
 const STAGE_M = {
@@ -322,7 +322,7 @@ onTick((t, dt) => {
   const vis = BAND_HERE && (curZone === 3 || (flight && flight.B && flight.B.tx < -3 && flight.B.tz > 3));
   if (vis !== STG.active) { STG.active = vis; for (const F of Object.values(MUS)) F.off = !vis; NOTEQ.length = 0; }
   // лампочки вывески бегут по кругу
-  if (STG.bulbs && vis) STG.bulbs.forEach((b, i) => { const v = Math.sin(t * 3 - i * .7) > 0 ? 1 : .45; b.material.color.setRGB(v, .82 * v, .54 * v); });
+  if (STG.bulbs && vis) STG.bulbs.forEach((b, i) => { const v = (Math.sin(t * 3 - i * .7) > 0 ? 1 : .45) * (STG.dim ?? 1); b.material.color.setRGB(v, .82 * v, .54 * v); });
   if (!vis) return;
   const playing = Music.on;
   const now = Music.time();
@@ -411,6 +411,8 @@ onTick((t, dt) => {
     F.nod = playing ? (sounding ? -.05 - (SX2.m - 64) * .004 : bob * .07) : 0;
     F.look = null;
   }
+  // финальный поклон в конце смены
+  if (STG.bow) for (const F of Object.values(MUS)) { F.leanT = .5; F.nod = .25; F.twistT = 0; F.sway = 0; F.look = null; }
 });
 
 /* ---------- реплики музыкантов и просьба сыграть ---------- */

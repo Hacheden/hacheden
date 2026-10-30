@@ -93,18 +93,19 @@ const MS = {
   parts.push(boxAt(-.95, .95, 0, .12, z1, z1 + .42, .8));
   merged(parts, MS.stone, street);
   // окна первого этажа: шторы светятся изнутри
-  STREET.silhouettes = [];
+  STREET.silhouettes = []; STREET.winGlow = [];
   for (const x of [-2.9, 2.9]) {
     const f = [boxAt(x - .9, x + .9, .82, .92, z1, z1 + .12, .8), boxAt(x - .9, x + .9, 2.62, 2.74, z1, z1 + .06, .8),
       boxAt(x - .9, x - .8, .92, 2.62, z1, z1 + .06, .8), boxAt(x + .8, x + .9, .92, 2.62, z1, z1 + .06, .8),
       boxAt(x - .02, x + .02, .92, 2.62, z1, z1 + .05, .8), boxAt(x - .8, x + .8, 1.96, 2.0, z1, z1 + .05, .8)];
     merged(f, MS.trim, street);
     const glow = mesh(new THREE.PlaneGeometry(1.6, 1.7), basic({ map: curtainTex, color: 0xcc8866 }), x, 1.77, z1 + .01, street);
+    STREET.winGlow.push(glow, glowSprite(0xffa060, 2.2, x, 1.8, z1 + .4, street, 0));
     // силуэт гостя иногда проходит за шторой
     const sil = mesh(new THREE.PlaneGeometry(.5, 1.0), basic({ map: TEX.glow, color: 0x000000, transparent: true, opacity: 0, depthWrite: false }), x, 1.6, z1 + .015, street);
     sil.scale.set(1, 1.3, 1);
     STREET.silhouettes.push({ m: sil, x0: x, t: R(2, 9), k: 1 });
-    glowSprite(0xffa060, 2.2, x, 1.8, z1 + .4, street, .18);
+    STREET.winGlow[STREET.winGlow.length - 1].material.opacity = .18;
   }
   // окна второго этажа
   for (const x of [-5.6, -2.9, 0, 2.9, 5.6]) {

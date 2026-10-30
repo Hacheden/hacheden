@@ -7,7 +7,9 @@ const ZONES = [
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
     hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." },
   { name: "Сцена", sub: BAND_HERE ? "Джаз-бэнд: фортепиано, саксофон, контрабас и щётки" : "Музыканты выходят на сцену в 19:00", pos: [-2.7, 1.62, .55], tgt: [-4.85, 1.22, 5.0], span: 5.0, pull: 2.2,
-    hint: "Каждая нота, которую ты слышишь, сыграна на сцене. Кликни по музыканту — он что-нибудь расскажет." }
+    hint: "Каждая нота, которую ты слышишь, сыграна на сцене. Кликни по музыканту — он что-нибудь расскажет." },
+  { name: "Погреб", sub: "Тайный погреб под читальней: бочки, свечи и сомелье", pos: [-26, 1.75, 2.3], tgt: [-26.1, .95, -1.2], span: 3.0, pull: 1.0,
+    hint: "Выбери вино: сомелье нальёт и расскажет его историю." }
 ];
 ZONES[0].sub = SEASON_INFO[SEASON].nook;
 if (SEASON === "summer") ZONES[2].hint = "Постучи в дверь или заведи граммофон. Летом камин не топят: в нём горят свечи.";
@@ -85,15 +87,18 @@ function renderZoneUI(i) {
 }
 function goZone(i, dur = 1.9) {
   i = clamp(i, 0, ZONES.length - 1);
+  if (typeof CEL !== "undefined" && CEL.busy) return Promise.resolve();
+  const cross = (curZone === 4) !== (i === 4);
   leaveSeat();
   const same = i === curZone;
   curZone = i; cur = i;
-  Music.room(i === 3 ? 4 : i);
+  Music.room(i === 3 ? 4 : i === 4 ? 5 : i);
   if (mixDlg.open && i !== 1) mixDlg.close();
   renderZoneUI(i);
   tween(LIGHTS.fill.position, { x: FILL_AT[i].x, y: FILL_AT[i].y, z: FILL_AT[i].z }, same ? .1 : dur);
   tween(LOOK, { yaw: 0, pitch: 0 }, same ? .6 : dur * .8);
   nudge = 0;
+  if (cross) return cellarCross(i);
   return flyTo(framed(i), same ? .8 : dur, same ? 0 : .9);
 }
 navBtns.forEach(b => b.addEventListener("click", () => { if (!busy) goZone(+b.dataset.zone); }));
@@ -153,8 +158,9 @@ function hideTip() { tip.classList.remove("show"); }
 addEventListener("keydown", e => {
   if (modalOpen() || mixDlg.open || busy || STREET.on) return;
   if (e.target.closest && e.target.closest("input, textarea")) return;
-  if (e.key === "ArrowLeft") { e.preventDefault(); goZone(curZone - 1); }
-  if (e.key === "ArrowRight") { e.preventDefault(); goZone(curZone + 1); }
+  if (curZone === 4) return;
+  if (e.key === "ArrowLeft") { e.preventDefault(); goZone(Math.max(0, curZone - 1)); }
+  if (e.key === "ArrowRight") { e.preventDefault(); goZone(Math.min(3, curZone + 1)); }
 });
 
 /* ---------- бутылки, коктейли и связь с барной картой ---------- */

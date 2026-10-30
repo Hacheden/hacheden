@@ -5,7 +5,7 @@ let SG = 0;
 const rr = (a, b) => a + Math.random() * (b - a);
 const chance = p => Math.random() < p;
 const choose = list => list[Math.floor(Math.random() * list.length)];
-function live() { if (SHOW.gen !== SG) throw ABORT; }
+function live() { if (SHOW.on && SHOW.gen !== SG) throw ABORT; }
 const SL = () => SHOW.slow || 1;
 async function ws(s) { await sleep(SHOW.fast ? Math.min(s, .01) : s * SL()); live(); }
 const PROG = () => Closeup.PROGRAMS;
@@ -233,12 +233,12 @@ function waitTicks(dur, fn) {
 /* ---------- кисти: рука держится за предмет, пальцы обхватывают ---------- */
 const HANDS = new Map();
 const _gq = new THREE.Quaternion(), _hc = V3(), _gf = V3(), _gn = V3(), _gw = V3();
-function dirToFig(v) { const c = Math.cos(-bt.face), s = Math.sin(-bt.face); return V3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c); }
+function dirToFig(v, F = bt) { const c = Math.cos(-F.face), s = Math.sin(-F.face); return V3(v.x * c + v.z * s, v.y, -v.x * s + v.z * c); }
 /* хват: p — точка на предмете, f — куда смотрят пальцы, n — куда смотрит ладонь (к предмету), r — толщина предмета */
 function grip(arm, obj, g, dur = .38) {
   arm.manual = true;
   handPose(arm, g.pose || "grip", g.r || .03);
-  const H = { obj, g: Object.assign({ r: .03 }, g), k: 0, from: arm.cur.clone(), lift: g.lift ?? .04 };
+  const H = { obj, F: g.F || bt, g: Object.assign({ r: .03 }, g), k: 0, from: arm.cur.clone(), lift: g.lift ?? .04 };
   HANDS.set(arm, H);
   if (SHOW.fast || dur <= 0) { H.k = 1; return Promise.resolve(); }
   return tween(H, { k: 1 }, dur * SL(), ease.io).then(live);
@@ -249,13 +249,13 @@ function letGo(arm, pose = "relax") {
   handPose(arm, pose);
 }
 /* свободная рука: плавно в точку мира */
-function handTo(arm, p, f, n, pose = "relax", dur = .35) {
+function handTo(arm, p, f, n, pose = "relax", dur = .35, F = bt) {
   HANDS.delete(arm);
   arm.snap = false; arm.k = 3.4 / Math.max(.1, dur * SL());
   arm.manual = true;
   handPose(arm, pose);
-  const l = toFig(bt, p);
-  reach(arm, l.x, l.y, l.z, dirToFig(f), dirToFig(n));
+  const l = toFig(F, p);
+  reach(arm, l.x, l.y, l.z, dirToFig(f, F), dirToFig(n, F));
   return ws(dur);
 }
 /* руки на стойке, ладонями вниз — спокойная поза между делом */
@@ -274,9 +274,9 @@ PRE_FIG.push(() => {
     _gn.copy(g.n).applyQuaternion(_gq).normalize();
     // запястье: от точки хвата назад вдоль пальцев и от ладони
     _gw.copy(_hc).addScaledVector(_gf, -(g.along ?? .048)).addScaledVector(_gn, -(.013 + g.r));
-    const l = toFig(bt, _gw);
+    const l = toFig(H.F, _gw);
     if (H.k < 1) { l.lerpVectors(H.from, l, H.k); l.y += Math.sin(Math.PI * H.k) * H.lift; }
-    reach(arm, l.x, l.y, l.z, dirToFig(_gf), dirToFig(_gn));
+    reach(arm, l.x, l.y, l.z, dirToFig(_gf, H.F), dirToFig(_gn, H.F));
     arm.snap = true;
   }
 });
@@ -1575,7 +1575,7 @@ async function setupStation(c) {
 }
 function cleanup(c, aborted) {
   for (const t of TMP) TMP.delete(t);
-  HANDS.clear();
+  HANDS.delete(bt.L); HANDS.delete(bt.R);
   for (const a of [bt.L, bt.R]) { a.manual = false; a.snap = false; a.k = 9; }
   streamOff(); tagOff();
   jigOn = false;
@@ -1637,6 +1637,7 @@ async function playShow(c) {
     aborted = true;
   }
   cleanup(c, aborted);
+  SHOW.fast = false;
   showUI.root.hidden = true;
   app.classList.remove("showing");
   SHOW.on = false;

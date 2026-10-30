@@ -121,6 +121,8 @@
   .nav, .spots, .zone-title, #order { transition: opacity .8s, visibility .8s; }
 
   /* за стойкой: ответы бармену вместо подсказок */
+  .fade { position: absolute; inset: 0; z-index: 7; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
+  .fade.on { opacity: 1; pointer-events: auto; }
   .app.seated .spots, .app.seated .hint { display: none; }
   .app.seated .zone-title { opacity: 0; }
   .talk { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 680px; }
@@ -208,6 +210,7 @@
     <p class="show-cap" id="show-cap" aria-live="polite"><span class="show-count" id="show-count"></span><span class="show-text" id="show-text"></span></p>
   </div>
   <div class="bubble" id="bubble" role="status" aria-live="polite"></div>
+  <div class="fade" id="fade" aria-hidden="true"></div>
   <div class="served" id="served" hidden></div>
   <!--@@BUTTONS@@-->
 </main>

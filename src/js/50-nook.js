@@ -3,8 +3,8 @@ const NOOK = { flash: 0, candleOn: true, globeSpeed: .25 };
 
 /* ---------- книжные шкафы ---------- */
 const BOOK_COL = ["#5a1414", "#1f3a26", "#1a2440", "#4a2a14", "#2a1a10", "#6a4a1a", "#3a0e1e", "#14140f", "#56301e", "#2c3a2a", "#6a1a1a", "#203048"];
-const books = [];
-const caseGeos = [], caseBacks = [];
+let books = [];
+let caseGeos = [], caseBacks = [];
 const SHELF_Y = [.12, .52, .92, 1.32, 1.72, 2.12, 2.52, 2.92];
 function bookcase(axis, a0, a1, fixed, side, top = 3.32) {
   // axis "z": шкаф вдоль стены x=fixed, смотрит в +x (side=1); axis "x": вдоль стены z=fixed, смотрит в +z
@@ -31,7 +31,17 @@ function bookcase(axis, a0, a1, fixed, side, top = 3.32) {
     }
   }
 }
-bookcase("z", -4.96, 1.3, -8, 1);
+/* левая стена: в середине — секция-дверь в тайный погреб (собирается отдельно) */
+const SECRET = { a0: -.79, a1: .257, hx: -8, hz: .257 };
+bookcase("z", -4.96, SECRET.a0, -8, 1);
+bookcase("z", SECRET.a1, 1.3, -8, 1);
+{
+  const keep = [caseGeos, caseBacks, books];
+  caseGeos = []; caseBacks = []; books = [];
+  bookcase("z", SECRET.a0, SECRET.a1, -8, 1);
+  SECRET.parts = { geos: caseGeos, backs: caseBacks, books };
+  [caseGeos, caseBacks, books] = keep;
+}
 bookcase("x", -7.66, -6.98, -5, 1);
 bookcase("x", -5.02, -4.0, -5, 1);
 merged(caseGeos, M.walnut);
@@ -57,9 +67,9 @@ merged(caseBacks, std({ color: 0x120a07, roughness: .9 }));
   const parts = [];
   for (const s of [-1, 1]) {
     const r = new THREE.CylinderGeometry(.018, .018, 3.3, 8);
-    r.rotateZ(-.13); r.translate(-7.42, 1.65, -1.0 + s * .22); parts.push(r);
+    r.rotateZ(-.13); r.translate(-7.42, 1.65, -3.0 + s * .22); parts.push(r);
   }
-  for (let i = 0; i < 10; i++) { const y = .25 + i * .31; const g = new THREE.CylinderGeometry(.013, .013, .44, 6); g.rotateX(Math.PI / 2); g.translate(-7.42 + (y - 1.65) * .131, y, -1.0); parts.push(g); }
+  for (let i = 0; i < 10; i++) { const y = .25 + i * .31; const g = new THREE.CylinderGeometry(.013, .013, .44, 6); g.rotateX(Math.PI / 2); g.translate(-7.42 + (y - 1.65) * .131, y, -3.0); parts.push(g); }
   merged(parts, M.oak);
   const rail = new THREE.CylinderGeometry(.015, .015, 6.2, 8); rail.rotateX(Math.PI / 2);
   mesh(rail, M.brass, -7.62, 3.22, -1.83);

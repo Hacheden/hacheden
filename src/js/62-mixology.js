@@ -9,7 +9,7 @@ function live() { if (SHOW.gen !== SG) throw ABORT; }
 const SL = () => SHOW.slow || 1;
 async function ws(s) { await sleep(SHOW.fast ? Math.min(s, .01) : s * SL()); live(); }
 const PROG = () => Closeup.PROGRAMS;
-const NOM = { rum: "Ром", tequila: "Текила", gin: "Джин", whisky: "Виски", cognac: "Коньяк", wine: "Красное вино", triple: "Апельсиновый ликёр",
+const NOM = { rum: "Ром", tequila: "Текила", gin: "Джин", whisky: "Виски", cognac: "Коньяк", wine: "Красное вино", triple: "Апельсиновый ликёр", cherry: "Вишнёвый ликёр",
   campari: "Кампари", vermouthR: "Красный вермут", vermouthD: "Сухой вермут", bitters: "Ангостура", tonic: "Тоник", soda: "Содовая",
   cola: "Кола", oj: "Апельсиновый сок", pineapple: "Ананасовый сок", coconut: "Кокосовые сливки", lime: "Сок лайма",
   lemon: "Лимонный сок", syrup: "Сахарный сироп", grenadine: "Гренадин" };
@@ -65,6 +65,9 @@ function setLevel(V) {
   V.liq.scale.y = Math.max(.0001, f * (V.y1 - V.y0));
   V.liq.material.color.copy(V.col);
   V.liq.material.emissive.copy(V.col).multiplyScalar(.3);
+  // светлое и прозрачное (вода, джин, содовая) не должно выглядеть молоком
+  const lum = V.col.r * .3 + V.col.g * .59 + V.col.b * .11;
+  V.liq.material.opacity = .9 - .52 * clamp((lum - .62) / .3, 0, 1);
 }
 const mouth = (V, dy = 0) => V.g.localToWorld(V3(0, V.mouthY + dy / V.scale, 0));
 const surface = V => V.g.localToWorld(V3(0, V.y0 + Math.max(.004, clamp(V.ml / V.cap, 0, .94) * (V.y1 - V.y0)), 0));
@@ -135,7 +138,7 @@ const P = {};
   P.salt = mesh(new THREE.CylinderGeometry(.065, .06, .012, 28), std({ color: 0xf4f1ea, roughness: .95 }), 0, 0, 0);
   P.salt.visible = false;
 })();
-const PROPS = () => [P.tin.g, P.cap.g, P.mixer.g, P.jig.g, P.spoon.g, P.strainer.g, P.muddler.g, P.scoop.g, P.bucket.g, P.tray.g, P.salt];
+const PROPS = () => [P.tin.g, P.cap.g, P.mixer.g, P.jig.g, P.spoon.g, P.strainer.g, P.muddler.g, P.scoop.g, P.bucket.g, P.tray.g, P.salt].concat(typeof FIRE_PROPS === "function" && P.mugA ? FIRE_PROPS() : []);
 
 /* ---------- бутылка с крупной этикеткой ---------- */
 const BKIND = { spirit: "tall", square: "square", flask: "flask", squat: "squat", wine: "bordeaux", dash: "bordeaux", soda: "round", squeeze: "squeeze", carafe: "carafe" };
@@ -339,7 +342,8 @@ function station() {
   Object.assign(ST, {
     glass: B(-.07, T, .42), serve: SEAT.on ? V3(SEAT_X + .06, T, -2.14) : B(-.07, T, .78),
     tin: B(.15, T, .38), cap: B(.29, T, .5), jig: B(.31, T, .36), spoon: B(.07, T + .005, .54), strainer: B(.36, T + .004, .53),
-    bucket: B(-.44, T, .27), scoop: B(-.3, T + .006, .25), tray: B(-.31, T + .01, .47), rail: B(-.22, T - .21, .17), salt: B(-.2, T + .006, .3)
+    bucket: B(-.44, T, .27), scoop: B(-.3, T + .006, .25), tray: B(-.31, T + .01, .47), rail: B(-.22, T - .21, .17), salt: B(-.2, T + .006, .3),
+    kettle: B(-.42, T, .3), mbox: B(.04, T + .007, .56), saucer: B(.3, T, .52)
   });
 }
 
@@ -354,6 +358,7 @@ function shotDef(name, f) {
     case "low": return { pos: f.clone().add(V3(s * .24, -.04, .52)), tgt: f.clone().add(V3(0, .07, 0)), span: .55 };
     case "top": return { pos: f.clone().add(V3(s * .06, .44, .3)), tgt: f.clone(), span: .4 };
     case "side": return { pos: f.clone().add(V3(s * .62, .08, .34)), tgt: f.clone().add(V3(0, .03, 0)), span: .55 };
+    case "fire": return { pos: V3(bx + s * .3, 1.44, bz + 1.8), tgt: V3(bx, 1.4, bz + .34), span: 1.12 };
     case "face": return { pos: V3(bx + s * .3, (f.y + 1.58) / 2 + .04, bz + 1.25), tgt: V3(bx + (f.x - bx) * .5, (f.y + 1.58) / 2, bz + .25), span: .85 };
     default: return { pos: V3(bx + s * .22, 1.43, bz + 1.5), tgt: V3(bx + (f.x - bx) * .4, 1.31, bz + .33), span: 1.05 };
   }
@@ -425,12 +430,14 @@ function stepCaption(st, c) {
     case "stirIn": return "Перемешиваем";
     case "strain": return "Процеживаем через стрейнер";
     case "float": return "Гренадин тяжелее — он опускается на дно";
-    case "garnish": return `Финальный штрих: ${GNAME[c.garnish] || "украшение"}`;
+    case "hot": return "Горячая вода: этот коктейль подают тёплым";
+    case "fire": return "Огненная струя: горящий коньяк переливают из кружки в кружку";
+    case "garnish": return c.garnish === "flame" ? "Цедра через пламя: масло апельсина вспыхивает над стаканом" : `Финальный штрих: ${GNAME[c.garnish] || "украшение"}`;
     case "serve": return choose(["Готово. Приятного вечера!", "Ваш коктейль. Наслаждайтесь.", "Прошу. За ваш вечер!"]);
   }
   return "";
 }
-const GCOL = { wheel: 0xa8c83e, wedge: 0xa8c83e, lemon: 0xf2d24a, orange: 0xf08a22, mint: 0x3f8f3a, cherry: 0xa8101e, pineapple: 0xf2c84a, olive: 0x8a9a30 };
+const GCOL = { flame: 0xf08a22, wheel: 0xa8c83e, wedge: 0xa8c83e, lemon: 0xf2d24a, orange: 0xf08a22, mint: 0x3f8f3a, cherry: 0xa8101e, pineapple: 0xf2c84a, olive: 0x8a9a30 };
 /* строка карточки для шага рецепта */
 function cardRow(st, c) {
   const { GNAME } = Closeup;
@@ -446,6 +453,8 @@ function cardRow(st, c) {
     case "squeeze": return { name: "Лайм", amt: "выжать", col: "#a8c83e" };
     case "rim": return { name: "Соль", amt: "на ободок", col: "#f4f1ea" };
     case "muddle": return tech("Размять");
+    case "hot": return { name: "Горячая вода", amt: `${st[1]} мл`, col: "#cfe0e6" };
+    case "fire": return tech("Поджечь", "огненная струя");
     case "shake": return tech("Взболтать", "со льдом");
     case "stir": return tech("Размешать", "со льдом");
     case "stirIn": return tech("Перемешать");
@@ -467,8 +476,8 @@ const CARD = { rows: [], map: [], layers: [], total: 100, filled: 0, cup: null }
 function buildCard(c, prog) {
   showUI.list.innerHTML = "";
   CARD.rows = []; CARD.map = []; CARD.layers = []; CARD.filled = 0;
-  const kind = prog.some(s => s[0] === "shake") ? "shake" : prog.some(s => s[0] === "stir") ? "stir" : "build";
-  showUI.sub.textContent = { shake: "Взболтать в шейкере", stir: "Размешать со льдом", build: "Собрать в бокале" }[kind];
+  const kind = prog.some(s => s[0] === "fire") ? "fire" : prog.some(s => s[0] === "shake") ? "shake" : prog.some(s => s[0] === "stir") ? "stir" : "build";
+  showUI.sub.textContent = { fire: "Фирменный · огненная подача", shake: "Взболтать в шейкере", stir: "Размешать со льдом", build: "Собрать в бокале" }[kind];
   prog.forEach((st, i) => {
     const r = cardRow(st, c);
     if (!r) { CARD.map[i] = -1; return; }
@@ -480,7 +489,7 @@ function buildCard(c, prog) {
     CARD.map[i] = CARD.rows.length;
     CARD.rows.push(li);
   });
-  CARD.total = prog.reduce((s, st) => s + (st[0] === "jig" || st[0] === "pour" ? st[2] : st[0] === "top" ? 70 : st[0] === "float" ? 15 : st[0] === "squeeze" ? 10 : st[0] === "dash" ? 4 : 0), 0) || 100;
+  CARD.total = prog.reduce((s, st) => s + (st[0] === "jig" || st[0] === "pour" ? st[2] : st[0] === "top" ? 70 : st[0] === "float" ? 15 : st[0] === "hot" ? st[1] : st[0] === "squeeze" ? 10 : st[0] === "dash" ? 4 : 0), 0) || 100;
   const cup = CUP_SVG[c.cup] || CUP_SVG.rocks;
   const stem = cup.stem ? `<path d="M50 ${cup.stem[0]} L50 ${cup.stem[1]}" class="st"/><ellipse cx="50" cy="${cup.stem[1] + 3}" rx="17" ry="3" class="st"/>` : "";
   showUI.cup.innerHTML = `<defs><clipPath id="sc-clip"><path d="${cup.d}"/></clipPath></defs><g clip-path="url(#sc-clip)" id="sc-fill"></g><path d="${cup.d}" class="gl"/>${stem}`;
@@ -987,6 +996,9 @@ function garnishMesh(kind) {
   } else if (kind === "mint") {
     mesh(new THREE.CylinderGeometry(.0015, .0015, .06, 4), std({ color: 0x2a5a1a }), 0, .02, 0, g);
     for (let i = 0; i < 7; i++) { const l = leafMesh(); world.remove(l); l.position.set(rr(-.012, .012), .01 + i * .007, rr(-.012, .012)); l.rotation.set(rr(-.6, .6), rr(0, 3), rr(-.6, .6)); g.add(l); }
+  } else if (kind === "flame") {
+    const peel = new THREE.SphereGeometry(.026, 14, 8, 0, Math.PI * 2, 0, Math.PI * .28); peel.scale(1, .5, .62);
+    mesh(peel, m, 0, -.006, 0, g);
   } else if (kind === "lemon") {
     const curve = new THREE.CatmullRomCurve3(Array.from({ length: 12 }, (_, i) => V3(Math.cos(i * .9) * .012, -i * .006, Math.sin(i * .9) * .012)));
     mesh(new THREE.TubeGeometry(curve, 40, .004, 6), m, 0, .03, 0, g);
@@ -1006,8 +1018,10 @@ async function stepGarnish(c) {
   const gm = garnishMesh(kind);
   place(gm, ST.tray.clone().add(V3(.03, .02, 0)));
   const pinch = PINCH(V3(0, kind === "olive" ? .07 : 0, 0));
-  await grip(R, gm, pinch, .42);
-  if (kind === "olive" || kind === "cherry") {
+  if (kind !== "flame") await grip(R, gm, pinch, .42);
+  if (kind === "flame") {
+    await stepFlameZest(gm, G);
+  } else if (kind === "olive" || kind === "cherry") {
     // высоко над бокалом: пауза для гостя, затем медленно вниз
     await move(gm, m.clone().add(V3(0, .22, 0)), { dur: .55, arc: .04 });
     bt.look = camera.position;
@@ -1089,11 +1103,423 @@ const FLOURISH = [
 ];
 async function flourish() { if (!SHOW.fast && chance(.3)) await choose(FLOURISH)(); }
 
+/* ================= огонь: фирменный Hacheden и огненная струя ================= */
+const flameTex = (blue) => {
+  const t = canvasTex(64, 128, (g, w, h) => {
+    // язык пламени: широкий снизу, узкий сверху
+    g.beginPath(); g.moveTo(32, 4);
+    g.bezierCurveTo(44, 40, 58, 74, 52, 100); g.bezierCurveTo(48, 120, 16, 120, 12, 100); g.bezierCurveTo(6, 74, 20, 40, 32, 4);
+    const gr = g.createRadialGradient(32, 98, 2, 32, 82, 70);
+    if (blue) { gr.addColorStop(0, "rgba(210,235,255,1)"); gr.addColorStop(.25, "rgba(90,150,255,.95)"); gr.addColorStop(.6, "rgba(40,70,220,.55)"); gr.addColorStop(1, "rgba(20,30,160,0)"); }
+    else { gr.addColorStop(0, "rgba(255,250,220,1)"); gr.addColorStop(.25, "rgba(255,205,90,.95)"); gr.addColorStop(.6, "rgba(255,110,30,.6)"); gr.addColorStop(1, "rgba(200,40,10,0)"); }
+    g.fillStyle = gr; g.fill();
+  });
+  t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping;
+  return t;
+};
+const FTEX = { o: flameTex(false), b: flameTex(true) };
+const fireMat = blue => new THREE.SpriteMaterial({ map: blue ? FTEX.b : FTEX.o, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false });
+/* язычки пламени: группа спрайтов, size — общая сила огня */
+const CLUSTERS = new Set();
+function flames(parent, at, n, spread, { blue = .5, h = .05 } = {}) {
+  const g = new THREE.Group(); g.position.copy(at); parent.add(g);
+  const sp = [];
+  for (let i = 0; i < n; i++) {
+    const s = new THREE.Sprite(fireMat(i / n < blue));
+    s.center.set(.5, .1);
+    const a = i * 2.4, r = spread * Math.sqrt((i + .5) / n);
+    s.userData = { x: Math.cos(a) * r, z: Math.sin(a) * r, k: rr(.6, 1.1), ph: rr(0, 9), w: rr(.45, .7) };
+    s.renderOrder = 8; g.add(s); sp.push(s);
+  }
+  const F = { g, sp, size: 0, h, on: true };
+  CLUSTERS.add(F);
+  return F;
+}
+function dropFlames(F) { if (!F) return; CLUSTERS.delete(F); F.g.parent && F.g.parent.remove(F.g); }
+/* огненная струя: цепочка языков пламени по дуге */
+const ARC = { on: false, p0: V3(), p1: V3(), p2: V3(), sp: [], k: 0 };
+for (let i = 0; i < 44; i++) { const s = new THREE.Sprite(fireMat(i % 3 !== 0)); s.center.set(.5, .3); s.visible = false; s.renderOrder = 8; world.add(s); ARC.sp.push(s); }
+const ARC_CORE = mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(V3(), V3(0, 0, 0), V3(0, -1, 0)), 16, .0035, 6), new THREE.MeshBasicMaterial({ color: 0xffb04a, transparent: true, opacity: .85, toneMapped: false, depthWrite: false }), 0, 0, 0);
+ARC_CORE.visible = false;
+function bez(t, out) { const u = 1 - t; return out.set(0, 0, 0).addScaledVector(ARC.p0, u * u).addScaledVector(ARC.p1, 2 * u * t).addScaledVector(ARC.p2, t * t); }
+/* искры и угольки: летят вверх и гаснут */
+const EMB = { n: 90, i: 0 };
+EMB.geo = new THREE.BufferGeometry();
+EMB.pos = new Float32Array(EMB.n * 3); EMB.col = new Float32Array(EMB.n * 3); EMB.v = new Float32Array(EMB.n * 3); EMB.life = new Float32Array(EMB.n);
+EMB.geo.setAttribute("position", new THREE.BufferAttribute(EMB.pos, 3)); EMB.geo.setAttribute("color", new THREE.BufferAttribute(EMB.col, 3));
+EMB.pts = new THREE.Points(EMB.geo, new THREE.PointsMaterial({ size: .011, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+EMB.pts.frustumCulled = false; EMB.pts.visible = false; world.add(EMB.pts);
+function spark(p, v, life = rr(.5, 1.1)) {
+  const i = EMB.i++ % EMB.n;
+  EMB.pos.set([p.x, p.y, p.z], i * 3); EMB.v.set([v.x, v.y, v.z], i * 3); EMB.life[i] = life;
+  EMB.pts.visible = true;
+}
+/* дым после того, как пламя гаснет */
+const smokeTex = canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, "rgba(200,190,180,.55)"); gr.addColorStop(1, "rgba(200,190,180,0)"); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+function puff(p, n = 7) {
+  for (let i = 0; i < n; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, opacity: .45, depthWrite: false, fog: false }));
+    s.position.copy(p).add(V3(rr(-.02, .02), rr(0, .02), rr(-.02, .02))); s.scale.setScalar(.04); world.add(s);
+    const d = SHOW.fast ? .001 : rr(1.4, 2.2);
+    tween(s.position, { y: s.position.y + rr(.18, .32), x: s.position.x + rr(-.06, .06) }, d, ease.out);
+    tween(s.scale, { x: .2, y: .2 }, d, ease.out);
+    tween(s.material, { opacity: 0 }, d, ease.in).then(() => world.remove(s));
+  }
+}
+/* свет огня: на время шоу берём свет камина из курилки и переносим к пламени */
+const FIRELT = { on: false, pos: V3(), lev: 0, home: null, col: null };
+const _fl = V3(), _fp = V3();
+onTick((t, dt) => {
+  // пламя дрожит
+  let tot = 0; _fl.set(0, 0, 0);
+  for (const F of CLUSTERS) {
+    for (const s of F.sp) {
+      const u = s.userData, n = .75 + .25 * Math.sin(t * 17 * u.k + u.ph) + .15 * Math.sin(t * 31 + u.ph * 3);
+      const hgt = F.h * F.size * u.k * n;
+      s.scale.set(hgt * u.w, hgt, 1);
+      s.position.set(u.x + Math.sin(t * 9 + u.ph) * .002, 0, u.z);
+      s.visible = F.size > .02;
+    }
+    if (F.size > .05) {
+      F.g.getWorldPosition(_fp);
+      _fl.addScaledVector(_fp, F.size); tot += F.size;
+      if (Math.random() < F.size * dt * 18) spark(_fp.clone().add(V3(rr(-.01, .01), F.h * F.size * .5, rr(-.01, .01))), V3(rr(-.05, .05), rr(.15, .35), rr(-.05, .05)));
+    }
+  }
+  // струя по дуге
+  if (ARC.on) {
+    const n = ARC.sp.length;
+    ARC.sp.forEach((s, i) => {
+      const tt = ((i + ARC.k * 6) % n) / n;
+      if (tt > ARC.k + .02) { s.visible = false; return; }
+      bez(tt, s.position);
+      const f = (.038 + .018 * Math.sin(t * 23 + i * 1.7)) * (1.15 - tt * .35);
+      s.scale.set(f * .75, f * 1.35, 1);
+      s.visible = true;
+    });
+    ARC.k = Math.min(1, ARC.k + dt * 3.5);
+    bez(.5, _fp); _fl.addScaledVector(_fp, 1.2); tot += 1.2;
+    if (Math.random() < dt * 25) { bez(Math.random() * ARC.k, _fp); spark(_fp.clone(), V3(rr(-.06, .06), rr(.1, .3), rr(-.06, .06))); }
+  }
+  // искры
+  if (EMB.pts.visible) {
+    let alive = 0;
+    for (let i = 0; i < EMB.n; i++) {
+      if (EMB.life[i] <= 0) { EMB.col[i * 3] = EMB.col[i * 3 + 1] = EMB.col[i * 3 + 2] = 0; continue; }
+      alive++;
+      EMB.life[i] -= dt;
+      for (let k = 0; k < 3; k++) EMB.pos[i * 3 + k] += EMB.v[i * 3 + k] * dt;
+      EMB.v[i * 3 + 1] -= dt * .05;
+      const l = clamp(EMB.life[i], 0, 1);
+      EMB.col[i * 3] = l; EMB.col[i * 3 + 1] = .55 * l * l; EMB.col[i * 3 + 2] = .15 * l * l * l;
+    }
+    EMB.geo.attributes.position.needsUpdate = EMB.geo.attributes.color.needsUpdate = true;
+    if (!alive) EMB.pts.visible = false;
+  }
+  // свет
+  if (FIRELT.on) {
+    const L = LIGHTS.fire;
+    if (tot > .01) _fl.multiplyScalar(1 / tot);
+    FIRELT.pos.lerp(tot > .01 ? _fl : FIRELT.pos, smoothK(8, dt));
+    FIRELT.lev += (Math.min(1.6, tot) - FIRELT.lev) * smoothK(6, dt);
+    L.position.copy(FIRELT.pos).add(V3(0, .08, .12));
+    L.intensity = FIRELT.lev * (2.6 + .7 * Math.sin(t * 19) + .4 * Math.sin(t * 37)) ;
+  }
+});
+function fireLight(on) {
+  const L = LIGHTS.fire;
+  if (on && !FIRELT.on) { FIRELT.home = L.position.clone(); FIRELT.col = L.color.clone(); FIRELT.dist = L.distance; L.color.set(0xff9a4a); L.distance = 3.2; FIRELT.on = true; FIRELT.lev = 0; FIRELT.pos.copy(B(0, 1.3, .4)); }
+  if (!on && FIRELT.on) { FIRELT.on = false; L.position.copy(FIRELT.home); L.color.copy(FIRELT.col); L.distance = FIRELT.dist; }
+}
+/* звуки огня */
+const FSND = {
+  strike: () => { if (SHOW.fast) return; noiseHit(0, .14, 3200, .8, .35, "highpass"); noiseHit(.05, .25, 900, .6, .18, "lowpass"); },
+  whoosh: (dur = .7, g = .5) => {
+    if (SHOW.fast) return; const c = fx(); if (!c) return;
+    const len = Math.floor(c.sampleRate * dur), b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / len);
+    const s = c.createBufferSource(), f = c.createBiquadFilter(), gn = c.createGain(), t = c.currentTime;
+    s.buffer = b; f.type = "lowpass"; f.frequency.setValueAtTime(250, t); f.frequency.exponentialRampToValueAtTime(2600, t + dur * .35); f.frequency.exponentialRampToValueAtTime(500, t + dur);
+    gn.gain.value = g; s.connect(f).connect(gn).connect(c.destination); s.start(t);
+  },
+  burn: dur => { if (SHOW.fast) return; for (let i = 0; i < dur * 9; i++) noiseHit(i / 9 + rr(0, .08), .05, rr(1500, 4200), 2, rr(.03, .09)); },
+  hiss: () => { if (!SHOW.fast) noiseHit(0, .5, 5200, .7, .12, "highpass"); }
+};
+
+/* ---------- реквизит для огня: кружки, чайник, спички, блюдце ---------- */
+const MXF = { copper: std({ color: 0xc0703e, metalness: 1, roughness: .28, envMapIntensity: 1.5 }), silver: M.chrome };
+function mugV(side) {
+  const V = vessel([[0, 0], [.036, 0], [.037, .004], [.039, .09], [.041, .095]], MXF.silver, [.034, .037, .004, .09, 220]);
+  const h = new THREE.TorusGeometry(.026, .0055, 8, 18, Math.PI);
+  h.rotateZ(-side * Math.PI / 2); h.translate(side * .039, .048, 0);
+  V.g.add(new THREE.Mesh(h, MXF.silver));
+  V.handle = V3(side * .064, .048, 0);
+  V.side = side;
+  return V;
+}
+(() => {
+  P.mugA = mugV(-1); P.mugB = mugV(1);
+  // медный чайник с горячей водой
+  P.kettle = { g: new THREE.Group() };
+  const k = P.kettle.g;
+  k.add(new THREE.Mesh(lathe([[0, 0], [.055, 0], [.062, .03], [.06, .07], [.042, .095], [.02, .1], [.0, .102]], 28), MXF.copper));
+  mesh(new THREE.SphereGeometry(.009, 10, 8), M.brass, 0, .108, 0, k);
+  const sp = new THREE.CylinderGeometry(.006, .01, .09, 10); sp.rotateZ(-.85); sp.translate(.085, .07, 0);
+  k.add(new THREE.Mesh(sp, MXF.copper));
+  const hd = new THREE.TorusGeometry(.045, .006, 8, 18, Math.PI); hd.rotateY(Math.PI / 2); hd.translate(0, .1, 0);
+  k.add(new THREE.Mesh(hd, std({ color: 0x1a0c08, roughness: .5 })));
+  P.kettle.spout = V3(.123, .103, 0);
+  world.add(k); k.visible = false;
+  // спичечный коробок и спичка
+  P.mbox = new THREE.Group();
+  mesh(new THREE.BoxGeometry(.052, .014, .036), std({ color: 0x8a1a1a, roughness: .7 }), 0, 0, 0, P.mbox);
+  mesh(new THREE.BoxGeometry(.053, .0145, .03), std({ color: 0x3a2418, roughness: 1 }), 0, 0, 0, P.mbox);
+  mesh(new THREE.PlaneGeometry(.03, .02), std({ color: 0xe8d8b0, roughness: .8 }), 0, .0073, 0, P.mbox).rotation.x = -Math.PI / 2;
+  world.add(P.mbox); P.mbox.visible = false;
+  P.match = new THREE.Group();
+  mesh(new THREE.CylinderGeometry(.0013, .0013, .05, 6), std({ color: 0xe8d4a8, roughness: .8 }), 0, .0, 0, P.match);
+  P.matchHead = mesh(new THREE.SphereGeometry(.0028, 8, 6), std({ color: 0x9a1a14, roughness: .6 }), 0, .026, 0, P.match);
+  P.matchHead.scale.set(1, 1.3, 1);
+  world.add(P.match); P.match.visible = false;
+  // блюдце, которым гасят пламя
+  P.saucer = { g: new THREE.Group() };
+  P.saucer.g.add(new THREE.Mesh(lathe([[0, 0], [.04, 0], [.042, .004], [.072, .012], [.074, .015]], 32), MXF.silver));
+  world.add(P.saucer.g); P.saucer.g.visible = false;
+})();
+const FIRE_PROPS = () => [P.mugA.g, P.mugB.g, P.kettle.g, P.mbox, P.match, P.saucer.g];
+
+/* пар над горячим */
+function steam(at, n = 6, spread = .02) {
+  for (let i = 0; i < n; i++) {
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, opacity: 0, depthWrite: false, fog: false }));
+    s.position.copy(at).add(V3(rr(-spread, spread), 0, rr(-spread, spread))); s.scale.setScalar(.03); world.add(s);
+    const d = SHOW.fast ? .001 : rr(1.6, 2.6), dl = i * .18;
+    setTimeout(() => {
+      tween(s.material, { opacity: .32 }, .3).then(() => tween(s.material, { opacity: 0 }, d - .3));
+      tween(s.position, { y: s.position.y + rr(.14, .24), x: s.position.x + rr(-.03, .03) }, d, ease.out);
+      tween(s.scale, { x: .11, y: .11 }, d, ease.out).then(() => world.remove(s));
+    }, SHOW.fast ? 0 : dl * 1000);
+  }
+}
+
+/* горячая вода из чайника */
+async function stepHot(st) {
+  const ml = st[1] || 50, G = SHOW.glassV, K = P.kettle.g, R = bt.R;
+  await jiggerPark();
+  shot(choose(["side", "macro"]), mouth(G, .06));
+  bt.look = K.position;
+  await grip(R, K, { p: V3(0, .145, 0), r: .006, f: V3(1, 0, 0), n: V3(0, -1, 0), pose: "grip", along: .045 }, .45);
+  bt.look = mouth(G);
+  const col = new THREE.Color(0xd8e6ea), m0 = G.ml;
+  steam(K.localToWorld(P.kettle.spout.clone()), 3, .005);
+  await pourFrom(K, P.kettle.spout, () => surface(G), ml, col, { gap: rr(.04, .07), ang: -.95, rate: .9,
+    fill: k => { G.ml = m0 + ml * k; G.col.lerp(new THREE.Color(0xc89a6a), .02); setLevel(G); } });
+  cardLayer(col, ml);
+  steam(mouth(G, .01), 6, .025);
+  await move(K, ST.kettle, { q: Qe(0, 0, 0), dur: .55, arc: .05 });
+  letGo(R);
+  await rest(R);
+}
+
+/* зажечь спичку о коробок: левая держит коробок, правая чиркает */
+async function lightMatch(arm = bt.R, boxArm = bt.L) {
+  const box = P.mbox, mt = P.match;
+  place(box, ST.mbox, Qe(0, 0, 0));
+  place(mt, ST.mbox.clone().add(V3(.0, .012, .0)), Qz(Math.PI / 2));
+  await Promise.all([
+    grip(boxArm, box, { p: V3(0, 0, 0), r: .018, f: V3(0, 0, 1), n: V3(-boxArm.side, 0, 0), pose: "grip", along: .04 }, .4),
+    grip(arm, mt, { p: V3(0, -.012, 0), r: .002, f: V3(.2, -.4, .9).normalize(), n: V3(-arm.side * .95, 0, .2).normalize(), pose: "pinch", along: .065 }, .4)
+  ]);
+  const at = B(.02, 1.3, .36);
+  await Promise.all([move(box, at, { q: Qe(0, 0, Math.PI / 2), dur: .4, arc: .02 }), move(mt, at.clone().add(V3(-.04, .02, .02)), { q: Qz(-.4), dur: .4, arc: .02 })]);
+  // чирк по боковине
+  await move(mt, at.clone().add(V3(.0, .0, .025)), { dur: .1 });
+  FSND.strike();
+  await move(mt, at.clone().add(V3(-.08, .05, .03)), { q: Qz(-.2), dur: .12, e: ease.out });
+  const fl = flames(mt, V3(0, .028, 0), 3, .001, { blue: .34, h: .03 });
+  fl.size = 1.6; tween(fl, { size: 1 }, .4);
+  const flash = glowSprite(0xffc070, .18, 0, .028, 0, mt, .9);
+  tween(flash.material, { opacity: 0 }, .35).then(() => mt.remove(flash));
+  for (let i = 0; i < 6; i++) spark(mt.localToWorld(V3(0, .028, 0)), V3(rr(-.15, .15), rr(.05, .3), rr(-.1, .1)), rr(.2, .5));
+  await move(box, ST.mbox, { q: Qe(0, 0, 0), dur: .4, arc: .03 });
+  letGo(boxArm);
+  rest(boxArm);
+  return fl;
+}
+async function matchOut(fl, arm = bt.R) {
+  const mt = P.match, p = mt.position.clone();
+  for (let i = 0; i < 3; i++) await move(mt, p.clone().add(V3(i % 2 ? -.05 : .05, .01, 0)), { dur: .08 });
+  dropFlames(fl);
+  puff(mt.localToWorld(V3(0, .03, 0)), 2);
+  await move(mt, ST.mbox.clone().add(V3(.04, .01, -.02)), { q: Qz(Math.PI / 2), dur: .35, arc: .03 });
+  letGo(arm);
+  mt.visible = false;
+}
+
+/* одна огненная дуга: из кружки src в кружку dst */
+async function arcPass(src, dst, dur) {
+  const dir = Math.sign(dst.g.position.x - src.g.position.x) || 1;
+  const lip = V3(dir * src.mouthR, src.mouthY, 0);
+  await tiltAbout(src.g, lip, Qz(-dir * 1.95), .28, ease.in);
+  const from = () => src.g.localToWorld(lip.clone()), to = () => mouth(dst, .005);
+  ARC.on = true; ARC.k = 0; ARC_CORE.visible = false;
+  const m0s = src.ml, m0d = dst.ml;
+  FSND.whoosh(dur, .35); FSND.burn(dur);
+  await waitTicks(dur, k => {
+    ARC.p0.copy(from()); ARC.p2.copy(to());
+    ARC.p1.set(ARC.p0.x + (ARC.p2.x - ARC.p0.x) * .55, ARC.p0.y + .01, (ARC.p0.z + ARC.p2.z) / 2);
+    src.ml = m0s * (1 - k); dst.ml = m0d + m0s * k;
+    src.fire.size = .3 + .7 * (1 - k); dst.fire.size = Math.min(1, .2 + k * 1.2);
+  });
+  ARC.on = false; ARC.sp.forEach(s => { s.visible = false; });
+  await tiltAbout(src.g, lip, Qz(0), .26);
+}
+async function stepFire() {
+  const A = P.mugA, Bm = P.mugB, G = SHOW.glassV, R = bt.R, L = bt.L;
+  await jiggerPark();
+  shot("fire", B(0, 1.32, .38), 1);
+  showUI.root.classList.add("fire");
+  bt.look = mouth(A);
+  // свет в зале гаснет
+  FIRELT.exp0 = renderer.toneMappingExposure;
+  tween(renderer, { toneMappingExposure: FIRELT.exp0 * .4 }, SHOW.fast ? .001 : 1.4);
+  fireLight(true);
+  await ws(.4);
+  const mf = await lightMatch();
+  shot(choose(["macro", "low"]), mouth(A, .04));
+  bt.look = mouth(A);
+  // поджигаем коньяк в кружке
+  await move(P.match, mouth(A, .03).add(V3(-.02, 0, .01)), { q: Qz(-.9), dur: .45, arc: .03 });
+  A.fire = flames(A.g, V3(0, A.mouthY - .004, 0), 8, .022, { blue: .65, h: .095 });
+  Bm.fire = flames(Bm.g, V3(0, Bm.mouthY - .004, 0), 8, .022, { blue: .65, h: .095 });
+  A.fire.size = .2; Bm.fire.size = 0;
+  FSND.whoosh(.8, .55);
+  tween(A.fire, { size: 1 }, SHOW.fast ? .001 : .5, ease.out);
+  await ws(.35);
+  await matchOut(mf);
+  // кружки в руки
+  shot("fire", B(0, 1.34, .36), choose([-1, 1]));
+  bt.look = camera.position;
+  await Promise.all([grip(R, A.g, wrap(-1, A.handle, .006, { pose: "grip", along: .04 }), .4), grip(L, Bm.g, wrap(1, Bm.handle, .006, { pose: "grip", along: .04 }), .4)]);
+  const hi = y => [B(-.13, y, .34), B(.13, y, .36)], lo = y => [B(-.13, y, .36), B(.13, y, .37)];
+  await Promise.all([move(A.g, hi(1.5)[0], { dur: .5 }), move(Bm.g, lo(1.17)[1], { dur: .5 })]);
+  bt.look = mouth(Bm);
+  // четыре прохода, каждый выше прежнего
+  const passes = SHOW.fast ? 1 : 4;
+  let src = A, dst = Bm;
+  for (let i = 0; i < passes; i++) {
+    follow(B(0, 1.32 + i * .015, .36));
+    await arcPass(src, dst, rr(.95, 1.15));
+    [src, dst] = [dst, src];
+    if (i < passes - 1) {
+      const y = 1.53 + (i + 1) * .045;
+      const sp = src === A ? 0 : 1, dp = 1 - sp;
+      await Promise.all([move(src.g, hi(y)[sp], { dur: .42, e: ease.io }), move(dst.g, lo(1.17)[dp], { dur: .42, e: ease.io })]);
+      bt.look = mouth(dst);
+    }
+  }
+  // жидкость снова в кружке A (или переливаем в неё последним проходом)
+  if (src !== A) { await Promise.all([move(Bm.g, hi(1.48)[1], { dur: .4 }), move(A.g, lo(1.17)[0], { dur: .4 })]); await arcPass(Bm, A, .9); }
+  // в стакан: огонь ложится на поверхность
+  shot(choose(["macro", "low", "side"]), mouth(G, .08));
+  bt.look = mouth(G);
+  await Promise.all([move(Bm.g, ST.cap, { q: Qe(0, 0, 0), dur: .5, arc: .04 }), move(A.g, mouth(G, .12).add(V3(-.11, 0, 0)), { dur: .5, arc: .03 })]);
+  letGo(L); rest(L);
+  dropFlames(Bm.fire); Bm.fire = null;
+  G.fire = flames(G.g, V3(0, G.y1 * .75, 0), 9, .03, { blue: .8, h: .05 });
+  G.fire.size = 0;
+  const m0 = G.ml, ml = A.ml || 65, col = new THREE.Color(SHOW.c.pour);
+  {
+    const lip = V3(A.mouthR, A.mouthY, 0);
+    await tiltAbout(A.g, lip, Qz(-1.9), .3, ease.in);
+    ARC.on = true; ARC.k = 0;
+    FSND.burn(1);
+    await waitTicks(.9, k => {
+      ARC.p0.copy(A.g.localToWorld(lip.clone())); ARC.p2.copy(surface(G));
+      ARC.p1.set(ARC.p0.x + (ARC.p2.x - ARC.p0.x) * .6, ARC.p0.y, (ARC.p0.z + ARC.p2.z) / 2);
+      A.fire.size = 1 - k * .8; G.fire.size = Math.min(1, k * 1.4);
+      G.ml = m0 + ml * k; G.col.lerp(col, .06); setLevel(G);
+    });
+    ARC.on = false; ARC.sp.forEach(s => { s.visible = false; });
+    await tiltAbout(A.g, lip, Qz(0), .25);
+  }
+  dropFlames(A.fire); A.fire = null; A.ml = 0;
+  cardLayer(liqOf("cognac"), 65);
+  cardMix(SHOW.c.pour);
+  await move(A.g, ST.tin, { dur: .5, arc: .05 });
+  letGo(R);
+  // пламя в стакане: пауза для гостя
+  bt.look = camera.position;
+  follow(mouth(G, .05));
+  await ws(1.1);
+  // гасим: накрыть блюдцем
+  place(P.saucer.g, ST.saucer, Qe(0, 0, 0));
+  await grip(L, P.saucer.g, { p: V3(0, .012, -.07), r: .004, f: V3(0, 0, 1), n: V3(0, -1, 0), pose: "pinch", along: .055 }, .4);
+  await move(P.saucer.g, mouth(G, .05), { q: Qx(Math.PI), dur: .45, arc: .04 });
+  await move(P.saucer.g, mouth(G, .016), { dur: .14, e: ease.in });
+  SND.tap();
+  G.fire.size = 0; FSND.hiss();
+  await ws(.7);
+  await move(P.saucer.g, mouth(G, .09), { dur: .3 });
+  dropFlames(G.fire); G.fire = null;
+  puff(mouth(G, .02), 8);
+  steam(mouth(G, .01), 4, .02);
+  await move(P.saucer.g, ST.saucer, { q: Qe(0, 0, 0), dur: .45, arc: .04 });
+  letGo(L);
+  // свет возвращается
+  showUI.root.classList.remove("fire");
+  tween(renderer, { toneMappingExposure: FIRELT.exp0 }, SHOW.fast ? .001 : 1.6);
+  await Promise.all([rest(L), rest(R)]);
+}
+
+/* обожжённая цедра: масло апельсина вспыхивает над стаканом */
+async function stepFlameZest(gm, G) {
+  const R = bt.R, m = mouth(G);
+  const mf = await lightMatch(bt.L, bt.R);
+  // правая берёт цедру с доски
+  place(gm, ST.tray.clone().add(V3(-.05, .02, -.02)), Qe(0, 0, 0));
+  await grip(R, gm, { p: V3(0, 0, 0), r: .004, f: V3(.6, -.2, .75).normalize(), n: V3(.75, 0, -.6).normalize(), pose: "pinch", along: .062 }, .4);
+  // спичка между цедрой и стаканом
+  shot(choose(["macro", "side"]), m.clone().add(V3(0, .08, 0)));
+  bt.look = m;
+  const matchAt = m.clone().add(V3(.02, .08, .0)), zestAt = m.clone().add(V3(-.07, .1, 0));
+  await Promise.all([move(P.match, matchAt, { q: Qz(.5), dur: .45 }), move(gm, zestAt, { q: Qe(0, 0, -Math.PI / 2), dur: .5, arc: .03 })]);
+  await ws(.25);
+  // сжатие: вспышка через пламя
+  handPose(R, "fist");
+  FSND.whoosh(.45, .6);
+  for (let i = 0; i < 22; i++) {
+    const s = new THREE.Sprite(fireMat(false)); s.center.set(.5, .5);
+    s.position.copy(zestAt).add(V3(.02, rr(-.01, .01), rr(-.01, .01))); s.scale.setScalar(.02); s.renderOrder = 8; world.add(s);
+    const to = matchAt.clone().add(V3(rr(.0, .07), rr(-.04, .04), rr(-.03, .03)));
+    const d = SHOW.fast ? .001 : rr(.22, .4);
+    tween(s.position, { x: to.x, y: to.y, z: to.z }, d, ease.out);
+    tween(s.scale, { x: rr(.05, .09), y: rr(.06, .11) }, d, ease.out);
+    tween(s.material, { opacity: 0 }, d * 1.3, ease.in).then(() => world.remove(s));
+    if (i % 2) spark(matchAt.clone(), V3(rr(-.1, .3), rr(-.05, .25), rr(-.1, .1)), rr(.3, .7));
+  }
+  if (FIRELT.on) FIRELT.lev = 1.6;
+  const flash = glowSprite(0xffb050, .35, matchAt.x, matchAt.y, matchAt.z, world, .9);
+  tween(flash.material, { opacity: 0 }, .5).then(() => world.remove(flash));
+  await ws(.5);
+  await matchOut(mf, bt.L);
+  rest(bt.L);
+  // цедру — по краю и в стакан
+  handPose(R, "pinch");
+  const rw = G.mouthR * G.scale;
+  await move(gm, m.clone().add(V3(-rw, .01, 0)), { q: Qe(0, 0, -Math.PI / 2.4), dur: .35 });
+  await move(gm, m.clone().add(V3(0, .01, rw * .9)), { q: Qe(Math.PI / 2, 0, -Math.PI / 2.4), dur: .35 });
+  letGo(R, "open");
+  const dst = G.g.localToWorld(V3(.01, G.y0 + (G.y1 - G.y0) * .55, 0));
+  await tween(gm.position, { x: dst.x, y: dst.y, z: dst.z }, SHOW.fast ? .001 : .25, ease.in);
+  SND.plop();
+}
+
 /* ---------- сцена целиком ---------- */
 const STEP = {
   ice: stepIce, jig: stepJig, pour: st => stepPour(st), top: st => stepPour(st, true), dash: stepDash, shake: stepShake, stir: stepStir,
   strain: stepStrain, stirIn: stepStirIn, leaves: stepLeaves, muddle: stepMuddle, squeeze: stepSqueeze, rim: stepRim, float: stepFloat,
-  garnish: (st, c) => stepGarnish(c), serve: stepServe
+  garnish: (st, c) => stepGarnish(c), serve: stepServe, hot: stepHot, fire: stepFire
 };
 function buildGlass(c) {
   const cup = CUPS[c.cup] || CUPS.rocks;
@@ -1123,10 +1549,15 @@ async function setupStation(c) {
   place(P.strainer.g, ST.strainer);
   P.jig.liq.visible = false;
   const prog = PROG()[c.id] || [];
-  const shaken = prog.some(s => s[0] === "shake"), stirred = prog.some(s => s[0] === "stir");
-  SHOW.main = shaken ? P.tin : stirred ? P.mixer : null;
+  const shaken = prog.some(s => s[0] === "shake"), stirred = prog.some(s => s[0] === "stir"), fiery = prog.some(s => s[0] === "fire");
+  SHOW.main = fiery ? P.mugA : shaken ? P.tin : stirred ? P.mixer : null;
   if (shaken) { place(P.tin.g, ST.tin); place(P.cap.g, ST.cap); }
   if (stirred) place(P.mixer.g, ST.tin);
+  if (fiery) {
+    resetVessel(P.mugA); resetVessel(P.mugB);
+    place(P.mugA.g, ST.tin); place(P.mugB.g, ST.cap); place(P.kettle.g, ST.kettle); place(P.mbox, ST.mbox); place(P.saucer.g, ST.saucer);
+    P.bucket.g.visible = P.scoop.g.visible = false;
+  }
   if (SHOW.glassV) world.remove(SHOW.glassV.g);
   SHOW.glassV = buildGlass(c);
   place(SHOW.glassV.g, ST.glass);
@@ -1148,6 +1579,12 @@ function cleanup(c, aborted) {
   for (const a of [bt.L, bt.R]) { a.manual = false; a.snap = false; a.k = 9; }
   streamOff(); tagOff();
   jigOn = false;
+  for (const F of [...CLUSTERS]) dropFlames(F);
+  ARC.on = false; ARC.sp.forEach(s => { s.visible = false; });
+  for (const t of tweens) if (t.obj === renderer) tweens.delete(t);
+  showUI.root.classList.remove("fire");
+  if (FIRELT.on) { fireLight(false); renderer.toneMappingExposure = FIRELT.exp0 || 1.2; }
+  for (const V of [P.mugA, P.mugB]) V.fire = null;
   BT.nod = 0; bt.nod = 0; bt.tilt = 0;
   world.attach(P.cap.g); world.attach(P.strainer.g);
   PROPS().forEach(o => { o.visible = false; o.quaternion.identity(); });

@@ -108,7 +108,10 @@
     .sc-list li { font-size: 12px; padding: 2px 5px; gap: 5px; grid-template-columns: 7px 1fr auto; }
     .sc-list li .a { font-size: 11px; }
     .show-tag { font-size: 14px; padding: 5px 10px; }
+    /* во время огненной струи карточка уходит: на узком экране ей не место над пламенем */
+    .show-ui.fire .show-card { opacity: 0; }
   }
+  .show-card { transition: opacity .5s; }
   @keyframes cap-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
   .app.showing .hud, .app.showing .zone-title, .app.showing #order { opacity: 0; visibility: hidden; }
   .hud { transition: opacity .6s, visibility .6s; }

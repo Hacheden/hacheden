@@ -144,6 +144,7 @@
     mint: `<g transform="translate(0 9)"><path d="M0 0C-10 -6 -12 -18 -4 -24C2 -16 4 -6 0 0Z" fill="#3f8f3a"/><path d="M2 -2C10 -10 20 -10 24 -4C16 0 8 2 2 -2Z" fill="#4fa548"/><path d="M-2 -2C-12 -6 -20 -2 -22 4C-14 6 -6 4 -2 -2Z" fill="#357d31"/></g>`,
     cherry: `<path d="M0 -4C4 -14 10 -20 16 -24" stroke="#5a3a1a" stroke-width="1.6" fill="none"/><circle r="7" fill="#a3122a"/><circle cx="-2.5" cy="-2.5" r="1.8" fill="#ff8a9a"/>`,
     pineapple: `<g transform="translate(0 12)"><path d="M-12 2L12 2L0 -16Z" fill="#f2c94c"/><path d="M0 -16L-6 -27M0 -16V-29M0 -16L6 -27" stroke="#3f8f3a" stroke-width="3" stroke-linecap="round"/></g>`,
+    flame: `<path d="M-15 -6C-8 -16 4 6 15 -6C10 4 -4 -2 -15 6Z" fill="#e98a1a"/><path d="M-13 -4C-6 -11 4 4 12 -4" stroke="#f6c070" stroke-width="1.4" fill="none"/>`,
     olive: `<path d="M-16 -22L12 20" stroke="#c9b48a" stroke-width="1.6"/><ellipse cy="4" rx="6.5" ry="8.5" fill="#7a8a2a"/><circle cy="0" r="2.2" fill="#b3263e"/>`
   };
   function glassSVG(d, opt = {}) {
@@ -961,6 +962,7 @@
       cognac: { kind: "squat", glass: "#2a1a0e", liq: "#b8651a", label: "#1b1210", ink: "#e2b866", name: "КОНЬЯК" },
       wine: { kind: "wine", glass: "#1f2c1d", liq: "#6b0f24", label: "#eadcbc", ink: "#4a0f1c", name: "ВИНО" },
       triple: { kind: "squat", glass: "#c9752a", op: .8, liq: "#f3e9c8", label: "#2a1a10", ink: "#f2b25a", name: "ЛИКЁР" },
+      cherry: { kind: "squat", glass: "#3a0610", op: .92, liq: "#7a0f1e", label: "#14080a", ink: "#e2b866", name: "ВИШНЯ" },
       campari: { kind: "spirit", glass: "#b3122e", op: .85, liq: "#c8102e", label: "#f1e4cc", ink: "#8a0c22", name: "КАМПАРИ" },
       vermouthR: { kind: "wine", glass: "#3a0f10", liq: "#7a1a14", label: "#e8d9b8", ink: "#5a0f12", name: "ВЕРМУТ" },
       vermouthD: { kind: "wine", glass: "#2a3a26", liq: "#eeecc8", label: "#e8d9b8", ink: "#2a3a26", name: "СУХОЙ" },
@@ -1324,15 +1326,16 @@
       "c-sour": [["ice", "tin"], ["jig", "whisky", 45], ["jig", "lemon", 25], ["jig", "syrup", 20], ["shake"], ["ice", "glass"], ["strain"], ["garnish"]],
       "c-sidecar": [["ice", "tin"], ["jig", "cognac", 50], ["jig", "triple", 20], ["jig", "lemon", 20], ["shake"], ["strain"], ["garnish"]],
       "c-sangria": [["ice", "glass"], ["pour", "wine", 150], ["pour", "oj", 50], ["top", "soda"], ["stirIn"], ["garnish"]],
+      "c-hacheden": [["pour", "syrup", 10], ["hot", 50], ["jig", "cognac", 50], ["jig", "cherry", 15], ["fire"], ["garnish"]],
       "c-nojito": [["leaves"], ["jig", "lime", 20], ["jig", "syrup", 15], ["muddle"], ["ice", "glass", true], ["top", "soda"], ["stirIn"], ["garnish"]]
     };
-    const GEN = { rum: "рома", tequila: "текилы", gin: "джина", whisky: "виски", cognac: "коньяка", wine: "вина", triple: "апельсинового ликёра",
+    const GEN = { rum: "рома", tequila: "текилы", gin: "джина", whisky: "виски", cognac: "коньяка", wine: "вина", triple: "апельсинового ликёра", cherry: "вишнёвого ликёра",
       campari: "кампари", vermouthR: "красного вермута", vermouthD: "сухого вермута", bitters: "ангостуры", tonic: "тоника", soda: "содовой",
       cola: "колы", oj: "апельсинового сока", pineapple: "ананасового сока", coconut: "кокосовых сливок", lime: "сока лайма",
       lemon: "лимонного сока", syrup: "сахарного сиропа", grenadine: "гренадина" };
     const TOPACC = { soda: "содовую", tonic: "тоник", cola: "колу" };
     const GNAME = { wheel: "кружок лайма", wedge: "долька лайма", orange: "кружок апельсина", lemon: "лимонная цедра", mint: "веточка мяты",
-      cherry: "коктейльная вишня", pineapple: "долька ананаса", olive: "оливка на шпажке" };
+      cherry: "коктейльная вишня", pineapple: "долька ананаса", olive: "оливка на шпажке", flame: "обожжённая апельсиновая цедра" };
     function stepText(st) {
       switch (st[0]) {
         case "ice": return st[2] ? "Засыпаем колотый лёд" : st[1] === "tin" ? "Кладём лёд в шейкер" : st[1] === "mixer" ? "Наполняем стакан для смешивания льдом" : "Наполняем бокал льдом";
@@ -1542,16 +1545,22 @@
 /* ---------- коктейли ---------- */
   const ING = [
     ["Крепкое", [["wine", "Вино"], ["cognac", "Коньяк"], ["rum", "Ром"], ["whisky", "Виски"], ["gin", "Джин"], ["tequila", "Текила"]]],
-    ["Ликёры и вермуты", [["triple", "Апельсиновый ликёр"], ["campari", "Кампари"], ["vermouthR", "Красный вермут"], ["vermouthD", "Сухой вермут"], ["bitters", "Ангостура"]]],
+    ["Ликёры и вермуты", [["triple", "Апельсиновый ликёр"], ["cherry", "Вишнёвый ликёр"], ["campari", "Кампари"], ["vermouthR", "Красный вермут"], ["vermouthD", "Сухой вермут"], ["bitters", "Ангостура"]]],
     ["Соки и газировка", [["tonic", "Тоник"], ["soda", "Содовая"], ["cola", "Кола"], ["oj", "Апельсиновый сок"], ["pineapple", "Ананасовый сок"], ["coconut", "Кокосовые сливки"]]],
     ["Свежее и сиропы", [["lime", "Лайм"], ["lemon", "Лимон"], ["mint", "Мята"], ["syrup", "Сахарный сироп"], ["grenadine", "Гренадин"]]]
   ];
   const ING_NAME = Object.fromEntries(ING.flatMap(([, items]) => items));
   const low = id => ING_NAME[id].toLowerCase();
-  const METHOD = { shake: "встряхнуть в шейкере", stir: "размешать со льдом", build: "собрать прямо в бокале" };
+  const METHOD = { shake: "встряхнуть в шейкере", stir: "размешать со льдом", build: "собрать прямо в бокале", fire: "поджечь и перелить огненной струёй" };
   const GLASS_NAME = { highball: "высокий стакан", rocks: "рокс", coupe: "шампанское блюдце", martini: "коктейльный бокал", wine: "винный бокал" };
   const BASES = [["rum", "С ромом"], ["tequila", "С текилой"], ["gin", "С джином"], ["whisky", "С виски"], ["cognac", "С коньяком"], ["wine", "С вином"], ["none", "Без алкоголя"]];
   const COCKTAILS = [
+    { id: "c-hacheden", name: "Hacheden", base: "cognac", origin: "Наш бар", method: "fire", need: ["cognac", "cherry", "syrup"], signature: true,
+      cup: "rocks", pour: "#8e2a16", pourOp: .92, pourLevel: 62, garnish: "flame",
+      tagline: "Горящий коньяк с вишней и цедрой, обожжённой над пламенем",
+      history: "Фирменный коктейль нашего бара. Огненная подача — дань «Блю Блейзеру» Джерри Томаса: в его книге 1862 года, первом пособии для барменов, горящий виски переливают между двумя кружками, и выходит «непрерывная струя жидкого огня». Апельсиновую цедру поджигают над бокалом: этот приём первым стал делать для коктейлей Пепе Руис из бара Chasen's в Лос-Анджелесе, а прославил Дейл ДеГрофф.",
+      recipe: [["50 мл", "коньяка"], ["15 мл", "вишнёвого ликёра"], ["10 мл", "сахарного сиропа"], ["50 мл", "горячей воды"], ["1", "апельсиновая цедра"]],
+      steps: "В стакан — сироп и горячую воду. Коньяк с вишнёвым ликёром слегка подогревают в металлической кружке и поджигают. Горящую смесь несколько раз переливают высокой струёй во вторую кружку и обратно, выливают в стакан и гасят, накрыв кружкой. Над стаканом сжимают цедру через пламя спички. Огненную подачу делают только опытные бармены: дома не повторяйте." },
     { id: "c-mojito", name: "Мохито", base: "rum", origin: "Куба", method: "build", need: ["rum", "lime", "syrup", "mint", "soda"],
       cup: "highball", pour: "#dfeccb", pourOp: .55, pourLevel: 30, garnish: "mint",
       tagline: "Освежающий ром с мятой и лаймом",
@@ -1697,7 +1706,8 @@
   }
   function renderMenu() {
     mixN = 100;
-    document.getElementById("panel-menu").innerHTML = BASES.map(([base, title]) => {
+    const sig = COCKTAILS.filter(c => c.signature);
+    document.getElementById("panel-menu").innerHTML = (sig.length ? `<h3 class="sig">Фирменный</h3><ul class="drinks sig">${sig.map(c => drinkRow(c, `<span class="sig-note">${c.tagline}</span>`, makeBtn(c))).join("")}</ul>` : "") + BASES.map(([base, title]) => {
       const list = COCKTAILS.filter(c => c.base === base);
       return list.length ? `<h3>${title}</h3><ul class="drinks">${list.map(c => drinkRow(c, "", makeBtn(c))).join("")}</ul>` : "";
     }).join("");

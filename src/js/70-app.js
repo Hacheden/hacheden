@@ -5,7 +5,9 @@ const ZONES = [
   { name: "Бар", sub: "Бармен на месте, лёд уже в ведёрке", pos: [0, 1.95, 1.45], tgt: [0, 1.48, -4.6], span: 7.0, pull: 3.0,
     hint: "Нажми на бутылку или сядь за стойку: бармен подберёт коктейль под настроение." },
   { name: "Курилка", sub: "Камин, кожаные кресла и дверь, в которую лучше постучать", pos: [2.8, 1.6, 1.65], tgt: [7.3, 1.05, -1.9], span: 5.6, pull: 2.4,
-    hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." }
+    hint: "Постучи в дверь, заведи граммофон или подбрось дров в камин." },
+  { name: "Сцена", sub: BAND_HERE ? "Джаз-бэнд: фортепиано, саксофон, контрабас и щётки" : "Музыканты выходят на сцену в 19:00", pos: [-2.7, 1.62, .55], tgt: [-4.85, 1.22, 5.0], span: 5.0, pull: 2.2,
+    hint: "Каждая нота, которую ты слышишь, сыграна на сцене. Кликни по музыканту — он что-нибудь расскажет." }
 ];
 ZONES[0].sub = SEASON_INFO[SEASON].nook;
 if (SEASON === "summer") ZONES[2].hint = "Постучи в дверь или заведи граммофон. Летом камин не топят: в нём горят свечи.";
@@ -82,11 +84,11 @@ function renderZoneUI(i) {
   });
 }
 function goZone(i, dur = 1.9) {
-  i = clamp(i, 0, 2);
+  i = clamp(i, 0, ZONES.length - 1);
   leaveSeat();
   const same = i === curZone;
   curZone = i; cur = i;
-  Music.room(i);
+  Music.room(i === 3 ? 4 : i);
   if (mixDlg.open && i !== 1) mixDlg.close();
   renderZoneUI(i);
   tween(LIGHTS.fill.position, { x: FILL_AT[i].x, y: FILL_AT[i].y, z: FILL_AT[i].z }, same ? .1 : dur);

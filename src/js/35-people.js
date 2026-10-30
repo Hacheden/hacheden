@@ -230,7 +230,7 @@ function makeFigure(o) {
       merged(slim ? [cuff, cuff2] : [cuff], mWhite, fo);
     } else {
       merged(fp, mSleeve, fo);
-      const cuff = taper(.037, .036, .03); cuff.translate(0, -LB + .02, 0);
+      const cuff = slim ? taper(.029, .028, .03) : taper(.037, .036, .03); cuff.translate(0, -LB + .02, 0);
       merged([cuff], mWhite, fo);
     }
     const hand = group(0, -LB, 0, fo);
@@ -270,8 +270,8 @@ function makeFigure(o) {
 /* место и направление фигуры */
 function placeFig(F, x, z, face) { F.x = F.tx = x; F.z = F.tz = z; F.face = F.tface = face; F.root.position.set(x, 0, z); F.root.rotation.y = face; for (const lg of F.legs) lg.stepT = 1; F._init = false; }
 /* перевод точки из мира в систему фигуры и обратно */
-function toFig(F, p, out = V3()) { const c = Math.cos(-F.face), s = Math.sin(-F.face), dx = p.x - F.x, dz = p.z - F.z; return out.set(dx * c + dz * s, p.y, -dx * s + dz * c); }
-function fromFig(F, p, out = V3()) { const c = Math.cos(F.face), s = Math.sin(F.face); return out.set(F.x + p.x * c + p.z * s, p.y, F.z - p.x * s + p.z * c); }
+function toFig(F, p, out = V3()) { const c = Math.cos(-F.face), s = Math.sin(-F.face), dx = p.x - F.x, dz = p.z - F.z; return out.set(dx * c + dz * s, p.y - (F.y0 || 0), -dx * s + dz * c); }
+function fromFig(F, p, out = V3()) { const c = Math.cos(F.face), s = Math.sin(F.face); return out.set(F.x + p.x * c + p.z * s, p.y + (F.y0 || 0), F.z - p.x * s + p.z * c); }
 /* задать цель руке: точка в системе фигуры; f — куда смотрят пальцы, p — куда ладонь */
 function reach(arm, x, y, z, f, p, curl) {
   arm.tgt.set(x, y, z);
@@ -388,7 +388,7 @@ function updateFigure(F, t, dt) {
   if (F.faceWalk && F.speed > .25 && dist > .15) faceT = Math.atan2(vx, vz);
   let df = Math.atan2(Math.sin(faceT - F.face), Math.cos(faceT - F.face));
   F.face += df * smoothK(6, dt);
-  F.root.position.set(F.x, 0, F.z);
+  F.root.position.set(F.x, F.y0 || 0, F.z);
   F.root.rotation.y = F.face;
   // тело: дыхание, наклон, поворот плеч в сторону взгляда
   F.breath += dt;

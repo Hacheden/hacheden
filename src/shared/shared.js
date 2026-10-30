@@ -228,7 +228,7 @@
   ];
   const MELODY = [72, 74, 76, 79, 81, 84];
 
-  function createBand(ctx, out) {
+  function createBand(ctx, out, emit = () => {}) {
     const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
@@ -252,7 +252,9 @@
     }
     function chord(c, t, dur, vel) {
       c.notes.forEach((n, i) => keys(n, t + i * .018 + Math.random() * .01, dur, vel * (1 - i * .08)));
+      emit({ i: "piano", kind: "chord", notes: c.notes, t, dur, vel });
     }
+    function mel(m, t, dur, vel) { keys(m, t, dur, vel); emit({ i: "piano", kind: "mel", notes: [m], t, dur, vel }); }
     function bass(m, t, dur) {
       const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
       o.type = "triangle"; o.frequency.value = mtof(m);
@@ -263,6 +265,55 @@
       g.gain.exponentialRampToValueAtTime(.0001, t + dur);
       o.connect(lp).connect(g).connect(out);
       o.start(t); o.stop(t + dur + .05);
+      emit({ i: "bass", m, t, dur });
+    }
+    /* тенор-саксофон: два генератора, мягкий фильтр, подъезд к ноте, вибрато и дыхание */
+    function sax(m, t, dur, vel = .05) {
+      const f = mtof(m), sum = ctx.createGain(), lp = ctx.createBiquadFilter(), pk = ctx.createBiquadFilter(), g = ctx.createGain();
+      const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), a1 = ctx.createGain(), a2 = ctx.createGain();
+      o1.type = "sawtooth"; o2.type = "square"; o2.detune.value = 6;
+      for (const o of [o1, o2]) { o.frequency.setValueAtTime(f * .97, t); o.frequency.exponentialRampToValueAtTime(f, t + .06); }
+      a1.gain.value = .55; a2.gain.value = .22;
+      o1.connect(a1).connect(sum); o2.connect(a2).connect(sum);
+      const vib = ctx.createOscillator(), vg = ctx.createGain();
+      vib.frequency.value = 5.2; vg.gain.setValueAtTime(0, t); vg.gain.linearRampToValueAtTime(f * .0045, t + Math.min(dur, .45));
+      vib.connect(vg); vg.connect(o1.frequency); vg.connect(o2.frequency);
+      lp.type = "lowpass"; lp.Q.value = 1.1;
+      lp.frequency.setValueAtTime(650, t); lp.frequency.linearRampToValueAtTime(2300, t + .05); lp.frequency.exponentialRampToValueAtTime(1350, t + .35);
+      pk.type = "peaking"; pk.frequency.value = 1150; pk.Q.value = 1.2; pk.gain.value = 5;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel, t + .035); g.gain.linearRampToValueAtTime(vel * .78, t + .2);
+      g.gain.setValueAtTime(vel * .78, t + Math.max(.2, dur - .06)); g.gain.linearRampToValueAtTime(.0001, t + dur + .09);
+      sum.connect(lp).connect(pk).connect(g).connect(out);
+      const n = ctx.createBufferSource(), nb = ctx.createBiquadFilter(), ng = ctx.createGain();
+      n.buffer = noise; nb.type = "bandpass"; nb.frequency.value = 2600; nb.Q.value = .8;
+      ng.gain.setValueAtTime(vel * .3, t); ng.gain.exponentialRampToValueAtTime(.0001, t + .09);
+      n.connect(nb).connect(ng).connect(out); n.start(t, Math.random() * .5, .12);
+      for (const o of [o1, o2, vib]) { o.start(t); o.stop(t + dur + .15); }
+      emit({ i: "sax", m, t, dur });
+    }
+    // фразы саксофона: ступени до мажора, на сильных долях — звуки аккорда
+    const SAX_SCALE = [55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72, 74];
+    const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+    const SX = { left: 0, rest: 0, idx: 6 };
+    function saxStep(step, t, beat, c) {
+      const k = step % 16, strong = k % 4 === 0;
+      if (SX.rest > 0) { SX.rest--; return; }
+      if (SX.left <= 0) { SX.left = 5 + Math.floor(Math.random() * 7); emit({ i: "sax", kind: "breath", t }); }
+      SX.left--;
+      const last = SX.left === 0;
+      if (!last && !strong && Math.random() < .22) return;
+      let idx = clamp(SX.idx + Math.round((Math.random() - .45) * 3.2), 0, SAX_SCALE.length - 1);
+      if (strong) {
+        const tones = c.notes.map(n => n % 12);
+        for (let d = 0; d < 3; d++) {
+          if (tones.includes(SAX_SCALE[clamp(idx + d, 0, 11)] % 12)) { idx = clamp(idx + d, 0, 11); break; }
+          if (tones.includes(SAX_SCALE[clamp(idx - d, 0, 11)] % 12)) { idx = clamp(idx - d, 0, 11); break; }
+        }
+      }
+      SX.idx = idx;
+      const dur = last ? beat * (1.4 + Math.random()) : beat * (step % 2 ? .38 : .62);
+      sax(SAX_SCALE[idx], t, dur, last ? .055 : .045);
+      if (last) SX.rest = 3 + Math.floor(Math.random() * 6);
     }
     function brush(t, v) {
       const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -271,6 +322,7 @@
       g.gain.exponentialRampToValueAtTime(.0001, t + .16);
       s.connect(f).connect(g).connect(out);
       s.start(t, Math.random() * .7, .2);
+      emit({ i: "brush", t, v });
     }
     function kick(t, v) {
       const o = ctx.createOscillator(), g = ctx.createGain();
@@ -280,6 +332,7 @@
       g.gain.exponentialRampToValueAtTime(.0001, t + .32);
       o.connect(g).connect(out);
       o.start(t); o.stop(t + .35);
+      emit({ i: "kick", t, v });
     }
     // треск пластинки
     function crackle() {
@@ -310,7 +363,11 @@
       if (pos === 5 && Math.random() < .3) kick(t, .09);
       if (pos === 2 || pos === 6) brush(t, .045);
       else if (Math.random() < .55) brush(t, .012 + Math.random() * .01);
-      if (k !== 0 && Math.random() < .09) keys(MELODY[Math.floor(Math.random() * MELODY.length)], t, 1.4, .03);
+      // каждые восемь тактов солирует то фортепиано, то саксофон
+      const saxTurn = Math.floor(step / 64) % 2 === 1;
+      if (saxTurn) saxStep(step, t, beat, c);
+      else { SX.left = 0; SX.rest = 0; }
+      if (k !== 0 && Math.random() < (saxTurn ? .025 : .09)) mel(MELODY[Math.floor(Math.random() * MELODY.length)], t, 1.4, .03);
     }
     return { play, crackle };
   }
@@ -320,9 +377,10 @@
     let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
     // погода за окном: громкость дождя, сверчков, ветра и камина; меняется по сезону
     const WX = { rain: .32, crickets: 0, wind: 0, fire: .5 };
+    const NOTE = [];
     // погоду слышно у окна читальни (0) и громче всего на улице (3)
     const outside = () => roomIdx === 0 ? 1 : roomIdx === 3 ? 1.8 : 0;
-    const roomFreq = () => roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
+    const roomFreq = () => roomIdx === 4 ? 6200 : roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // 4 — у самой сцены   // в соседних комнатах музыка звучит глуше, как из-за стены
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
       for (let ch = 0; ch < 2; ch++) {
@@ -344,7 +402,7 @@
       tone.connect(dry).connect(master);
       tone.connect(wet).connect(verb).connect(master);
       master.connect(comp).connect(ctx.destination);
-      band = createBand(ctx, tone);
+      band = createBand(ctx, tone, e => { for (const f of NOTE) f(e); });
       band.crackle();
       // треск камина: слышен только в курилке
       fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? WX.fire : 0;
@@ -470,7 +528,7 @@
       src.buffer = b; lp.type = "lowpass"; lp.frequency.value = 260; g.gain.value = 1.4;
       src.connect(lp).connect(g).connect(master); src.start();
     }
-    return { start, stop, room, weather, beat, shake, thunder, get on() { return on; } };
+    return { start, stop, room, weather, beat, shake, thunder, get on() { return on; }, onNote: f => NOTE.push(f), time: () => ctx ? ctx.currentTime : 0 };
   })();
 
   const musicBtn = document.getElementById("music");

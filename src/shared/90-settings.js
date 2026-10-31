@@ -54,6 +54,16 @@
       ${swRow("saver", "Режим экономии", "для слабых телефонов: проще картинка, 30 кадров, без эффектов")}
       <p class="note" id="set-reload"${needReload ? "" : " hidden"}>Часть изменений полностью применится после перезагрузки страницы.
         <button class="clear" type="button" data-reload>Перезагрузить</button></p>
+      ${H3D.owner ? (() => {
+        const qs = new URLSearchParams(location.search), t = qs.get("time") || "", s = qs.get("season") || "";
+        const tb = (v, l) => `<button class="chip" type="button" data-demo-time="${v}" aria-pressed="${t === v}">${l}</button>`;
+        const sb = (v, l) => `<button class="chip" type="button" data-demo-season="${v}" aria-pressed="${s === v}">${l}</button>`;
+        return `<h3>Демо (только хозяину)</h3>
+        <p class="note">Посмотреть бар в любое время суток и сезон. Гости этого не видят: для них бар живёт по настоящим часам.</p>
+        <div class="row" style="grid-template-columns:1fr"><span class="lbl">Время</span><div class="seg">${tb("", "Сейчас")}${tb("17:30", "17:30 открытие")}${tb("20:30", "20:30")}${tb("23:30", "23:30")}${tb("01:30", "01:30")}${tb("02:58", "02:58 закрытие")}</div></div>
+        <div class="row" style="grid-template-columns:1fr"><span class="lbl">Сезон</span><div class="seg">${sb("", "Как сейчас")}${sb("winter", "Зима")}${sb("spring", "Весна")}${sb("summer", "Лето")}${sb("autumn", "Осень")}</div></div>
+        <div class="acts"><button class="make ghost" type="button" data-demo-coach>Показать знакомство с управлением</button></div>`;
+      })() : ""}
       <div class="acts"><button class="make ghost${resetArm ? " warn" : ""}" type="button" data-reset>${resetArm ? "Точно сбросить? Нажмите ещё раз" : "Сбросить настройки"}</button></div>
       <p class="note">Настройки хранятся только в этом браузере.</p>`;
   }
@@ -90,7 +100,13 @@
       if (q !== SET.quality || m !== SET.motion) needReload = true;
       renderSettings();
       toast("Настройки сброшены", "Вернули всё как было по умолчанию");
-    } else if ("reload" in b.dataset) location.reload();
+    } else if (b.dataset.demoTime != null || b.dataset.demoSeason != null) {
+      const u = new URL(location.href);
+      const k = b.dataset.demoTime != null ? "time" : "season", v = b.dataset.demoTime ?? b.dataset.demoSeason;
+      if (v) u.searchParams.set(k, v); else u.searchParams.delete(k);
+      location.href = u.toString();
+    } else if ("demoCoach" in b.dataset) { setDlg.close(); if (H3D.coach) H3D.coach(); }
+    else if ("reload" in b.dataset) location.reload();
     else if ("openPlayer" in b.dataset) { setDlg.close(); openPlayer(); }
   });
   setDlg.addEventListener("close", () => { resetArm = false; });

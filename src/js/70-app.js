@@ -371,20 +371,22 @@ function tick(now) {
   if (DUST.p.visible) DUST.g.attributes.position.needsUpdate = true;
   for (const fn of tickers) fn(t, dt);
 
-  if (!TEST) renderer.render(scene, camera);
+  if (!TEST) POST.render(dt);
   // если тормозит: уменьшаем разрешение
   if (started) {
     frames++;
     slowAcc += dt; slowN++;
     if (slowN >= 90) {
       const fps = slowN / slowAcc;
-      if (fps < 40 && DPR > .85) { DPR = Math.max(.85, DPR - .25); renderer.setPixelRatio(DPR); }
+      // сначала упрощаем эффекты, потом уменьшаем разрешение
+      if (fps < 40 && !POST.degrade() && DPR > .85) { DPR = Math.max(.85, DPR - .25); renderer.setPixelRatio(DPR); POST.setSize(); }
       slowAcc = 0; slowN = 0;
     }
   }
 }
 function resize() {
   renderer.setSize(innerWidth, innerHeight, false);
+  POST.setSize();
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   if (started && !flight) setCam(SEAT.on ? seatShot() : framed(curZone, nudge));
@@ -400,12 +402,13 @@ CAM.fov = framed(1).fov;
 progress(.7);
 bakeEnvironment();
 renderer.compile(scene, camera);
-renderer.render(scene, camera);
+POST.render();
 progress(1);
 H3D.ready = true;
 H3D.bt = bt; H3D.figs = FIGS; H3D.BT = BT;
 H3D.cam = (p, t, fov = 40) => { flight = null; setCam({ px: p[0], py: p[1], pz: p[2], tx: t[0], ty: t[1], tz: t[2], fov }); };
-H3D.render = () => renderer.render(scene, camera);
+H3D.render = () => POST.render();
+H3D.post = POST;
 H3D.info = () => ({ calls: renderer.info.render.calls, tris: renderer.info.render.triangles, geos: renderer.info.memory.geometries, tex: renderer.info.memory.textures, dpr: DPR, zone: curZone, busy, btBusy: BT.busy });
 renderZoneUI(1);
 requestAnimationFrame(tick);

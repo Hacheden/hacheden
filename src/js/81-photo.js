@@ -12,7 +12,7 @@ function shutter() {
 }
 /* снимок: кадр 3D-сцены и имена посетителей рядом */
 function capture() {
-  renderer.render(scene, camera);
+  POST.render(0);
   const src = renderer.domElement, W = src.width, H = src.height;
   const raw = document.createElement("canvas"); raw.width = W; raw.height = H;
   raw.getContext("2d").drawImage(src, 0, 0);

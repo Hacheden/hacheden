@@ -15,6 +15,7 @@ applyEffects();
 onSetting(k => {
   if (k === "effects" || k === "saver") applyEffects();
   if (k === "quality" || k === "saver") { DPR = Math.min(devicePixelRatio || 1, dprCap()); renderer.setPixelRatio(DPR); resize(); }
+  if (k === "quality" || k === "saver") { const t = SET.saver || SET.quality === "low" ? 0 : SET.quality === "high" ? 2 : SET.quality === "medium" ? 1 : QUALITY > 1 ? 2 : 1; POST.tier = Math.min(t, 2); bloom.enabled = t >= 1; }
   if (k === "mood") applyTime();
 });
 

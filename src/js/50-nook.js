@@ -208,7 +208,7 @@ function lightning() {
   if (STILL) return;
   NOOK.flash = 1;
   setTimeout(() => { NOOK.flash = .7; }, 140);
-  setTimeout(() => { if (Music.on) Music.thunder(); }, 600 + Math.random() * 900);
+  setTimeout(() => { Music.thunder(); }, 600 + Math.random() * 900);
 }
 
 /* ---------- стол писателя у окна ---------- */

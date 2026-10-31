@@ -223,15 +223,28 @@
   
 /* ---------- музыка: сочиняется прямо в браузере, чужих треков нет ---------- */
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-  const CHORDS = [
-    { root: 38, notes: [53, 57, 60, 64] },  // Dm9
-    { root: 43, notes: [53, 57, 59, 64] },  // G13
-    { root: 36, notes: [52, 55, 59, 62] },  // Cmaj9
-    { root: 45, notes: [55, 59, 60, 64] }   // Am9
+  /* Композиции нашего домашнего ансамбля. Всё звучит из синтезатора браузера, записей нет.
+     Аккорды записаны в до мажоре, tr — сдвиг тональности в полутонах. Легко добавить свою. */
+  const C_ = (root, ...notes) => ({ root, notes });
+  const TRACKS = [
+    { id: "quiet", title: "Тихий час у стойки", artist: "Hacheden House Quartet", mood: "calm", bpm: 68, per: 16, sax: "alt", drums: 1, mel: .09, walk: false, tr: 0,
+      chords: [C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64), C_(36, 52, 55, 59, 62), C_(45, 55, 59, 60, 64)] },
+    { id: "amber", title: "Янтарный свет", artist: "Hacheden House Trio", mood: "calm", bpm: 74, per: 16, sax: "off", drums: .8, mel: .16, walk: false, tr: 2,
+      chords: [C_(41, 52, 55, 57, 60), C_(40, 50, 55, 59, 62), C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64)] },
+    { id: "swing", title: "Свинг у стойки", artist: "Hacheden House Quartet", mood: "swing", bpm: 112, per: 8, sax: "alt", drums: 1.2, mel: .07, walk: true, tr: -2,
+      chords: [C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64), C_(36, 52, 55, 59, 62), C_(45, 55, 61, 64, 66)] },
+    { id: "roof", title: "Фокстрот на крыше", artist: "Hacheden House Quartet", mood: "swing", bpm: 126, per: 8, sax: "lead", drums: 1.3, mel: .05, walk: true, tr: 5,
+      chords: [C_(36, 52, 55, 59, 62), C_(45, 55, 60, 64, 67), C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64)] },
+    { id: "blues", title: "Полночный блюз", artist: "Hacheden House Quartet", mood: "late", bpm: 60, per: 16, sax: "lead", drums: .6, mel: .05, walk: false, tr: 0,
+      chords: [C_(45, 55, 59, 60, 64), C_(38, 53, 57, 60, 64), C_(45, 55, 59, 60, 64), C_(40, 56, 62, 65, 68)] },
+    { id: "train", title: "Последний поезд", artist: "Hacheden House Trio", mood: "late", bpm: 56, per: 16, sax: "off", drums: .35, mel: .13, walk: false, tr: 0,
+      chords: [C_(36, 51, 55, 58, 62), C_(44, 51, 55, 56, 60), C_(41, 55, 56, 60, 63), C_(43, 53, 56, 59, 62)] }
   ];
+  const MOODS_MUSIC = { auto: "По часам", calm: "Спокойный вечер", swing: "Свинг", late: "Поздняя ночь" };
+  const TRACK_LEN = 150;   // секунд на композицию, потом следующая
   const MELODY = [72, 74, 76, 79, 81, 84];
 
-  function createBand(ctx, out, emit = () => {}) {
+  function createBand(ctx, out, emit = () => {}, TR = TRACKS[0]) {
     const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
@@ -254,11 +267,13 @@
       g.connect(out);
     }
     function chord(c, t, dur, vel) {
-      c.notes.forEach((n, i) => keys(n, t + i * .018 + Math.random() * .01, dur, vel * (1 - i * .08)));
-      emit({ i: "piano", kind: "chord", notes: c.notes, t, dur, vel });
+      const notes = c.notes.map(n => n + TR.tr);
+      notes.forEach((n, i) => keys(n, t + i * .018 + Math.random() * .01, dur, vel * (1 - i * .08)));
+      emit({ i: "piano", kind: "chord", notes, t, dur, vel });
     }
-    function mel(m, t, dur, vel) { keys(m, t, dur, vel); emit({ i: "piano", kind: "mel", notes: [m], t, dur, vel }); }
+    function mel(m, t, dur, vel) { m += TR.tr; keys(m, t, dur, vel); emit({ i: "piano", kind: "mel", notes: [m], t, dur, vel }); }
     function bass(m, t, dur) {
+      m += TR.tr;
       const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
       o.type = "triangle"; o.frequency.value = mtof(m);
       lp.type = "lowpass"; lp.frequency.value = 380;
@@ -272,6 +287,7 @@
     }
     /* тенор-саксофон: два генератора, мягкий фильтр, подъезд к ноте, вибрато и дыхание */
     function sax(m, t, dur, vel = .05) {
+      m += TR.tr;
       const f = mtof(m), sum = ctx.createGain(), lp = ctx.createBiquadFilter(), pk = ctx.createBiquadFilter(), g = ctx.createGain();
       const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), a1 = ctx.createGain(), a2 = ctx.createGain();
       o1.type = "sawtooth"; o2.type = "square"; o2.detune.value = 6;
@@ -316,7 +332,7 @@
       SX.idx = idx;
       const dur = last ? beat * (1.4 + Math.random()) : beat * (step % 2 ? .38 : .62);
       sax(SAX_SCALE[idx], t, dur, last ? .055 : .045);
-      if (last) SX.rest = 3 + Math.floor(Math.random() * 6);
+      if (last) SX.rest = (TR.sax === "lead" ? 2 : 3) + Math.floor(Math.random() * 5);
     }
     function brush(t, v) {
       const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -352,38 +368,58 @@
       s.start();
       return s;
     }
-    // один шаг — восьмая доля; аккорд меняется каждые два такта
+    // один шаг — восьмая доля; аккорд меняется раз в per восьмых
     function play(step, t, beat) {
-      const k = step % 16, pos = step % 8, ci = Math.floor(step / 16) % 4;
-      const c = CHORDS[ci], next = CHORDS[(ci + 1) % 4];
-      if (k === 0) chord(c, t, 3.4, .06);
-      if (k === 6 && Math.random() < .5) chord(c, t, 1.6, .035);
-      if (k === 11) chord(c, t, 2.2, .045);
-      if (pos === 0) bass(c.root, t, beat * 1.8);
-      if (pos === 4) bass(Math.random() < .6 ? c.root + 7 : c.root + 12, t, beat * 1.6);
-      if (k === 15 && Math.random() < .5) bass(next.root + (Math.random() < .5 ? 1 : -1), t, beat * .45);
-      if (pos === 0) kick(t, .16);
-      if (pos === 5 && Math.random() < .3) kick(t, .09);
-      if (pos === 2 || pos === 6) brush(t, .045);
-      else if (Math.random() < .55) brush(t, .012 + Math.random() * .01);
-      // каждые восемь тактов солирует то фортепиано, то саксофон
-      const saxTurn = Math.floor(step / 64) % 2 === 1;
+      const CH = TR.chords, per = TR.per, n = CH.length;
+      const k = step % 16, pos = step % 8, kk = step % per, ci = Math.floor(step / per) % n;
+      const c = CH[ci], next = CH[(ci + 1) % n], dr = TR.drums;
+      if (kk === 0) chord(c, t, beat * per * .42, .06);
+      if (per === 16) {
+        if (kk === 6 && Math.random() < .5) chord(c, t, 1.6, .035);
+        if (kk === 11) chord(c, t, 2.2, .045);
+      } else {
+        if (kk === 3 && Math.random() < .45) chord(c, t, beat * .55, .032);
+        if (kk === 6 && Math.random() < .6) chord(c, t, beat * .9, .038);
+      }
+      if (TR.walk) {
+        // шагающий бас: по четверти, к следующему аккорду — полутоном
+        if (pos % 2 === 0) {
+          const q = pos / 2, toNext = kk >= per - 2;
+          const m = q === 0 && kk < 2 ? c.root : toNext ? next.root + (Math.random() < .5 ? 1 : -1) : c.root + [0, 3, 7, 5, 4, 10][Math.floor(Math.random() * 6)];
+          bass(m, t, beat * .95);
+        }
+      } else {
+        if (pos === 0) bass(c.root, t, beat * 1.8);
+        if (pos === 4) bass(Math.random() < .6 ? c.root + 7 : c.root + 12, t, beat * 1.6);
+        if (k === 15 && Math.random() < .5) bass(next.root + (Math.random() < .5 ? 1 : -1), t, beat * .45);
+      }
+      if (pos === 0) kick(t, .16 * Math.min(1, dr));
+      if (pos === 5 && Math.random() < .3 * dr) kick(t, .09);
+      if (TR.walk && pos === 4 && Math.random() < .5) kick(t, .07);
+      if (pos === 2 || pos === 6) brush(t, .045 * Math.min(1.2, dr));
+      else if (Math.random() < .55 * dr) brush(t, .012 + Math.random() * .01);
+      // саксофон: по очереди с фортепиано, ведёт всю пьесу или молчит
+      const saxTurn = TR.sax === "lead" ? Math.floor(step / 64) % 4 !== 3 : TR.sax === "alt" ? Math.floor(step / 64) % 2 === 1 : false;
       if (saxTurn) saxStep(step, t, beat, c);
       else { SX.left = 0; SX.rest = 0; }
-      if (k !== 0 && Math.random() < (saxTurn ? .025 : .09)) mel(MELODY[Math.floor(Math.random() * MELODY.length)], t, 1.4, .03);
+      if (k !== 0 && Math.random() < (saxTurn ? .025 : TR.mel)) mel(MELODY[Math.floor(Math.random() * MELODY.length)], t, 1.4, .03);
     }
-    return { play, crackle };
+    function setTrack(t) { TR = t; SX.left = 0; SX.rest = 0; }
+    return { play, crackle, setTrack };
   }
 
+  /* Звуковой движок: музыка и окружение (дождь, камин, сверчки, ветер) идут разными каналами
+     и смешиваются в общий; громкости — из настроек. Звук включается только после действия гостя. */
   const Music = (() => {
-    const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
-    // погода за окном: громкость дождя, сверчков, ветра и камина; меняется по сезону
+    let BEAT = 60 / 68, EIGHTH = BEAT / 2, SWING = 1.25;
+    let ctx = null, tone, master, musBus, ambBus, band, analyser, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
+    let trackI = 0, trackStart = 0, mood = "auto", switching = false;
     const WX = { rain: .32, crickets: 0, wind: 0, fire: .5 };
-    const NOTE = [];
-    // погоду слышно у окна читальни (0) и громче всего на улице (3)
+    const MIX = { rain: 1, fire: 1 };   // ручки из комнат: громкость дождя в читальне, камин в курилке
+    const NOTE = [], LISTEN = [];
     const outside = () => roomIdx === 0 ? 1 : roomIdx === 3 ? 1.8 : 0;
-    const roomFreq = () => roomIdx === 4 ? 6200 : roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // 4 — у самой сцены   // в соседних комнатах музыка звучит глуше, как из-за стены
+    const roomFreq = () => roomIdx === 4 ? 6200 : roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
+    const tellAll = () => LISTEN.forEach(f => { try { f(); } catch (e) {} });
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
       for (let ch = 0; ch < 2; ch++) {
@@ -392,105 +428,178 @@
       }
       return b;
     }
+    function loopNoise(make, sec, gainNode) {
+      const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sec), ctx.sampleRate);
+      make(b.getChannelData(0), ctx.sampleRate);
+      const s = ctx.createBufferSource(); s.buffer = b; s.loop = true;
+      return [s, gainNode];
+    }
     function setup() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return false;
-      ctx = new AC();
+      try { ctx = new AC(); } catch (e) { return false; }
       master = ctx.createGain(); master.gain.value = 0;
+      musBus = ctx.createGain(); musBus.gain.value = 0;
+      ambBus = ctx.createGain(); ambBus.gain.value = 0;
+      analyser = ctx.createAnalyser(); analyser.fftSize = 128; analyser.smoothingTimeConstant = .8;
       tone = ctx.createBiquadFilter(); tone.type = "lowpass"; tone.frequency.value = roomFreq(); tone.Q.value = .4;
       const dry = ctx.createGain(); dry.gain.value = .8;
       const wet = ctx.createGain(); wet.gain.value = .32;
       const verb = ctx.createConvolver(); verb.buffer = impulse(2.6);
       const comp = ctx.createDynamicsCompressor();
-      tone.connect(dry).connect(master);
-      tone.connect(wet).connect(verb).connect(master);
+      tone.connect(dry).connect(musBus);
+      tone.connect(wet).connect(verb).connect(musBus);
+      musBus.connect(analyser);
+      musBus.connect(master); ambBus.connect(master);
       master.connect(comp).connect(ctx.destination);
-      band = createBand(ctx, tone, e => { for (const f of NOTE) f(e); });
+      band = createBand(ctx, tone, e => { for (const f of NOTE) f(e); }, TRACKS[trackI]);
       band.crackle();
       // треск камина: слышен только в курилке
-      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? WX.fire : 0;
-      const fb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), fd = fb.getChannelData(0);
-      let env = 0;
-      for (let i = 0; i < fd.length; i++) {
-        if (Math.random() < .0009) env = .35 + Math.random() * .6;
-        env *= .985;
-        fd[i] = (Math.random() * 2 - 1) * (env + .012);
-      }
-      const fsrc = ctx.createBufferSource(), flp = ctx.createBiquadFilter();
-      fsrc.buffer = fb; fsrc.loop = true; flp.type = "lowpass"; flp.frequency.value = 3200;
-      fsrc.connect(flp).connect(fire).connect(master); fsrc.start();
+      fire = ctx.createGain(); fire.gain.value = 0;
+      const [fsrc] = loopNoise((fd) => {
+        let env = 0;
+        for (let i = 0; i < fd.length; i++) { if (Math.random() < .0009) env = .35 + Math.random() * .6; env *= .985; fd[i] = (Math.random() * 2 - 1) * (env + .012); }
+      }, 4);
+      const flp = ctx.createBiquadFilter(); flp.type = "lowpass"; flp.frequency.value = 3200;
+      fsrc.connect(flp).connect(fire).connect(ambBus); fsrc.start();
       // дождь за окном читальни
-      rain = ctx.createGain(); rain.gain.value = outside() * WX.rain;
-      const rb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), rd = rb.getChannelData(0);
-      for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07);
-      const rsrc = ctx.createBufferSource(), rbp = ctx.createBiquadFilter();
-      rsrc.buffer = rb; rsrc.loop = true; rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
-      rsrc.connect(rbp).connect(rain).connect(master); rsrc.start();
+      rain = ctx.createGain(); rain.gain.value = 0;
+      const [rsrc] = loopNoise(rd => { for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07); }, 3);
+      const rbp = ctx.createBiquadFilter(); rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
+      rsrc.connect(rbp).connect(rain).connect(ambBus); rsrc.start();
       // сверчки летней ночью
-      crick = ctx.createGain(); crick.gain.value = outside() * WX.crickets;
-      const cb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), cd = cb.getChannelData(0), sr = ctx.sampleRate;
-      for (const [f, per, off, amp] of [[4400, .62, .05, .5], [4950, .81, .31, .35], [3900, 1.13, .6, .25]]) {
-        for (let t0 = off; t0 < 3.9; t0 += per) for (let k = 0; k < 3; k++) {
-          const st = Math.floor((t0 + k * .045) * sr), n = Math.floor(.022 * sr);
-          for (let i = 0; i < n && st + i < cd.length; i++) cd[st + i] += Math.sin(2 * Math.PI * f * i / sr) * Math.sin(Math.PI * i / n) * amp;
+      crick = ctx.createGain(); crick.gain.value = 0;
+      const [csrc] = loopNoise((cd, sr) => {
+        for (const [f, per, off, amp] of [[4400, .62, .05, .5], [4950, .81, .31, .35], [3900, 1.13, .6, .25]]) {
+          for (let t0 = off; t0 < 3.9; t0 += per) for (let k = 0; k < 3; k++) {
+            const st = Math.floor((t0 + k * .045) * sr), n = Math.floor(.022 * sr);
+            for (let i = 0; i < n && st + i < cd.length; i++) cd[st + i] += Math.sin(2 * Math.PI * f * i / sr) * Math.sin(Math.PI * i / n) * amp;
+          }
         }
-      }
-      const csrc = ctx.createBufferSource(); csrc.buffer = cb; csrc.loop = true;
-      csrc.connect(crick).connect(master); csrc.start();
+      }, 4);
+      csrc.connect(crick).connect(ambBus); csrc.start();
       // зимний ветер
-      wind = ctx.createGain(); wind.gain.value = outside() * WX.wind;
-      const wb = ctx.createBuffer(1, ctx.sampleRate * 8, ctx.sampleRate), wd = wb.getChannelData(0);
-      let lp = 0;
-      for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
-      const wsrc = ctx.createBufferSource(); wsrc.buffer = wb; wsrc.loop = true;
-      wsrc.connect(wind).connect(master); wsrc.start();
+      wind = ctx.createGain(); wind.gain.value = 0;
+      const [wsrc] = loopNoise(wd => {
+        let lp = 0;
+        for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
+      }, 8);
+      wsrc.connect(wind).connect(ambBus); wsrc.start();
+      levels(true);
+      room(roomIdx);
       return true;
     }
+    /* громкости каналов из настроек; плавно, без щелчков */
+    function levels(instant) {
+      if (!ctx) return;
+      const now = ctx.currentTime, k = instant ? .01 : .25;
+      master.gain.setTargetAtTime(SET.mute ? 0 : SET.master, now, k);
+      musBus.gain.setTargetAtTime(on && !switching ? SET.music * .95 : 0, now, on ? .6 : .35);
+      ambBus.gain.setTargetAtTime(SET.ambient * 1.1, now, .8);
+      // тишина во всех каналах — ставим звук на паузу, чтобы не грузить телефон
+      const silent = SET.mute || SET.master <= 0 || (!on && SET.ambient <= 0);
+      if (silent && ctx.state === "running") setTimeout(() => { if ((SET.mute || SET.master <= 0 || (!on && SET.ambient <= 0)) && ctx.state === "running") ctx.suspend(); }, 1200);
+      else if (!silent && ctx.state === "suspended" && !document.hidden) ctx.resume();
+    }
+    function trackFor(m) {
+      if (m === "auto") {
+        const h = new Date().getHours() + new Date().getMinutes() / 60;
+        m = h >= 17 && h < 22 ? "calm" : h >= 22 || h < .5 ? "swing" : "late";
+      }
+      return TRACKS.filter(t => t.mood === m);
+    }
+    function applyTrack(i) {
+      trackI = (i + TRACKS.length) % TRACKS.length;
+      const T = TRACKS[trackI];
+      BEAT = 60 / T.bpm; EIGHTH = BEAT / 2; SWING = T.bpm > 100 ? 1.32 : 1.25;
+      if (band) band.setTrack(T);
+      step = 0;
+      trackStart = ctx ? ctx.currentTime : 0;
+    }
     function tick() {
+      if (on && !switching && ctx.currentTime - trackStart > TRACK_LEN) { next(); return; }
       while (nextTime < ctx.currentTime + .2) {
         band.play(step, nextTime, BEAT);
-        nextTime += step % 2 === 0 ? EIGHTH * 1.25 : EIGHTH * .75;   // свинг
+        nextTime += step % 2 === 0 ? EIGHTH * SWING : EIGHTH * (2 - SWING);
         step++;
       }
     }
     function run() {
       nextTime = ctx.currentTime + .1;
-      anchor = nextTime - (Math.floor(step / 2) * BEAT + (step % 2 ? EIGHTH * 1.25 : 0));
+      anchor = nextTime - (Math.floor(step / 2) * BEAT + (step % 2 ? EIGHTH * SWING : 0));
       clearInterval(timer);
       timer = setInterval(tick, 40);
+    }
+    /* первый жест гостя: включаем окружение (без музыки, если она выключена) */
+    function wake() {
+      if (!ctx && !setup()) return false;
+      if (ctx.state === "suspended" && !document.hidden) ctx.resume();
+      levels();
+      return true;
     }
     function start() {
       if (!ctx && !setup()) return false;
       on = true;
       ctx.resume();
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setTargetAtTime(.75, ctx.currentTime, .8);
+      if (!trackStart) applyTrack(trackI);
+      trackStart = ctx.currentTime - Math.min(ctx.currentTime - trackStart, TRACK_LEN - 1);
+      levels();
       run();
+      tellAll();
       return true;
     }
     function stop() {
       on = false;
       if (!ctx) return;
-      clearInterval(timer); timer = null;
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setTargetAtTime(0, ctx.currentTime, .4);
-      setTimeout(() => { if (!on) ctx.suspend(); }, 1800);
+      levels();
+      setTimeout(() => { if (!on) { clearInterval(timer); timer = null; } }, 1500);
+      tellAll();
     }
+    /* смена композиции: тихий уход, новая пьеса с первого такта — две мелодии не звучат вместе */
+    function play(i) {
+      if (!ctx && !setup()) return false;
+      if (!on) { applyTrack(i); trackStart = ctx.currentTime; start(); return true; }
+      switching = true; levels();
+      setTimeout(() => {
+        applyTrack(i);
+        switching = false;
+        trackStart = ctx.currentTime;
+        run(); levels(); tellAll();
+      }, 650);
+      tellAll();
+      return true;
+    }
+    function listFor() { return trackFor(mood); }
+    function next(dir = 1) {
+      const list = listFor(), cur = list.indexOf(TRACKS[trackI]);
+      const nxt = cur < 0 ? list[0] : list[(cur + dir + list.length) % list.length];
+      return play(TRACKS.indexOf(nxt));
+    }
+    function setMood(m) {
+      mood = m;
+      try { localStorage.setItem("hacheden-mood", m); } catch (e) {}
+      const list = listFor();
+      if (!list.includes(TRACKS[trackI])) { if (on) play(TRACKS.indexOf(list[0])); else applyTrack(TRACKS.indexOf(list[0])); }
+      tellAll();
+    }
+    try { const m = localStorage.getItem("hacheden-mood"); if (m && MOODS_MUSIC[m]) mood = m; } catch (e) {}
+    { const first = trackFor(mood)[0]; trackI = TRACKS.indexOf(first); BEAT = 60 / first.bpm; EIGHTH = BEAT / 2; SWING = first.bpm > 100 ? 1.32 : 1.25; }
     function room(i) {
       roomIdx = i;
-      if (ctx) {
-        tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
-        fire.gain.setTargetAtTime(roomIdx === 2 ? WX.fire : 0, ctx.currentTime, .6);
-        rain.gain.setTargetAtTime(outside() * WX.rain, ctx.currentTime, .6);
-        crick.gain.setTargetAtTime(outside() * WX.crickets, ctx.currentTime, .6);
-        wind.gain.setTargetAtTime(outside() * WX.wind, ctx.currentTime, .6);
-      }
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      tone.frequency.setTargetAtTime(roomFreq(), now, .5);
+      fire.gain.setTargetAtTime(roomIdx === 2 ? WX.fire * MIX.fire : 0, now, .6);
+      rain.gain.setTargetAtTime(outside() * WX.rain * (roomIdx === 0 ? MIX.rain : 1), now, .6);
+      crick.gain.setTargetAtTime(outside() * WX.crickets, now, .6);
+      wind.gain.setTargetAtTime(outside() * WX.wind, now, .6);
     }
     function weather(o) { Object.assign(WX, o); room(roomIdx); }
+    function mix(o) { Object.assign(MIX, o); room(roomIdx); }
     document.addEventListener("visibilitychange", () => {
-      if (!ctx || !on) return;
+      if (!ctx) return;
       if (document.hidden) { clearInterval(timer); ctx.suspend(); }
-      else ctx.resume().then(run);
+      else { levels(); if (ctx.state !== "running" && !(SET.mute || SET.master <= 0)) ctx.resume().then(() => { if (on) run(); }); else if (on) run(); }
     });
     // где мы внутри доли: 0 — сильная доля, бармен кивает
     function beat() {
@@ -499,7 +608,7 @@
     }
     // лёд в шейкере
     function shake(ms) {
-      if (!ctx || !on) return;
+      if (!ctx || ctx.state !== "running") return;
       if (!sfx) {
         sfx = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .2), ctx.sampleRate);
         const d = sfx.getChannelData(0);
@@ -513,13 +622,13 @@
         g.gain.setValueAtTime(0, t);
         g.gain.linearRampToValueAtTime(v, t + .01);
         g.gain.exponentialRampToValueAtTime(.0001, t + .09);
-        src.connect(f).connect(g).connect(master);
+        src.connect(f).connect(g).connect(ambBus);
         src.start(t, Math.random() * .08, .1);
       }
     }
     // далёкий раскат грома
     function thunder() {
-      if (!ctx || !on) return;
+      if (!ctx || ctx.state !== "running") return;
       const len = ctx.sampleRate * 3.2, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
       let v = 0;
       for (let i = 0; i < len; i++) {
@@ -529,9 +638,15 @@
       }
       const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
       src.buffer = b; lp.type = "lowpass"; lp.frequency.value = 260; g.gain.value = 1.4;
-      src.connect(lp).connect(g).connect(master); src.start();
+      src.connect(lp).connect(g).connect(ambBus); src.start();
     }
-    return { start, stop, room, weather, beat, shake, thunder, get on() { return on; }, onNote: f => NOTE.push(f), time: () => ctx ? ctx.currentTime : 0 };
+    function spectrum(arr) { if (!analyser) return false; analyser.getByteFrequencyData(arr); return true; }
+    function info() {
+      const T = TRACKS[trackI], el = ctx && on ? Math.max(0, ctx.currentTime - trackStart) : 0;
+      return { i: trackI, track: T, mood, on, elapsed: el, len: TRACK_LEN, switching };
+    }
+    return { start, stop, wake, play, next, prev: () => next(-1), setMood, info, spectrum, levels, room, weather, mix, beat, shake, thunder,
+      onChange: f => LISTEN.push(f), get on() { return on; }, onNote: f => NOTE.push(f), time: () => ctx ? ctx.currentTime : 0 };
   })();
 
   const musicBtn = document.getElementById("music");
@@ -545,15 +660,26 @@
     musicBtn.querySelector(".label").textContent = text;
     try { localStorage.setItem("hacheden-music", want ? "on" : "off"); } catch (e) {}
   }
+  Music.onChange(() => {
+    const want = Music.on;
+    if (musicBtn.classList.contains("on") === want) return;
+    musicBtn.classList.toggle("on", want);
+    document.body.classList.toggle("music-on", want);
+    const text = want ? "Выключить музыку" : "Включить музыку";
+    musicBtn.setAttribute("aria-label", text);
+    musicBtn.querySelector(".label").textContent = text;
+  });
   musicBtn.addEventListener("click", () => setMusic(!Music.on));
   let musicWasOn = false;
   try { musicWasOn = localStorage.getItem("hacheden-music") === "on"; } catch (e) {}
-  if (musicWasOn) {
-    // браузер разрешает звук только после действия человека: включаем при первом клике
-    addEventListener("pointerdown", e => { if (!e.target.closest("#music, #sm-gramo, [data-act=gramo]") && !Music.on) setMusic(true); }, { once: true });
-  }
+  // браузер разрешает звук только после действия человека: окружение и музыку включаем при первом касании
+  addEventListener("pointerdown", e => {
+    Music.wake();
+    if (musicWasOn && !e.target.closest("#music, #sm-gramo, [data-act=gramo]") && !Music.on) setMusic(true);
+  }, { once: true });
+  addEventListener("keydown", () => Music.wake(), { once: true });
 
-  
+
   const DOOR_STORY = {
     name: "Три стука в дверь",
     tagline: "Как попадали в подпольный бар",
@@ -621,7 +747,7 @@
     function rustle() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
-      sctx = sctx || new AC();
+      sctx = sctx || AUDIO.route(new AC(), "ui");
       sctx.resume();
       const len = sctx.sampleRate * .35, b = sctx.createBuffer(1, len, sctx.sampleRate), d = b.getChannelData(0);
       for (let j = 0; j < len; j++) { const k = j / len; d[j] = (Math.random() * 2 - 1) * Math.sin(Math.PI * k) * (.6 + .4 * Math.random()); }
@@ -1037,7 +1163,10 @@
       lime: { kind: "squeeze", glass: "#ffffff", op: .25, liq: "#d9e8a0", label: "#8fb12f", ink: "#1a2a0a", name: "ЛАЙМ" },
       lemon: { kind: "squeeze", glass: "#ffffff", op: .25, liq: "#f2e48a", label: "#e8c832", ink: "#2a2208", name: "ЛИМОН" },
       syrup: { kind: "squeeze", glass: "#ffffff", op: .3, liq: "#f6efd8", label: "#e8dcc0", ink: "#4a3a22", name: "СИРОП" },
-      grenadine: { kind: "squeeze", glass: "#b3122a", op: .85, liq: "#b3122a", label: "#f2e8cf", ink: "#8a0c22", name: "ГРЕНАДИН" }
+      grenadine: { kind: "squeeze", glass: "#b3122a", op: .85, liq: "#b3122a", label: "#f2e8cf", ink: "#8a0c22", name: "ГРЕНАДИН" },
+      coffee: { kind: "carafe", glass: "#ffffff", op: .18, liq: "#2a1206", name: "" },
+      tea: { kind: "carafe", glass: "#ffffff", op: .18, liq: "#b5651d", name: "" },
+      cream: { kind: "squeeze", glass: "#f4eee2", op: .95, liq: "#f6efe0", label: "#3a2a1a", ink: "#f6efe0", name: "СЛИВКИ" }
     };
     // горлышко в точке (0,0), корпус уходит вниз
     const BOTTLE = {
@@ -1393,8 +1522,8 @@
     const GEN = { rum: "рома", tequila: "текилы", gin: "джина", whisky: "виски", cognac: "коньяка", wine: "вина", triple: "апельсинового ликёра", cherry: "вишнёвого ликёра",
       campari: "кампари", vermouthR: "красного вермута", vermouthD: "сухого вермута", bitters: "ангостуры", tonic: "тоника", soda: "содовой",
       cola: "колы", oj: "апельсинового сока", pineapple: "ананасового сока", coconut: "кокосовых сливок", lime: "сока лайма",
-      lemon: "лимонного сока", syrup: "сахарного сиропа", grenadine: "гренадина" };
-    const TOPACC = { soda: "содовую", tonic: "тоник", cola: "колу" };
+      lemon: "лимонного сока", syrup: "сахарного сиропа", grenadine: "гренадина", coffee: "кофе", tea: "чая", cream: "сливок" };
+    const TOPACC = { soda: "содовую", tonic: "тоник", cola: "колу", coffee: "кофе", tea: "чай" };
     const GNAME = { wheel: "кружок лайма", wedge: "долька лайма", orange: "кружок апельсина", lemon: "лимонная цедра", mint: "веточка мяты",
       cherry: "коктейльная вишня", pineapple: "долька ананаса", olive: "оливка на шпажке", flame: "обожжённая апельсиновая цедра" };
     function stepText(st) {
@@ -1608,13 +1737,14 @@
     ["Крепкое", [["wine", "Вино"], ["cognac", "Коньяк"], ["rum", "Ром"], ["whisky", "Виски"], ["gin", "Джин"], ["tequila", "Текила"]]],
     ["Ликёры и вермуты", [["triple", "Апельсиновый ликёр"], ["cherry", "Вишнёвый ликёр"], ["campari", "Кампари"], ["vermouthR", "Красный вермут"], ["vermouthD", "Сухой вермут"], ["bitters", "Ангостура"]]],
     ["Соки и газировка", [["tonic", "Тоник"], ["soda", "Содовая"], ["cola", "Кола"], ["oj", "Апельсиновый сок"], ["pineapple", "Ананасовый сок"], ["coconut", "Кокосовые сливки"]]],
-    ["Свежее и сиропы", [["lime", "Лайм"], ["lemon", "Лимон"], ["mint", "Мята"], ["syrup", "Сахарный сироп"], ["grenadine", "Гренадин"]]]
+    ["Свежее и сиропы", [["lime", "Лайм"], ["lemon", "Лимон"], ["mint", "Мята"], ["syrup", "Сахарный сироп"], ["grenadine", "Гренадин"]]],
+    ["Кофе и чай", [["coffee", "Горячий кофе"], ["tea", "Горячий чай"], ["cream", "Сливки"]]]
   ];
   const ING_NAME = Object.fromEntries(ING.flatMap(([, items]) => items));
   const low = id => ING_NAME[id].toLowerCase();
   const METHOD = { shake: "встряхнуть в шейкере", stir: "размешать со льдом", build: "собрать прямо в бокале", fire: "поджечь и перелить огненной струёй" };
   const GLASS_NAME = { highball: "высокий стакан", rocks: "рокс", coupe: "шампанское блюдце", martini: "коктейльный бокал", wine: "винный бокал" };
-  const BASES = [["rum", "С ромом"], ["tequila", "С текилой"], ["gin", "С джином"], ["whisky", "С виски"], ["cognac", "С коньяком"], ["wine", "С вином"], ["aperitif", "Аперитивы"], ["none", "Без алкоголя"]];
+  const BASES = [["rum", "С ромом"], ["tequila", "С текилой"], ["gin", "С джином"], ["whisky", "С виски"], ["cognac", "С коньяком"], ["wine", "С вином"], ["aperitif", "Аперитивы"], ["none", "Без алкоголя"], ["hot", "Кофе и чай"]];
   const COCKTAILS = [
     { id: "c-hacheden", name: "Hacheden", base: "cognac", origin: "Наш бар", method: "fire", need: ["cognac", "cherry", "syrup"], signature: true,
       cup: "rocks", pour: "#8e2a16", pourOp: .92, pourLevel: 62, garnish: "flame",
@@ -1718,6 +1848,30 @@
       history: "Безалкогольная версия знаменитого кубинского коктейля. Мята, лайм и пузырьки освежают не хуже оригинала.",
       recipe: [["20 мл", "сока лайма"], ["15 мл", "сахарного сиропа"], ["6–8", "листиков мяты"], ["до верха", "содовой"]],
       steps: "Разомни мяту с лаймом и сиропом, засыпь стакан колотым льдом и долей содовую. Перемешай и укрась мятой." }
+    ,{ id: "c-irish", name: "Ирландский кофе", base: "hot", origin: "Ирландия", method: "build", need: ["whisky", "syrup", "coffee", "cream"],
+      cup: "wine", pour: "#3a1a0c", pourOp: .95, pourLevel: 40,
+      tagline: "Горячий кофе с виски под шапкой сливок",
+      history: "Придумал шеф-повар Джо Шеридан в 1943 году в Фойнсе на западе Ирландии: туда садились трансатлантические гидросамолёты, и замёрзшим пассажирам подали кофе с виски. В 1952 году журналист Стэнтон Делаплейн привёз рецепт в кафе «Буэна Виста» в Сан-Франциско, и оттуда напиток разошёлся по Америке.",
+      recipe: [["40 мл", "ирландского виски"], ["15 мл", "сахарного сиропа (лучше из коричневого сахара)"], ["90 мл", "горячего крепкого кофе"], ["30 мл", "слегка взбитых сливок"]],
+      steps: "Прогрей бокал горячей водой. Размешай в горячем кофе сироп и виски. Сверху по ложке аккуратно выложи слегка взбитые сливки: их не перемешивают, кофе пьют сквозь сливочную шапку." },
+    { id: "c-toddy", name: "Горячий тодди", base: "hot", origin: "Шотландия и Ирландия", method: "build", need: ["whisky", "lemon", "syrup"],
+      cup: "rocks", pour: "#c8822e", pourOp: .85, pourLevel: 62, garnish: "lemon",
+      tagline: "Виски, мёд и лимон, залитые горячей водой",
+      history: "Горячий тодди пьют в Шотландии и Ирландии холодными сырыми вечерами, а ещё им по старинке лечат простуду. По одной из версий, название пришло из Индии XVII века, где «тодди» называли напиток из сока пальмы.",
+      recipe: [["45 мл", "виски"], ["15 мл", "мёда или сахарного сиропа"], ["15 мл", "лимонного сока"], ["120 мл", "горячей воды"], ["1", "лимонная цедра"]],
+      steps: "Подогрей стакан кипятком. Положи мёд, влей лимонный сок и виски, долей горячей водой и размешай. Укрась цедрой лимона." },
+    { id: "c-coffee", name: "Чёрный кофе", base: "hot", origin: "Йемен", method: "build", need: ["coffee"],
+      cup: "rocks", pour: "#2a1206", pourOp: .97, pourLevel: 62,
+      tagline: "Крепкий горячий кофе — бармену и гостю",
+      history: "Кофе как напиток распространился в XV веке из Йемена: его пили в суфийских обителях, чтобы не уснуть во время ночных молитв. В XVI веке первые кофейни открылись в Мекке и Стамбуле, а оттуда кофе пришёл в Европу.",
+      recipe: [["120 мл", "горячего свежесваренного кофе"]],
+      steps: "Свари кофе покрепче и налей в прогретую чашку. Сахар и сливки — по желанию." },
+    { id: "c-tea", name: "Чай с лимоном и мёдом", base: "hot", origin: "Китай", method: "build", need: ["tea", "lemon", "syrup"],
+      cup: "highball", pour: "#b5651d", pourOp: .75, pourLevel: 30, garnish: "lemon",
+      tagline: "Согревающий чай без алкоголя",
+      history: "Чай пили в Китае ещё в древности, а в Европу его в начале XVII века привезли голландские купцы. Лимон добавляет свежести, мёд — мягкой сладости.",
+      recipe: [["150 мл", "горячего чёрного чая"], ["10 мл", "лимонного сока"], ["10 мл", "мёда или сахарного сиропа"], ["1", "долька лимона"]],
+      steps: "Завари чай, налей в прогретый стакан, добавь лимонный сок и мёд, размешай и укрась долькой лимона." }
   ];
   const SECRETS = [
     { id: "s-boulevardier", name: "Бульвардье", base: "whisky", origin: "Франция", method: "stir", need: ["whisky", "campari", "vermouthR"], secret: true,
@@ -1777,7 +1931,11 @@
     "s-bloodsand": [["ice", "tin"], ["jig", "whisky", 25], ["jig", "cherry", 25], ["jig", "vermouthR", 25], ["jig", "oj", 25], ["shake"], ["strain"], ["garnish"]],
     "s-gimlet": [["ice", "tin"], ["jig", "gin", 50], ["jig", "lime", 20], ["jig", "syrup", 15], ["shake"], ["strain"], ["garnish"]],
     "s-batanga": [["rim"], ["ice", "glass"], ["squeeze"], ["jig", "tequila", 50], ["top", "cola"], ["stirIn"], ["garnish"]],
-    "s-kalimotxo": [["ice", "glass"], ["pour", "wine", 80], ["top", "cola"], ["stirIn"], ["garnish"]]
+    "s-kalimotxo": [["ice", "glass"], ["pour", "wine", 80], ["top", "cola"], ["stirIn"], ["garnish"]],
+    "c-irish": [["jig", "syrup", 15], ["pour", "coffee", 90], ["jig", "whisky", 40], ["stirIn"], ["pour", "cream", 30]],
+    "c-toddy": [["jig", "syrup", 15], ["jig", "lemon", 15], ["jig", "whisky", 45], ["hot", 120], ["stirIn"], ["garnish"]],
+    "c-coffee": [["pour", "coffee", 120]],
+    "c-tea": [["pour", "tea", 150], ["jig", "lemon", 10], ["jig", "syrup", 10], ["stirIn"], ["garnish"]]
   });
 
   /* ---------- объём и крепость: считаем по шагам рецепта ---------- */
@@ -1829,6 +1987,7 @@
     FOUND.add(c.id);
     keepSet("hacheden-found", [...FOUND]);
     addDrink(c);
+    if (fresh) track("count", "recipe");
     return fresh;
   }
   SECRETS.forEach(s => { if (FOUND.has(s.id)) addDrink(s); });
@@ -1837,7 +1996,7 @@
   const ROLE = { rum: "spirit", tequila: "spirit", gin: "spirit", whisky: "spirit", cognac: "spirit", wine: "wine",
     triple: "liq", cherry: "liq", campari: "bitter", vermouthR: "verm", vermouthD: "verm", bitters: "dash",
     tonic: "top", soda: "top", cola: "top", oj: "juice", pineapple: "juice", coconut: "cream",
-    lime: "sour", lemon: "sour", mint: "mint", syrup: "sweet", grenadine: "sweet" };
+    lime: "sour", lemon: "sour", mint: "mint", syrup: "sweet", grenadine: "sweet", coffee: "top", tea: "top", cream: "cream" };
   // сначала недорогое, крепкое в самом конце: если ошибёшься, выльешь меньше
   const ROLE_ORDER = ["sour", "sweet", "juice", "cream", "liq", "bitter", "verm", "wine", "spirit"];
   const ICE_NAME = { none: "без льда", cubes: "лёд кубиками", crushed: "колотый лёд" };
@@ -2118,10 +2277,13 @@
   const CATS = [
     ["all", "Все", () => true],
     ["sig", "Фирменный", c => c.signature],
-    ["classic", "Классика", c => !c.signature && !c.custom && !c.secret],
+    ["classic", "Классика", c => !c.signature && !c.custom && !c.secret && c.base !== "hot"],
     ["fresh", "Освежающие", c => c.cup === "highball" || c.need.some(i => ROLE[i] === "top")],
-    ["strong", "Крепкие", c => c.stats.abv >= 20],
+    ["strong", "Покрепче", c => c.stats.abv >= 20],
     ["zero", "Без алкоголя", c => c.stats.abv < .5],
+    ["hot", "Кофе и чай", c => c.base === "hot"],
+    ["spirits", "Крепкие напитки", () => false],
+    ["wine", "Вино", () => false],
     ["found", "Тайные", c => c.secret],
     ["mine", "Мои", c => c.custom],
     ["fav", "★ Избранное", c => FAV.has(c.id)]
@@ -2146,7 +2308,7 @@
     const q = MENU.q.trim().toLowerCase();
     const visible = c => !q || c.name.toLowerCase().includes(q) || c.need.some(i => ING_NAME[i] && ING_NAME[i].toLowerCase().includes(q));
     document.getElementById("menu-cats").innerHTML = CATS.map(([id, title, f]) => {
-      const n = COCKTAILS.filter(f).length;
+      const n = id === "spirits" ? SHELF.filter(d => d.id !== "wine").length : id === "wine" ? SHELF.filter(d => d.id === "wine").length : COCKTAILS.filter(f).length;
       if ((id === "mine" || id === "fav") && !n && MENU.cat !== id) return "";
       const label = id === "found" ? `${title} ${FOUND.size}/${SECRETS.length}` : id === "all" ? title : `${title} · ${n}`;
       return `<button class="chip" type="button" data-cat="${id}" aria-pressed="${MENU.cat === id}">${label}</button>`;
@@ -2170,6 +2332,13 @@
       html = list.length ? `<ul class="drinks${MENU.cat === "sig" ? " sig" : ""}">${list.map(menuRow).join("")}</ul>`
         : `<p class="empty">${MENU.cat === "found" ? "Тайные рецепты ещё не найдены." : MENU.cat === "mine" ? "Своих коктейлей пока нет. Смешай что-нибудь во вкладке «Смешать» и сохрани." : MENU.cat === "fav" ? "Отмечай звёздочкой то, что понравилось." : "Ничего не нашлось."}</p>`;
     }
+    // бутылки с полки: крепкие напитки и вино
+    if (MENU.cat === "spirits" || MENU.cat === "wine" || (MENU.cat === "all" && MENU.sort === "base")) {
+      const shelf = SHELF.filter(d => (MENU.cat === "wine" ? d.id === "wine" : MENU.cat === "spirits" ? d.id !== "wine" : true) && (!q || d.name.toLowerCase().includes(q)));
+      if (MENU.cat !== "all") html = "";
+      if (shelf.length) html += `${MENU.cat === "all" ? "<h3>С полки: крепкое и вино</h3>" : ""}<ul class="drinks">${shelf.map(shelfRow).join("")}</ul>`;
+      else if (MENU.cat !== "all") html = `<p class="empty">Ничего не нашлось.</p>`;
+    }
     document.getElementById("menu-list").innerHTML = html;
     const left = SECRETS.filter(s => !FOUND.has(s.id));
     const box = document.getElementById("menu-secret");
@@ -2180,9 +2349,19 @@
         <p class="hint-line">Подсказка: ${s.hint}</p>${left.length > 1 ? `<button class="clear" type="button" data-hint>Другая подсказка</button>` : ""}`;
     }
   }
+  const SHELF = DRINKS;
+  function shelfRow(d) {
+    mixN++;
+    const abv = (d.facts.find(f => f[0] === "Крепость") || [, ""])[1];
+    return `<li class="drink">${glassSVG(d, { pre: "m" + mixN + "-", still: true })}
+      <div><b>${d.name}<i class="badge">с полки</i></b><span>${d.tagline}</span><span class="meta">${d.id === "wine" ? "бокал 125–150 мл" : "порция 40–50 мл"}${abv ? " · " + abv : ""}</span></div>
+      <span></span>
+      <div class="acts"><button class="make ghost" type="button" data-sinfo="${d.id}">Подробнее</button><button class="make" type="button" data-pour="${d.id}">Налить</button></div></li>`;
+  }
   function toggleFav(id) {
     FAV.has(id) ? FAV.delete(id) : FAV.add(id);
     keepSet("hacheden-fav", [...FAV]);
+    track("count", "fav");
   }
   function toggleIng(id) {
     inShaker.has(id) ? inShaker.delete(id) : inShaker.add(id);
@@ -2229,6 +2408,8 @@
     else if (t.dataset.add) { inShaker.add(t.dataset.add); renderMix(); }
     else if (t.dataset.make) makeCocktail(t.dataset.make);
     else if (t.dataset.info) openCard(COCKTAIL_BY_ID[t.dataset.info], { info: true });
+    else if (t.dataset.sinfo) openCard(DRINKS.find(d => d.id === t.dataset.sinfo));
+    else if (t.dataset.pour) { const id = t.dataset.pour; mixDlg.close(); hintEl.textContent = HINT; if (H3D.bottle) H3D.bottle(id); }
     else if (t.dataset.fav) { toggleFav(t.dataset.fav); renderMenu(); const f = mixDlg.querySelector(`[data-fav="${t.dataset.fav}"]`); if (f) f.focus(); }
     else if (t.dataset.cat) { MENU.cat = t.dataset.cat; renderMenu(); const f = mixDlg.querySelector(`[data-cat="${MENU.cat}"]`); if (f) f.focus(); }
     else if (t.dataset.opt) { const [k, v] = t.dataset.opt.split(":"); SERVE[k] = v; if (k === "cup" && (v === "coupe" || v === "martini")) SERVE.ice = "auto"; renderMix(); const f = mixDlg.querySelector(`[data-opt="${k}:${v}"]`); if (f) f.focus(); }
@@ -2272,6 +2453,7 @@
       const first = !c.saved;
       if (first) { c.saved = true; MINE.push(c); addDrink(c); }
       saveMine();
+      if (first) track("count", "mine");
       refreshExtras(c, first ? "Сохранено в «Мои коктейли» — ищите в меню." : "Название сохранено.");
       const f = dlg.querySelector("[data-save]"); if (f) f.focus();
     } else if (b.dataset.forget) {
@@ -2307,8 +2489,11 @@
     Bartender.done();
     hintEl.textContent = HINT;
     busy = false;
+    LAST_DRINK = c;
+    track("drink", c.id);
     openCard(c);
   }
+  let LAST_DRINK = null;
   addEventListener("keydown", e => {
     if (e.key === "Escape" && mixDlg.open && !dlg.open) { mixDlg.close(); orderBtn.focus(); }
   });

@@ -15,7 +15,9 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const STILL = reduceMotion.matches;
 const COARSE = matchMedia("(pointer: coarse)").matches;
 const SMALL = Math.min(innerWidth, innerHeight) < 620;
-let QUALITY = COARSE || SMALL ? 1 : 2;   // 1 — телефон, 2 — компьютер
+/* 1 — телефон, 2 — компьютер; гость может выбрать сам в настройках */
+const LOWQ = SET.saver || SET.quality === "low";
+let QUALITY = LOWQ ? 1 : SET.quality === "high" || SET.quality === "medium" ? 2 : (COARSE || SMALL ? 1 : 2);
 
 let renderer;
 try {
@@ -27,7 +29,8 @@ try {
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-let DPR = Math.min(devicePixelRatio || 1, QUALITY > 1 ? 1.75 : 1.5);
+const dprCap = () => SET.saver || SET.quality === "low" ? 1 : SET.quality === "medium" ? 1.25 : SET.quality === "high" ? 2 : QUALITY > 1 ? 1.75 : 1.5;
+let DPR = Math.min(devicePixelRatio || 1, dprCap());
 renderer.setPixelRatio(DPR);
 const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 

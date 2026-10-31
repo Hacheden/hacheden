@@ -12,7 +12,7 @@ const PROG = () => Closeup.PROGRAMS;
 const NOM = { rum: "Ром", tequila: "Текила", gin: "Джин", whisky: "Виски", cognac: "Коньяк", wine: "Красное вино", triple: "Апельсиновый ликёр", cherry: "Вишнёвый ликёр",
   campari: "Кампари", vermouthR: "Красный вермут", vermouthD: "Сухой вермут", bitters: "Ангостура", tonic: "Тоник", soda: "Содовая",
   cola: "Кола", oj: "Апельсиновый сок", pineapple: "Ананасовый сок", coconut: "Кокосовые сливки", lime: "Сок лайма",
-  lemon: "Лимонный сок", syrup: "Сахарный сироп", grenadine: "Гренадин" };
+  lemon: "Лимонный сок", syrup: "Сахарный сироп", grenadine: "Гренадин", coffee: "Кофе", tea: "Чай", cream: "Сливки" };
 const liqOf = ing => new THREE.Color((Closeup.LOOK[ing] || {}).liq || "#ffffff");
 
 /* ---------- координаты: всё считается от места бармена (x — его левая рука, z — к гостю) ---------- */
@@ -1558,6 +1558,7 @@ async function setupStation(c) {
     place(P.mugA.g, ST.tin); place(P.mugB.g, ST.cap); place(P.kettle.g, ST.kettle); place(P.mbox, ST.mbox); place(P.saucer.g, ST.saucer);
     P.bucket.g.visible = P.scoop.g.visible = false;
   }
+  if (!fiery && prog.some(s => s[0] === "hot")) place(P.kettle.g, ST.kettle);
   if (SHOW.glassV) world.remove(SHOW.glassV.g);
   SHOW.glassV = buildGlass(c);
   place(SHOW.glassV.g, ST.glass);

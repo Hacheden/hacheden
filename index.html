@@ -342,6 +342,145 @@
     .music.on .disc { animation: none; }
   }
 
+  /* ---------- кнопки справа: плеер, журнал, настройки ---------- */
+  .tools { position: absolute; top: 76px; right: 18px; z-index: 4; display: grid; gap: 8px; }
+  .tool { position: relative; appearance: none; width: 46px; height: 46px; display: grid; place-items: center; padding: 0; border-radius: 50%;
+    border: 1px solid rgba(214,170,92,.35); background: rgba(20,8,11,.72); color: var(--cream); cursor: pointer;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: border-color .2s, color .2s, transform .2s; }
+  .tool svg { width: 22px; height: 22px; }
+  .tool:hover { border-color: var(--brass); color: var(--brass); }
+  .tool:active { transform: scale(.94); }
+  .tool:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
+  .tool-dot { position: absolute; top: 6px; right: 6px; width: 9px; height: 9px; border-radius: 50%; background: #ffd27a; box-shadow: 0 0 8px #ffb04a; }
+  .app.seated .tools, .app.mixing .tools { opacity: .0; visibility: hidden; }
+
+  /* ---------- панели: настройки, журнал, плеер, рассказы ---------- */
+  dialog.sheet { position: fixed; inset: 0 0 0 auto; z-index: 9; margin: 0; padding: 0; border: 0; width: min(440px, 100%); height: 100%; max-height: 100%;
+    overflow: auto; border-left: 1px solid rgba(214,170,92,.35); color: var(--cream);
+    background: linear-gradient(180deg, rgba(38,12,19,.98), rgba(20,8,11,.99)); box-shadow: -20px 0 50px rgba(0,0,0,.5); }
+  dialog.sheet[open] { animation: slide-in .35s cubic-bezier(.2,.8,.2,1); }
+  dialog.sheet::backdrop { background: rgba(5,1,2,.35); }
+  dialog.sheet.wide { width: min(560px, 100%); }
+  .sheet-in { padding: 22px 24px calc(36px + env(safe-area-inset-bottom, 0px)); }
+  .sheet-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .sheet-top h2 { margin: 0; font: 400 32px/1.1 var(--font-display); }
+  .sheet-top .close { position: static; }
+  .sheet h3 { margin: 26px 0 10px; font: 400 20px/1.2 var(--font-display); color: var(--brass); }
+  .sheet p.note { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(214,170,92,.12); }
+  .row label, .row .lbl { font-size: 15px; line-height: 1.35; }
+  .row small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .row.slider { grid-template-columns: 120px 1fr 44px; }
+  .row.slider output { text-align: right; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  input[type=range].rng { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: none; cursor: pointer; }
+  input[type=range].rng::-webkit-slider-runnable-track { height: 4px; border-radius: 4px; background: linear-gradient(90deg, var(--brass) var(--v, 50%), rgba(214,170,92,.22) var(--v, 50%)); }
+  input[type=range].rng::-moz-range-track { height: 4px; border-radius: 4px; background: rgba(214,170,92,.22); }
+  input[type=range].rng::-moz-range-progress { height: 4px; border-radius: 4px; background: var(--brass); }
+  input[type=range].rng::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: -7px; border-radius: 50%; background: #f1d7a6; border: 2px solid #8a6328; box-shadow: 0 0 10px rgba(255,190,100,.35); }
+  input[type=range].rng::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #f1d7a6; border: 2px solid #8a6328; }
+  input[type=range].rng:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; border-radius: 6px; }
+  .sw { position: relative; width: 46px; height: 26px; flex: none; }
+  .sw input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .sw span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(214,170,92,.4); transition: background .2s; pointer-events: none; }
+  .sw span::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #cdb894; transition: transform .2s, background .2s; }
+  .sw input:checked + span { background: rgba(214,170,92,.45); }
+  .sw input:checked + span::after { transform: translateX(20px); background: #ffe2a8; }
+  .sw input:focus-visible + span { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg .chip { padding: 8px 11px; font-size: 14px; }
+  .sheet .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .make.warn { border-color: #d07a6a; color: #ffd8d0; background: rgba(160,40,30,.2); }
+
+  /* уведомления */
+  .toasts { position: fixed; z-index: 20; right: 78px; top: 76px; display: grid; gap: 8px; width: min(340px, calc(100% - 32px)); pointer-events: none; }
+  .toast { pointer-events: auto; display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 12px; cursor: pointer;
+    background: rgba(26,9,13,.94); border: 1px solid rgba(214,170,92,.45); box-shadow: 0 10px 30px rgba(0,0,0,.45), 0 0 24px rgba(255,160,70,.12);
+    color: var(--cream); animation: toast-in .45s cubic-bezier(.2,.8,.2,1); }
+  .toast.out { opacity: 0; transform: translateY(8px); transition: opacity .35s, transform .35s; }
+  .toast .t-ic { flex: none; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; background: rgba(214,170,92,.18); color: #ffd890; font-size: 15px; }
+  .toast.secret .t-ic { background: rgba(140,60,200,.22); color: #e6c8ff; }
+  .toast b { display: block; font: 400 17px/1.2 var(--font-display); color: #ffe0b0; }
+  .toast .t-tx span { display: block; margin-top: 2px; font-size: 13.5px; color: var(--muted); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+
+  /* плеер */
+  .np { margin-top: 18px; padding: 16px; border-radius: 14px; background: linear-gradient(140deg, rgba(214,170,92,.14), rgba(120,20,30,.16)); border: 1px solid rgba(214,170,92,.3); }
+  .np-title { margin: 0; font: 400 24px/1.15 var(--font-display); }
+  .np-artist { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+  .np-viz { display: block; width: 100%; height: 54px; margin-top: 12px; }
+  .np-bar { position: relative; height: 4px; margin-top: 10px; border-radius: 4px; background: rgba(214,170,92,.2); overflow: hidden; }
+  .np-bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--brass); }
+  .np-time { display: flex; justify-content: space-between; margin-top: 6px; color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .np-ctl { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 10px; }
+  .pbtn { appearance: none; display: grid; place-items: center; width: 46px; height: 46px; border-radius: 50%; border: 1px solid rgba(214,170,92,.45); background: rgba(255,255,255,.04); color: var(--cream); cursor: pointer; }
+  .pbtn svg { width: 20px; height: 20px; }
+  .pbtn.big { width: 60px; height: 60px; background: rgba(214,170,92,.28); border-color: var(--brass); }
+  .pbtn.big svg { width: 24px; height: 24px; }
+  .pbtn:hover { border-color: var(--brass); background: rgba(214,170,92,.2); }
+  .pbtn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .tracks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+  .trk { display: grid; grid-template-columns: 34px 1fr auto auto; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.035); }
+  .trk.cur { background: rgba(214,170,92,.16); box-shadow: inset 0 0 0 1px rgba(214,170,92,.45); }
+  .trk b { display: block; font: 400 17px/1.2 var(--font-display); }
+  .trk span { display: block; margin-top: 2px; color: var(--muted); font-size: 12.5px; }
+  .trk .pbtn { width: 34px; height: 34px; }
+  .trk .pbtn svg { width: 14px; height: 14px; }
+  .trk time { color: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+
+  /* журнал */
+  .jtabs { margin-top: 16px; }
+  .jlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .jitem { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.035); }
+  .jitem .ji { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 50%; background: rgba(214,170,92,.18); color: #ffd890; font-size: 17px; }
+  .jitem.locked { opacity: .55; }
+  .jitem.locked .ji { background: rgba(255,255,255,.06); color: var(--muted); }
+  .jitem b { display: block; font: 400 18px/1.2 var(--font-display); }
+  .jitem span { display: block; margin-top: 3px; color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+  .jitem em { display: block; margin-top: 4px; color: rgba(214,170,92,.8); font-size: 12px; font-style: normal; }
+  .jmeter { display: flex; align-items: center; gap: 10px; margin: 12px 0 4px; color: var(--muted); font-size: 14px; }
+  .jmeter .np-bar { flex: 1; margin: 0; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .stat { padding: 12px; border-radius: 12px; background: rgba(255,255,255,.04); }
+  .stat b { display: block; font: 400 28px/1 var(--font-display); color: #ffe0b0; }
+  .stat span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; }
+
+  /* рассказы читальни */
+  .story-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+  .story-list button { appearance: none; width: 100%; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(214,170,92,.25); background: rgba(255,255,255,.035); color: var(--cream); cursor: pointer; font: inherit; }
+  .story-list button:hover { border-color: var(--brass); }
+  .story-list button:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .story-list b { display: block; font: 400 19px/1.2 var(--font-display); }
+  .story-list span { display: block; margin-top: 4px; color: var(--muted); font-size: 13.5px; }
+  .story-list .read::after { content: " · прочитано"; color: var(--brass); }
+  .story-text p { margin: 0 0 14px; font-size: 16.5px; line-height: 1.7; }
+  .story-text h3 { margin-top: 18px; }
+  .quote { margin: 16px 0 0; padding: 16px 18px; border-left: 3px solid var(--brass); background: rgba(214,170,92,.08); border-radius: 0 12px 12px 0; }
+  .quote p { margin: 0; font: italic 400 19px/1.5 var(--font-display); }
+  .quote span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
+
+  /* атмосфера комнаты */
+  dialog.atmo { position: fixed; z-index: 9; inset: auto auto calc(92px + env(safe-area-inset-bottom, 0px)) 50%; transform: translateX(-50%); margin: 0; width: min(420px, calc(100% - 24px));
+    padding: 16px 18px 18px; border-radius: 16px; border: 1px solid rgba(214,170,92,.4); color: var(--cream);
+    background: rgba(24,8,12,.95); box-shadow: 0 16px 40px rgba(0,0,0,.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  dialog.atmo[open] { animation: toast-in .3s cubic-bezier(.2,.8,.2,1); }
+  dialog.atmo h2 { margin: 0 34px 6px 0; font: 400 22px/1.2 var(--font-display); }
+  dialog.atmo .close { position: absolute; top: 10px; right: 10px; }
+
+  @media (max-width: 620px) {
+    .tools { top: 72px; right: 14px; gap: 6px; }
+    .tool { width: 42px; height: 42px; }
+    dialog.sheet, dialog.sheet.wide { inset: auto 0 0 0; width: 100%; height: auto; max-height: 86svh; border-left: 0; border-top: 1px solid rgba(214,170,92,.35); border-radius: 18px 18px 0 0; }
+    dialog.sheet[open] { animation-name: slide-up; }
+    .sheet-in { padding: 18px 18px calc(28px + env(safe-area-inset-bottom, 0px)); }
+    .sheet-top h2 { font-size: 27px; }
+    .row.slider { grid-template-columns: 96px 1fr 40px; }
+    .toasts { right: auto; left: 50%; top: 118px; transform: translateX(-50%); width: min(340px, calc(100% - 120px)); }
+    dialog.atmo { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    dialog.sheet[open], dialog.atmo[open], .toast { animation: none; }
+  }
+
 
   /* ================= 3D ================= */
   html, body { overflow: hidden; overscroll-behavior: none; }
@@ -447,12 +586,12 @@
   }
   .show-card { transition: opacity .5s; }
   @keyframes cap-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  .app.showing .hud, .app.showing .zone-title, .app.showing #order { opacity: 0; visibility: hidden; }
+  .app.showing .hud, .app.showing .zone-title, .app.showing #order, .app.showing .tools { opacity: 0; visibility: hidden; }
   .hud { transition: opacity .6s, visibility .6s; }
   @media (max-width: 640px) { .show-title { top: 74px; padding: 0 16px; font-size: 28px; } }
   /* на улице: только подсказка и ответы, без навигации по залам */
-  .app.street .nav, .app.street .spots, .app.street .zone-title, .app.street #order { opacity: 0; visibility: hidden; pointer-events: none; }
-  .nav, .spots, .zone-title, #order { transition: opacity .8s, visibility .8s; }
+  .app.street .nav, .app.street .spots, .app.street .zone-title, .app.street #order, .app.street .tools { opacity: 0; visibility: hidden; pointer-events: none; }
+  .nav, .spots, .zone-title, #order, .tools { transition: opacity .8s, visibility .8s; }
 
   /* за стойкой: ответы бармену вместо подсказок */
   .fade { position: absolute; inset: 0; z-index: 7; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
@@ -573,6 +712,19 @@
   </button>
 
   
+  <div class="tools" id="tools" role="group" aria-label="Плеер, журнал и настройки">
+    <button class="tool" id="t-player" type="button" aria-label="Музыкальный плеер" aria-haspopup="dialog" title="Музыкальный плеер">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 17.5V6l10-2v11.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="6.6" cy="17.5" r="2.4" fill="currentColor"/><circle cx="16.6" cy="15.5" r="2.4" fill="currentColor"/></svg>
+    </button>
+    <button class="tool" id="t-journal" type="button" aria-label="Журнал: секреты и достижения" aria-haspopup="dialog" title="Журнал: секреты и достижения">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 3.5h10.5a1.5 1.5 0 0 1 1.5 1.5v15H7.5A1.5 1.5 0 0 1 6 18.5z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6 18.5A1.5 1.5 0 0 1 7.5 17H18" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 7.2l.9 1.9 2 .3-1.5 1.4.4 2-1.8-1-1.8 1 .4-2-1.5-1.4 2-.3z" fill="currentColor"/></svg>
+      <i class="tool-dot" id="t-journal-dot" hidden></i>
+    </button>
+    <button class="tool" id="t-settings" type="button" aria-label="Настройки" aria-haspopup="dialog" title="Настройки">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h9M17 7h3M4 17h3M11 17h9M4 12h4M12 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="15" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="9" cy="17" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="10" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
+    </button>
+  </div>
+
 </main>
 
 <div class="intro" id="intro">
@@ -681,7 +833,6 @@
 
 <script>
   /* общие связки между 3D-сценой и модулями основной версии */
-  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let busy = false, cur = 1;
   const app = document.getElementById("app");
   const H3D = {};
@@ -698,6 +849,120 @@
     document.querySelector(".load").hidden = true;
   }
   setTimeout(noGL, 25000);
+/* ================= настройки гостя, звуковые каналы, уведомления, прогресс =================
+   Всё хранится только в этом браузере (localStorage), без регистрации и без сервера. */
+  const SET_DEFAULT = { master: .8, music: .7, ambient: .6, ui: .45, mute: false, quality: "auto", fps: "60", effects: true, motion: "auto", saver: false, mood: "auto" };
+  const SET = Object.assign({}, SET_DEFAULT, (() => { try { return JSON.parse(localStorage.getItem("hacheden-settings")) || {}; } catch (e) { return {}; } })());
+  const SET_LISTEN = [];
+  function saveSettings() { try { localStorage.setItem("hacheden-settings", JSON.stringify(SET)); } catch (e) {} }
+  function setSetting(k, v) { SET[k] = v; saveSettings(); SET_LISTEN.forEach(f => { try { f(k, v); } catch (e) { console.warn(e); } }); }
+  const onSetting = f => SET_LISTEN.push(f);
+  /* «меньше движения»: по системе или вручную */
+  const reduceMotionMQ = matchMedia("(prefers-reduced-motion: reduce)");
+  const reduceMotion = { get matches() { return SET.motion === "reduce" || (SET.motion === "auto" && reduceMotionMQ.matches); } };
+
+  /* каналы звука: музыка, окружение (дождь, камин, звуки бара), интерфейс */
+  const AUDIO = {
+    routes: [],
+    level(ch) { return SET.mute ? 0 : SET.master * (ch === "music" ? SET.music : ch === "ambient" ? SET.ambient : SET.ui); },
+    // любой звуковой контекст подключаем через свой регулятор громкости
+    route(ctx, ch) {
+      if (!ctx || ctx._hRoute) return ctx;
+      const real = ctx.destination, g = ctx.createGain();
+      g.gain.value = AUDIO.level(ch);
+      g.connect(real);
+      try { Object.defineProperty(ctx, "destination", { value: g, configurable: true }); } catch (e) { return ctx; }
+      ctx._hRoute = true;
+      AUDIO.routes.push([ctx, g, ch]);
+      return ctx;
+    },
+    apply() {
+      for (const [ctx, g, ch] of AUDIO.routes) g.gain.setTargetAtTime(AUDIO.level(ch), ctx.currentTime, .12);
+      if (typeof Music !== "undefined") Music.levels();
+    }
+  };
+  onSetting(k => { if (["master", "music", "ambient", "ui", "mute"].includes(k)) AUDIO.apply(); });
+
+  /* звуки интерфейса: тихий щелчок кнопки, мягкий звонок для находок */
+  let uiCtx = null;
+  function uiAudio() {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!uiCtx) { try { uiCtx = AUDIO.route(new AC(), "ui"); } catch (e) { return null; } }
+    if (uiCtx.state === "suspended") uiCtx.resume();
+    return uiCtx;
+  }
+  function uiSound(kind = "tick") {
+    if (AUDIO.level("ui") <= .001) return;
+    const c = uiAudio(); if (!c) return;
+    const t = c.currentTime + .01;
+    const tone = (f, at, dur, v, type = "sine") => {
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t + at);
+      g.gain.setValueAtTime(0, t + at); g.gain.linearRampToValueAtTime(v, t + at + .006); g.gain.exponentialRampToValueAtTime(.0001, t + at + dur);
+      o.connect(g).connect(c.destination); o.start(t + at); o.stop(t + at + dur + .02);
+    };
+    if (kind === "tick") tone(2100, 0, .045, .035, "triangle");
+    else if (kind === "soft") tone(1300, 0, .07, .03);
+    else if (kind === "open") { tone(660, 0, .16, .03); tone(990, .05, .2, .022); }
+    else if (kind === "chime") { tone(1318.5, 0, .9, .045); tone(1760, .11, 1.1, .04); tone(2637, .22, .9, .015); }
+  }
+  document.addEventListener("pointerdown", e => {
+    const b = e.target.closest && e.target.closest("button, [role=tab], select, summary");
+    if (b && !b.disabled) uiSound(b.classList.contains("make") || b.classList.contains("enter") ? "soft" : "tick");
+  }, true);
+
+  /* аккуратные уведомления в углу: секреты, достижения, сохранения */
+  let toastBox = null;
+  function toast(title, text = "", kind = "") {
+    if (!toastBox) {
+      toastBox = document.createElement("div");
+      toastBox.className = "toasts"; toastBox.setAttribute("role", "status"); toastBox.setAttribute("aria-live", "polite");
+      document.body.appendChild(toastBox);
+    }
+    const el = document.createElement("div");
+    el.className = "toast" + (kind ? " " + kind : "");
+    const icon = kind === "secret" ? "✦" : kind === "ach" ? "★" : "•";
+    el.innerHTML = `<span class="t-ic" aria-hidden="true">${icon}</span><span class="t-tx"><b></b><span></span></span>`;
+    el.querySelector("b").textContent = title;
+    el.querySelector(".t-tx span").textContent = text;
+    toastBox.appendChild(el);
+    while (toastBox.children.length > 3) toastBox.firstChild.remove();
+    const bye = () => { el.classList.add("out"); setTimeout(() => el.remove(), 400); };
+    el.addEventListener("click", bye);
+    setTimeout(bye, kind ? 6000 : 4200);
+  }
+
+  /* прогресс гостя: где был, что пил, что нашёл */
+  const PROG = Object.assign({ rooms: [], secrets: {}, ach: {}, drinks: {}, tracks: [], favTracks: [], stories: [], visits: 0, first: 0, counters: {} },
+    (() => { try { return JSON.parse(localStorage.getItem("hacheden-progress")) || {}; } catch (e) { return {}; } })());
+  function saveProgress() { try { localStorage.setItem("hacheden-progress", JSON.stringify(PROG)); } catch (e) {} }
+  const PROG_LISTEN = [];
+  /* событие: track("room", 2), track("drink", "c-mojito"), track("secret", "cellar") … */
+  function track(ev, v) {
+    let changed = false;
+    const addTo = (arr, x) => { if (!arr.includes(x)) { arr.push(x); changed = true; } };
+    if (ev === "room") addTo(PROG.rooms, v);
+    else if (ev === "drink") { PROG.drinks[v] = (PROG.drinks[v] || 0) + 1; changed = true; }
+    else if (ev === "track") addTo(PROG.tracks, v);
+    else if (ev === "story") addTo(PROG.stories, v);
+    else if (ev === "count") { PROG.counters[v] = (PROG.counters[v] || 0) + 1; changed = true; }
+    else if (ev === "secret") {
+      if (!PROG.secrets[v]) {
+        PROG.secrets[v] = Date.now(); changed = true;
+        const s = typeof SECRET_INFO !== "undefined" && SECRET_INFO[v];
+        setTimeout(() => { uiSound("chime"); toast("Найден секрет", s ? s.name : "", "secret"); }, 400);
+      }
+    }
+    if (!changed) return;
+    saveProgress();
+    PROG_LISTEN.forEach(f => { try { f(ev, v); } catch (e) { console.warn(e); } });
+  }
+  const onProgress = f => PROG_LISTEN.push(f);
+  if (!PROG.first) PROG.first = Date.now();
+  PROG.visits++;
+  saveProgress();
+
 /* ---------- формы бутылок ---------- */
   const SHAPES = {
     bordeaux: { d: "M25 14H35V62C35 76 52 80 52 104V186Q52 194 44 194H16Q8 194 8 186V104C8 80 25 76 25 62Z", neck: [25, 35], top: 14, body: [8, 44] },
@@ -923,15 +1188,28 @@
   
 /* ---------- музыка: сочиняется прямо в браузере, чужих треков нет ---------- */
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
-  const CHORDS = [
-    { root: 38, notes: [53, 57, 60, 64] },  // Dm9
-    { root: 43, notes: [53, 57, 59, 64] },  // G13
-    { root: 36, notes: [52, 55, 59, 62] },  // Cmaj9
-    { root: 45, notes: [55, 59, 60, 64] }   // Am9
+  /* Композиции нашего домашнего ансамбля. Всё звучит из синтезатора браузера, записей нет.
+     Аккорды записаны в до мажоре, tr — сдвиг тональности в полутонах. Легко добавить свою. */
+  const C_ = (root, ...notes) => ({ root, notes });
+  const TRACKS = [
+    { id: "quiet", title: "Тихий час у стойки", artist: "Hacheden House Quartet", mood: "calm", bpm: 68, per: 16, sax: "alt", drums: 1, mel: .09, walk: false, tr: 0,
+      chords: [C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64), C_(36, 52, 55, 59, 62), C_(45, 55, 59, 60, 64)] },
+    { id: "amber", title: "Янтарный свет", artist: "Hacheden House Trio", mood: "calm", bpm: 74, per: 16, sax: "off", drums: .8, mel: .16, walk: false, tr: 2,
+      chords: [C_(41, 52, 55, 57, 60), C_(40, 50, 55, 59, 62), C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64)] },
+    { id: "swing", title: "Свинг у стойки", artist: "Hacheden House Quartet", mood: "swing", bpm: 112, per: 8, sax: "alt", drums: 1.2, mel: .07, walk: true, tr: -2,
+      chords: [C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64), C_(36, 52, 55, 59, 62), C_(45, 55, 61, 64, 66)] },
+    { id: "roof", title: "Фокстрот на крыше", artist: "Hacheden House Quartet", mood: "swing", bpm: 126, per: 8, sax: "lead", drums: 1.3, mel: .05, walk: true, tr: 5,
+      chords: [C_(36, 52, 55, 59, 62), C_(45, 55, 60, 64, 67), C_(38, 53, 57, 60, 64), C_(43, 53, 57, 59, 64)] },
+    { id: "blues", title: "Полночный блюз", artist: "Hacheden House Quartet", mood: "late", bpm: 60, per: 16, sax: "lead", drums: .6, mel: .05, walk: false, tr: 0,
+      chords: [C_(45, 55, 59, 60, 64), C_(38, 53, 57, 60, 64), C_(45, 55, 59, 60, 64), C_(40, 56, 62, 65, 68)] },
+    { id: "train", title: "Последний поезд", artist: "Hacheden House Trio", mood: "late", bpm: 56, per: 16, sax: "off", drums: .35, mel: .13, walk: false, tr: 0,
+      chords: [C_(36, 51, 55, 58, 62), C_(44, 51, 55, 56, 60), C_(41, 55, 56, 60, 63), C_(43, 53, 56, 59, 62)] }
   ];
+  const MOODS_MUSIC = { auto: "По часам", calm: "Спокойный вечер", swing: "Свинг", late: "Поздняя ночь" };
+  const TRACK_LEN = 150;   // секунд на композицию, потом следующая
   const MELODY = [72, 74, 76, 79, 81, 84];
 
-  function createBand(ctx, out, emit = () => {}) {
+  function createBand(ctx, out, emit = () => {}, TR = TRACKS[0]) {
     const noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
     const nd = noise.getChannelData(0);
     for (let i = 0; i < nd.length; i++) nd[i] = Math.random() * 2 - 1;
@@ -954,11 +1232,13 @@
       g.connect(out);
     }
     function chord(c, t, dur, vel) {
-      c.notes.forEach((n, i) => keys(n, t + i * .018 + Math.random() * .01, dur, vel * (1 - i * .08)));
-      emit({ i: "piano", kind: "chord", notes: c.notes, t, dur, vel });
+      const notes = c.notes.map(n => n + TR.tr);
+      notes.forEach((n, i) => keys(n, t + i * .018 + Math.random() * .01, dur, vel * (1 - i * .08)));
+      emit({ i: "piano", kind: "chord", notes, t, dur, vel });
     }
-    function mel(m, t, dur, vel) { keys(m, t, dur, vel); emit({ i: "piano", kind: "mel", notes: [m], t, dur, vel }); }
+    function mel(m, t, dur, vel) { m += TR.tr; keys(m, t, dur, vel); emit({ i: "piano", kind: "mel", notes: [m], t, dur, vel }); }
     function bass(m, t, dur) {
+      m += TR.tr;
       const o = ctx.createOscillator(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
       o.type = "triangle"; o.frequency.value = mtof(m);
       lp.type = "lowpass"; lp.frequency.value = 380;
@@ -972,6 +1252,7 @@
     }
     /* тенор-саксофон: два генератора, мягкий фильтр, подъезд к ноте, вибрато и дыхание */
     function sax(m, t, dur, vel = .05) {
+      m += TR.tr;
       const f = mtof(m), sum = ctx.createGain(), lp = ctx.createBiquadFilter(), pk = ctx.createBiquadFilter(), g = ctx.createGain();
       const o1 = ctx.createOscillator(), o2 = ctx.createOscillator(), a1 = ctx.createGain(), a2 = ctx.createGain();
       o1.type = "sawtooth"; o2.type = "square"; o2.detune.value = 6;
@@ -1016,7 +1297,7 @@
       SX.idx = idx;
       const dur = last ? beat * (1.4 + Math.random()) : beat * (step % 2 ? .38 : .62);
       sax(SAX_SCALE[idx], t, dur, last ? .055 : .045);
-      if (last) SX.rest = 3 + Math.floor(Math.random() * 6);
+      if (last) SX.rest = (TR.sax === "lead" ? 2 : 3) + Math.floor(Math.random() * 5);
     }
     function brush(t, v) {
       const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
@@ -1052,38 +1333,58 @@
       s.start();
       return s;
     }
-    // один шаг — восьмая доля; аккорд меняется каждые два такта
+    // один шаг — восьмая доля; аккорд меняется раз в per восьмых
     function play(step, t, beat) {
-      const k = step % 16, pos = step % 8, ci = Math.floor(step / 16) % 4;
-      const c = CHORDS[ci], next = CHORDS[(ci + 1) % 4];
-      if (k === 0) chord(c, t, 3.4, .06);
-      if (k === 6 && Math.random() < .5) chord(c, t, 1.6, .035);
-      if (k === 11) chord(c, t, 2.2, .045);
-      if (pos === 0) bass(c.root, t, beat * 1.8);
-      if (pos === 4) bass(Math.random() < .6 ? c.root + 7 : c.root + 12, t, beat * 1.6);
-      if (k === 15 && Math.random() < .5) bass(next.root + (Math.random() < .5 ? 1 : -1), t, beat * .45);
-      if (pos === 0) kick(t, .16);
-      if (pos === 5 && Math.random() < .3) kick(t, .09);
-      if (pos === 2 || pos === 6) brush(t, .045);
-      else if (Math.random() < .55) brush(t, .012 + Math.random() * .01);
-      // каждые восемь тактов солирует то фортепиано, то саксофон
-      const saxTurn = Math.floor(step / 64) % 2 === 1;
+      const CH = TR.chords, per = TR.per, n = CH.length;
+      const k = step % 16, pos = step % 8, kk = step % per, ci = Math.floor(step / per) % n;
+      const c = CH[ci], next = CH[(ci + 1) % n], dr = TR.drums;
+      if (kk === 0) chord(c, t, beat * per * .42, .06);
+      if (per === 16) {
+        if (kk === 6 && Math.random() < .5) chord(c, t, 1.6, .035);
+        if (kk === 11) chord(c, t, 2.2, .045);
+      } else {
+        if (kk === 3 && Math.random() < .45) chord(c, t, beat * .55, .032);
+        if (kk === 6 && Math.random() < .6) chord(c, t, beat * .9, .038);
+      }
+      if (TR.walk) {
+        // шагающий бас: по четверти, к следующему аккорду — полутоном
+        if (pos % 2 === 0) {
+          const q = pos / 2, toNext = kk >= per - 2;
+          const m = q === 0 && kk < 2 ? c.root : toNext ? next.root + (Math.random() < .5 ? 1 : -1) : c.root + [0, 3, 7, 5, 4, 10][Math.floor(Math.random() * 6)];
+          bass(m, t, beat * .95);
+        }
+      } else {
+        if (pos === 0) bass(c.root, t, beat * 1.8);
+        if (pos === 4) bass(Math.random() < .6 ? c.root + 7 : c.root + 12, t, beat * 1.6);
+        if (k === 15 && Math.random() < .5) bass(next.root + (Math.random() < .5 ? 1 : -1), t, beat * .45);
+      }
+      if (pos === 0) kick(t, .16 * Math.min(1, dr));
+      if (pos === 5 && Math.random() < .3 * dr) kick(t, .09);
+      if (TR.walk && pos === 4 && Math.random() < .5) kick(t, .07);
+      if (pos === 2 || pos === 6) brush(t, .045 * Math.min(1.2, dr));
+      else if (Math.random() < .55 * dr) brush(t, .012 + Math.random() * .01);
+      // саксофон: по очереди с фортепиано, ведёт всю пьесу или молчит
+      const saxTurn = TR.sax === "lead" ? Math.floor(step / 64) % 4 !== 3 : TR.sax === "alt" ? Math.floor(step / 64) % 2 === 1 : false;
       if (saxTurn) saxStep(step, t, beat, c);
       else { SX.left = 0; SX.rest = 0; }
-      if (k !== 0 && Math.random() < (saxTurn ? .025 : .09)) mel(MELODY[Math.floor(Math.random() * MELODY.length)], t, 1.4, .03);
+      if (k !== 0 && Math.random() < (saxTurn ? .025 : TR.mel)) mel(MELODY[Math.floor(Math.random() * MELODY.length)], t, 1.4, .03);
     }
-    return { play, crackle };
+    function setTrack(t) { TR = t; SX.left = 0; SX.rest = 0; }
+    return { play, crackle, setTrack };
   }
 
+  /* Звуковой движок: музыка и окружение (дождь, камин, сверчки, ветер) идут разными каналами
+     и смешиваются в общий; громкости — из настроек. Звук включается только после действия гостя. */
   const Music = (() => {
-    const BEAT = 60 / 68, EIGHTH = BEAT / 2;
-    let ctx = null, tone, master, band, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
-    // погода за окном: громкость дождя, сверчков, ветра и камина; меняется по сезону
+    let BEAT = 60 / 68, EIGHTH = BEAT / 2, SWING = 1.25;
+    let ctx = null, tone, master, musBus, ambBus, band, analyser, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
+    let trackI = 0, trackStart = 0, mood = "auto", switching = false;
     const WX = { rain: .32, crickets: 0, wind: 0, fire: .5 };
-    const NOTE = [];
-    // погоду слышно у окна читальни (0) и громче всего на улице (3)
+    const MIX = { rain: 1, fire: 1 };   // ручки из комнат: громкость дождя в читальне, камин в курилке
+    const NOTE = [], LISTEN = [];
     const outside = () => roomIdx === 0 ? 1 : roomIdx === 3 ? 1.8 : 0;
-    const roomFreq = () => roomIdx === 4 ? 6200 : roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // 4 — у самой сцены   // в соседних комнатах музыка звучит глуше, как из-за стены
+    const roomFreq = () => roomIdx === 4 ? 6200 : roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
+    const tellAll = () => LISTEN.forEach(f => { try { f(); } catch (e) {} });
     function impulse(sec) {
       const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
       for (let ch = 0; ch < 2; ch++) {
@@ -1092,105 +1393,178 @@
       }
       return b;
     }
+    function loopNoise(make, sec, gainNode) {
+      const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * sec), ctx.sampleRate);
+      make(b.getChannelData(0), ctx.sampleRate);
+      const s = ctx.createBufferSource(); s.buffer = b; s.loop = true;
+      return [s, gainNode];
+    }
     function setup() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return false;
-      ctx = new AC();
+      try { ctx = new AC(); } catch (e) { return false; }
       master = ctx.createGain(); master.gain.value = 0;
+      musBus = ctx.createGain(); musBus.gain.value = 0;
+      ambBus = ctx.createGain(); ambBus.gain.value = 0;
+      analyser = ctx.createAnalyser(); analyser.fftSize = 128; analyser.smoothingTimeConstant = .8;
       tone = ctx.createBiquadFilter(); tone.type = "lowpass"; tone.frequency.value = roomFreq(); tone.Q.value = .4;
       const dry = ctx.createGain(); dry.gain.value = .8;
       const wet = ctx.createGain(); wet.gain.value = .32;
       const verb = ctx.createConvolver(); verb.buffer = impulse(2.6);
       const comp = ctx.createDynamicsCompressor();
-      tone.connect(dry).connect(master);
-      tone.connect(wet).connect(verb).connect(master);
+      tone.connect(dry).connect(musBus);
+      tone.connect(wet).connect(verb).connect(musBus);
+      musBus.connect(analyser);
+      musBus.connect(master); ambBus.connect(master);
       master.connect(comp).connect(ctx.destination);
-      band = createBand(ctx, tone, e => { for (const f of NOTE) f(e); });
+      band = createBand(ctx, tone, e => { for (const f of NOTE) f(e); }, TRACKS[trackI]);
       band.crackle();
       // треск камина: слышен только в курилке
-      fire = ctx.createGain(); fire.gain.value = roomIdx === 2 ? WX.fire : 0;
-      const fb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), fd = fb.getChannelData(0);
-      let env = 0;
-      for (let i = 0; i < fd.length; i++) {
-        if (Math.random() < .0009) env = .35 + Math.random() * .6;
-        env *= .985;
-        fd[i] = (Math.random() * 2 - 1) * (env + .012);
-      }
-      const fsrc = ctx.createBufferSource(), flp = ctx.createBiquadFilter();
-      fsrc.buffer = fb; fsrc.loop = true; flp.type = "lowpass"; flp.frequency.value = 3200;
-      fsrc.connect(flp).connect(fire).connect(master); fsrc.start();
+      fire = ctx.createGain(); fire.gain.value = 0;
+      const [fsrc] = loopNoise((fd) => {
+        let env = 0;
+        for (let i = 0; i < fd.length; i++) { if (Math.random() < .0009) env = .35 + Math.random() * .6; env *= .985; fd[i] = (Math.random() * 2 - 1) * (env + .012); }
+      }, 4);
+      const flp = ctx.createBiquadFilter(); flp.type = "lowpass"; flp.frequency.value = 3200;
+      fsrc.connect(flp).connect(fire).connect(ambBus); fsrc.start();
       // дождь за окном читальни
-      rain = ctx.createGain(); rain.gain.value = outside() * WX.rain;
-      const rb = ctx.createBuffer(1, ctx.sampleRate * 3, ctx.sampleRate), rd = rb.getChannelData(0);
-      for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07);
-      const rsrc = ctx.createBufferSource(), rbp = ctx.createBiquadFilter();
-      rsrc.buffer = rb; rsrc.loop = true; rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
-      rsrc.connect(rbp).connect(rain).connect(master); rsrc.start();
+      rain = ctx.createGain(); rain.gain.value = 0;
+      const [rsrc] = loopNoise(rd => { for (let i = 0; i < rd.length; i++) rd[i] = (Math.random() * 2 - 1) * (Math.random() < .002 ? .5 : .07); }, 3);
+      const rbp = ctx.createBiquadFilter(); rbp.type = "bandpass"; rbp.frequency.value = 2400; rbp.Q.value = .5;
+      rsrc.connect(rbp).connect(rain).connect(ambBus); rsrc.start();
       // сверчки летней ночью
-      crick = ctx.createGain(); crick.gain.value = outside() * WX.crickets;
-      const cb = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate), cd = cb.getChannelData(0), sr = ctx.sampleRate;
-      for (const [f, per, off, amp] of [[4400, .62, .05, .5], [4950, .81, .31, .35], [3900, 1.13, .6, .25]]) {
-        for (let t0 = off; t0 < 3.9; t0 += per) for (let k = 0; k < 3; k++) {
-          const st = Math.floor((t0 + k * .045) * sr), n = Math.floor(.022 * sr);
-          for (let i = 0; i < n && st + i < cd.length; i++) cd[st + i] += Math.sin(2 * Math.PI * f * i / sr) * Math.sin(Math.PI * i / n) * amp;
+      crick = ctx.createGain(); crick.gain.value = 0;
+      const [csrc] = loopNoise((cd, sr) => {
+        for (const [f, per, off, amp] of [[4400, .62, .05, .5], [4950, .81, .31, .35], [3900, 1.13, .6, .25]]) {
+          for (let t0 = off; t0 < 3.9; t0 += per) for (let k = 0; k < 3; k++) {
+            const st = Math.floor((t0 + k * .045) * sr), n = Math.floor(.022 * sr);
+            for (let i = 0; i < n && st + i < cd.length; i++) cd[st + i] += Math.sin(2 * Math.PI * f * i / sr) * Math.sin(Math.PI * i / n) * amp;
+          }
         }
-      }
-      const csrc = ctx.createBufferSource(); csrc.buffer = cb; csrc.loop = true;
-      csrc.connect(crick).connect(master); csrc.start();
+      }, 4);
+      csrc.connect(crick).connect(ambBus); csrc.start();
       // зимний ветер
-      wind = ctx.createGain(); wind.gain.value = outside() * WX.wind;
-      const wb = ctx.createBuffer(1, ctx.sampleRate * 8, ctx.sampleRate), wd = wb.getChannelData(0);
-      let lp = 0;
-      for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
-      const wsrc = ctx.createBufferSource(); wsrc.buffer = wb; wsrc.loop = true;
-      wsrc.connect(wind).connect(master); wsrc.start();
+      wind = ctx.createGain(); wind.gain.value = 0;
+      const [wsrc] = loopNoise(wd => {
+        let lp = 0;
+        for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
+      }, 8);
+      wsrc.connect(wind).connect(ambBus); wsrc.start();
+      levels(true);
+      room(roomIdx);
       return true;
     }
+    /* громкости каналов из настроек; плавно, без щелчков */
+    function levels(instant) {
+      if (!ctx) return;
+      const now = ctx.currentTime, k = instant ? .01 : .25;
+      master.gain.setTargetAtTime(SET.mute ? 0 : SET.master, now, k);
+      musBus.gain.setTargetAtTime(on && !switching ? SET.music * .95 : 0, now, on ? .6 : .35);
+      ambBus.gain.setTargetAtTime(SET.ambient * 1.1, now, .8);
+      // тишина во всех каналах — ставим звук на паузу, чтобы не грузить телефон
+      const silent = SET.mute || SET.master <= 0 || (!on && SET.ambient <= 0);
+      if (silent && ctx.state === "running") setTimeout(() => { if ((SET.mute || SET.master <= 0 || (!on && SET.ambient <= 0)) && ctx.state === "running") ctx.suspend(); }, 1200);
+      else if (!silent && ctx.state === "suspended" && !document.hidden) ctx.resume();
+    }
+    function trackFor(m) {
+      if (m === "auto") {
+        const h = new Date().getHours() + new Date().getMinutes() / 60;
+        m = h >= 17 && h < 22 ? "calm" : h >= 22 || h < .5 ? "swing" : "late";
+      }
+      return TRACKS.filter(t => t.mood === m);
+    }
+    function applyTrack(i) {
+      trackI = (i + TRACKS.length) % TRACKS.length;
+      const T = TRACKS[trackI];
+      BEAT = 60 / T.bpm; EIGHTH = BEAT / 2; SWING = T.bpm > 100 ? 1.32 : 1.25;
+      if (band) band.setTrack(T);
+      step = 0;
+      trackStart = ctx ? ctx.currentTime : 0;
+    }
     function tick() {
+      if (on && !switching && ctx.currentTime - trackStart > TRACK_LEN) { next(); return; }
       while (nextTime < ctx.currentTime + .2) {
         band.play(step, nextTime, BEAT);
-        nextTime += step % 2 === 0 ? EIGHTH * 1.25 : EIGHTH * .75;   // свинг
+        nextTime += step % 2 === 0 ? EIGHTH * SWING : EIGHTH * (2 - SWING);
         step++;
       }
     }
     function run() {
       nextTime = ctx.currentTime + .1;
-      anchor = nextTime - (Math.floor(step / 2) * BEAT + (step % 2 ? EIGHTH * 1.25 : 0));
+      anchor = nextTime - (Math.floor(step / 2) * BEAT + (step % 2 ? EIGHTH * SWING : 0));
       clearInterval(timer);
       timer = setInterval(tick, 40);
+    }
+    /* первый жест гостя: включаем окружение (без музыки, если она выключена) */
+    function wake() {
+      if (!ctx && !setup()) return false;
+      if (ctx.state === "suspended" && !document.hidden) ctx.resume();
+      levels();
+      return true;
     }
     function start() {
       if (!ctx && !setup()) return false;
       on = true;
       ctx.resume();
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setTargetAtTime(.75, ctx.currentTime, .8);
+      if (!trackStart) applyTrack(trackI);
+      trackStart = ctx.currentTime - Math.min(ctx.currentTime - trackStart, TRACK_LEN - 1);
+      levels();
       run();
+      tellAll();
       return true;
     }
     function stop() {
       on = false;
       if (!ctx) return;
-      clearInterval(timer); timer = null;
-      master.gain.cancelScheduledValues(ctx.currentTime);
-      master.gain.setTargetAtTime(0, ctx.currentTime, .4);
-      setTimeout(() => { if (!on) ctx.suspend(); }, 1800);
+      levels();
+      setTimeout(() => { if (!on) { clearInterval(timer); timer = null; } }, 1500);
+      tellAll();
     }
+    /* смена композиции: тихий уход, новая пьеса с первого такта — две мелодии не звучат вместе */
+    function play(i) {
+      if (!ctx && !setup()) return false;
+      if (!on) { applyTrack(i); trackStart = ctx.currentTime; start(); return true; }
+      switching = true; levels();
+      setTimeout(() => {
+        applyTrack(i);
+        switching = false;
+        trackStart = ctx.currentTime;
+        run(); levels(); tellAll();
+      }, 650);
+      tellAll();
+      return true;
+    }
+    function listFor() { return trackFor(mood); }
+    function next(dir = 1) {
+      const list = listFor(), cur = list.indexOf(TRACKS[trackI]);
+      const nxt = cur < 0 ? list[0] : list[(cur + dir + list.length) % list.length];
+      return play(TRACKS.indexOf(nxt));
+    }
+    function setMood(m) {
+      mood = m;
+      try { localStorage.setItem("hacheden-mood", m); } catch (e) {}
+      const list = listFor();
+      if (!list.includes(TRACKS[trackI])) { if (on) play(TRACKS.indexOf(list[0])); else applyTrack(TRACKS.indexOf(list[0])); }
+      tellAll();
+    }
+    try { const m = localStorage.getItem("hacheden-mood"); if (m && MOODS_MUSIC[m]) mood = m; } catch (e) {}
+    { const first = trackFor(mood)[0]; trackI = TRACKS.indexOf(first); BEAT = 60 / first.bpm; EIGHTH = BEAT / 2; SWING = first.bpm > 100 ? 1.32 : 1.25; }
     function room(i) {
       roomIdx = i;
-      if (ctx) {
-        tone.frequency.setTargetAtTime(roomFreq(), ctx.currentTime, .5);
-        fire.gain.setTargetAtTime(roomIdx === 2 ? WX.fire : 0, ctx.currentTime, .6);
-        rain.gain.setTargetAtTime(outside() * WX.rain, ctx.currentTime, .6);
-        crick.gain.setTargetAtTime(outside() * WX.crickets, ctx.currentTime, .6);
-        wind.gain.setTargetAtTime(outside() * WX.wind, ctx.currentTime, .6);
-      }
+      if (!ctx) return;
+      const now = ctx.currentTime;
+      tone.frequency.setTargetAtTime(roomFreq(), now, .5);
+      fire.gain.setTargetAtTime(roomIdx === 2 ? WX.fire * MIX.fire : 0, now, .6);
+      rain.gain.setTargetAtTime(outside() * WX.rain * (roomIdx === 0 ? MIX.rain : 1), now, .6);
+      crick.gain.setTargetAtTime(outside() * WX.crickets, now, .6);
+      wind.gain.setTargetAtTime(outside() * WX.wind, now, .6);
     }
     function weather(o) { Object.assign(WX, o); room(roomIdx); }
+    function mix(o) { Object.assign(MIX, o); room(roomIdx); }
     document.addEventListener("visibilitychange", () => {
-      if (!ctx || !on) return;
+      if (!ctx) return;
       if (document.hidden) { clearInterval(timer); ctx.suspend(); }
-      else ctx.resume().then(run);
+      else { levels(); if (ctx.state !== "running" && !(SET.mute || SET.master <= 0)) ctx.resume().then(() => { if (on) run(); }); else if (on) run(); }
     });
     // где мы внутри доли: 0 — сильная доля, бармен кивает
     function beat() {
@@ -1199,7 +1573,7 @@
     }
     // лёд в шейкере
     function shake(ms) {
-      if (!ctx || !on) return;
+      if (!ctx || ctx.state !== "running") return;
       if (!sfx) {
         sfx = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .2), ctx.sampleRate);
         const d = sfx.getChannelData(0);
@@ -1213,13 +1587,13 @@
         g.gain.setValueAtTime(0, t);
         g.gain.linearRampToValueAtTime(v, t + .01);
         g.gain.exponentialRampToValueAtTime(.0001, t + .09);
-        src.connect(f).connect(g).connect(master);
+        src.connect(f).connect(g).connect(ambBus);
         src.start(t, Math.random() * .08, .1);
       }
     }
     // далёкий раскат грома
     function thunder() {
-      if (!ctx || !on) return;
+      if (!ctx || ctx.state !== "running") return;
       const len = ctx.sampleRate * 3.2, b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
       let v = 0;
       for (let i = 0; i < len; i++) {
@@ -1229,9 +1603,15 @@
       }
       const src = ctx.createBufferSource(), lp = ctx.createBiquadFilter(), g = ctx.createGain();
       src.buffer = b; lp.type = "lowpass"; lp.frequency.value = 260; g.gain.value = 1.4;
-      src.connect(lp).connect(g).connect(master); src.start();
+      src.connect(lp).connect(g).connect(ambBus); src.start();
     }
-    return { start, stop, room, weather, beat, shake, thunder, get on() { return on; }, onNote: f => NOTE.push(f), time: () => ctx ? ctx.currentTime : 0 };
+    function spectrum(arr) { if (!analyser) return false; analyser.getByteFrequencyData(arr); return true; }
+    function info() {
+      const T = TRACKS[trackI], el = ctx && on ? Math.max(0, ctx.currentTime - trackStart) : 0;
+      return { i: trackI, track: T, mood, on, elapsed: el, len: TRACK_LEN, switching };
+    }
+    return { start, stop, wake, play, next, prev: () => next(-1), setMood, info, spectrum, levels, room, weather, mix, beat, shake, thunder,
+      onChange: f => LISTEN.push(f), get on() { return on; }, onNote: f => NOTE.push(f), time: () => ctx ? ctx.currentTime : 0 };
   })();
 
   const musicBtn = document.getElementById("music");
@@ -1245,15 +1625,26 @@
     musicBtn.querySelector(".label").textContent = text;
     try { localStorage.setItem("hacheden-music", want ? "on" : "off"); } catch (e) {}
   }
+  Music.onChange(() => {
+    const want = Music.on;
+    if (musicBtn.classList.contains("on") === want) return;
+    musicBtn.classList.toggle("on", want);
+    document.body.classList.toggle("music-on", want);
+    const text = want ? "Выключить музыку" : "Включить музыку";
+    musicBtn.setAttribute("aria-label", text);
+    musicBtn.querySelector(".label").textContent = text;
+  });
   musicBtn.addEventListener("click", () => setMusic(!Music.on));
   let musicWasOn = false;
   try { musicWasOn = localStorage.getItem("hacheden-music") === "on"; } catch (e) {}
-  if (musicWasOn) {
-    // браузер разрешает звук только после действия человека: включаем при первом клике
-    addEventListener("pointerdown", e => { if (!e.target.closest("#music, #sm-gramo, [data-act=gramo]") && !Music.on) setMusic(true); }, { once: true });
-  }
+  // браузер разрешает звук только после действия человека: окружение и музыку включаем при первом касании
+  addEventListener("pointerdown", e => {
+    Music.wake();
+    if (musicWasOn && !e.target.closest("#music, #sm-gramo, [data-act=gramo]") && !Music.on) setMusic(true);
+  }, { once: true });
+  addEventListener("keydown", () => Music.wake(), { once: true });
 
-  
+
   const DOOR_STORY = {
     name: "Три стука в дверь",
     tagline: "Как попадали в подпольный бар",
@@ -1321,7 +1712,7 @@
     function rustle() {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
-      sctx = sctx || new AC();
+      sctx = sctx || AUDIO.route(new AC(), "ui");
       sctx.resume();
       const len = sctx.sampleRate * .35, b = sctx.createBuffer(1, len, sctx.sampleRate), d = b.getChannelData(0);
       for (let j = 0; j < len; j++) { const k = j / len; d[j] = (Math.random() * 2 - 1) * Math.sin(Math.PI * k) * (.6 + .4 * Math.random()); }
@@ -1737,7 +2128,10 @@
       lime: { kind: "squeeze", glass: "#ffffff", op: .25, liq: "#d9e8a0", label: "#8fb12f", ink: "#1a2a0a", name: "ЛАЙМ" },
       lemon: { kind: "squeeze", glass: "#ffffff", op: .25, liq: "#f2e48a", label: "#e8c832", ink: "#2a2208", name: "ЛИМОН" },
       syrup: { kind: "squeeze", glass: "#ffffff", op: .3, liq: "#f6efd8", label: "#e8dcc0", ink: "#4a3a22", name: "СИРОП" },
-      grenadine: { kind: "squeeze", glass: "#b3122a", op: .85, liq: "#b3122a", label: "#f2e8cf", ink: "#8a0c22", name: "ГРЕНАДИН" }
+      grenadine: { kind: "squeeze", glass: "#b3122a", op: .85, liq: "#b3122a", label: "#f2e8cf", ink: "#8a0c22", name: "ГРЕНАДИН" },
+      coffee: { kind: "carafe", glass: "#ffffff", op: .18, liq: "#2a1206", name: "" },
+      tea: { kind: "carafe", glass: "#ffffff", op: .18, liq: "#b5651d", name: "" },
+      cream: { kind: "squeeze", glass: "#f4eee2", op: .95, liq: "#f6efe0", label: "#3a2a1a", ink: "#f6efe0", name: "СЛИВКИ" }
     };
     // горлышко в точке (0,0), корпус уходит вниз
     const BOTTLE = {
@@ -2093,8 +2487,8 @@
     const GEN = { rum: "рома", tequila: "текилы", gin: "джина", whisky: "виски", cognac: "коньяка", wine: "вина", triple: "апельсинового ликёра", cherry: "вишнёвого ликёра",
       campari: "кампари", vermouthR: "красного вермута", vermouthD: "сухого вермута", bitters: "ангостуры", tonic: "тоника", soda: "содовой",
       cola: "колы", oj: "апельсинового сока", pineapple: "ананасового сока", coconut: "кокосовых сливок", lime: "сока лайма",
-      lemon: "лимонного сока", syrup: "сахарного сиропа", grenadine: "гренадина" };
-    const TOPACC = { soda: "содовую", tonic: "тоник", cola: "колу" };
+      lemon: "лимонного сока", syrup: "сахарного сиропа", grenadine: "гренадина", coffee: "кофе", tea: "чая", cream: "сливок" };
+    const TOPACC = { soda: "содовую", tonic: "тоник", cola: "колу", coffee: "кофе", tea: "чай" };
     const GNAME = { wheel: "кружок лайма", wedge: "долька лайма", orange: "кружок апельсина", lemon: "лимонная цедра", mint: "веточка мяты",
       cherry: "коктейльная вишня", pineapple: "долька ананаса", olive: "оливка на шпажке", flame: "обожжённая апельсиновая цедра" };
     function stepText(st) {
@@ -2308,13 +2702,14 @@
     ["Крепкое", [["wine", "Вино"], ["cognac", "Коньяк"], ["rum", "Ром"], ["whisky", "Виски"], ["gin", "Джин"], ["tequila", "Текила"]]],
     ["Ликёры и вермуты", [["triple", "Апельсиновый ликёр"], ["cherry", "Вишнёвый ликёр"], ["campari", "Кампари"], ["vermouthR", "Красный вермут"], ["vermouthD", "Сухой вермут"], ["bitters", "Ангостура"]]],
     ["Соки и газировка", [["tonic", "Тоник"], ["soda", "Содовая"], ["cola", "Кола"], ["oj", "Апельсиновый сок"], ["pineapple", "Ананасовый сок"], ["coconut", "Кокосовые сливки"]]],
-    ["Свежее и сиропы", [["lime", "Лайм"], ["lemon", "Лимон"], ["mint", "Мята"], ["syrup", "Сахарный сироп"], ["grenadine", "Гренадин"]]]
+    ["Свежее и сиропы", [["lime", "Лайм"], ["lemon", "Лимон"], ["mint", "Мята"], ["syrup", "Сахарный сироп"], ["grenadine", "Гренадин"]]],
+    ["Кофе и чай", [["coffee", "Горячий кофе"], ["tea", "Горячий чай"], ["cream", "Сливки"]]]
   ];
   const ING_NAME = Object.fromEntries(ING.flatMap(([, items]) => items));
   const low = id => ING_NAME[id].toLowerCase();
   const METHOD = { shake: "встряхнуть в шейкере", stir: "размешать со льдом", build: "собрать прямо в бокале", fire: "поджечь и перелить огненной струёй" };
   const GLASS_NAME = { highball: "высокий стакан", rocks: "рокс", coupe: "шампанское блюдце", martini: "коктейльный бокал", wine: "винный бокал" };
-  const BASES = [["rum", "С ромом"], ["tequila", "С текилой"], ["gin", "С джином"], ["whisky", "С виски"], ["cognac", "С коньяком"], ["wine", "С вином"], ["aperitif", "Аперитивы"], ["none", "Без алкоголя"]];
+  const BASES = [["rum", "С ромом"], ["tequila", "С текилой"], ["gin", "С джином"], ["whisky", "С виски"], ["cognac", "С коньяком"], ["wine", "С вином"], ["aperitif", "Аперитивы"], ["none", "Без алкоголя"], ["hot", "Кофе и чай"]];
   const COCKTAILS = [
     { id: "c-hacheden", name: "Hacheden", base: "cognac", origin: "Наш бар", method: "fire", need: ["cognac", "cherry", "syrup"], signature: true,
       cup: "rocks", pour: "#8e2a16", pourOp: .92, pourLevel: 62, garnish: "flame",
@@ -2418,6 +2813,30 @@
       history: "Безалкогольная версия знаменитого кубинского коктейля. Мята, лайм и пузырьки освежают не хуже оригинала.",
       recipe: [["20 мл", "сока лайма"], ["15 мл", "сахарного сиропа"], ["6–8", "листиков мяты"], ["до верха", "содовой"]],
       steps: "Разомни мяту с лаймом и сиропом, засыпь стакан колотым льдом и долей содовую. Перемешай и укрась мятой." }
+    ,{ id: "c-irish", name: "Ирландский кофе", base: "hot", origin: "Ирландия", method: "build", need: ["whisky", "syrup", "coffee", "cream"],
+      cup: "wine", pour: "#3a1a0c", pourOp: .95, pourLevel: 40,
+      tagline: "Горячий кофе с виски под шапкой сливок",
+      history: "Придумал шеф-повар Джо Шеридан в 1943 году в Фойнсе на западе Ирландии: туда садились трансатлантические гидросамолёты, и замёрзшим пассажирам подали кофе с виски. В 1952 году журналист Стэнтон Делаплейн привёз рецепт в кафе «Буэна Виста» в Сан-Франциско, и оттуда напиток разошёлся по Америке.",
+      recipe: [["40 мл", "ирландского виски"], ["15 мл", "сахарного сиропа (лучше из коричневого сахара)"], ["90 мл", "горячего крепкого кофе"], ["30 мл", "слегка взбитых сливок"]],
+      steps: "Прогрей бокал горячей водой. Размешай в горячем кофе сироп и виски. Сверху по ложке аккуратно выложи слегка взбитые сливки: их не перемешивают, кофе пьют сквозь сливочную шапку." },
+    { id: "c-toddy", name: "Горячий тодди", base: "hot", origin: "Шотландия и Ирландия", method: "build", need: ["whisky", "lemon", "syrup"],
+      cup: "rocks", pour: "#c8822e", pourOp: .85, pourLevel: 62, garnish: "lemon",
+      tagline: "Виски, мёд и лимон, залитые горячей водой",
+      history: "Горячий тодди пьют в Шотландии и Ирландии холодными сырыми вечерами, а ещё им по старинке лечат простуду. По одной из версий, название пришло из Индии XVII века, где «тодди» называли напиток из сока пальмы.",
+      recipe: [["45 мл", "виски"], ["15 мл", "мёда или сахарного сиропа"], ["15 мл", "лимонного сока"], ["120 мл", "горячей воды"], ["1", "лимонная цедра"]],
+      steps: "Подогрей стакан кипятком. Положи мёд, влей лимонный сок и виски, долей горячей водой и размешай. Укрась цедрой лимона." },
+    { id: "c-coffee", name: "Чёрный кофе", base: "hot", origin: "Йемен", method: "build", need: ["coffee"],
+      cup: "rocks", pour: "#2a1206", pourOp: .97, pourLevel: 62,
+      tagline: "Крепкий горячий кофе — бармену и гостю",
+      history: "Кофе как напиток распространился в XV веке из Йемена: его пили в суфийских обителях, чтобы не уснуть во время ночных молитв. В XVI веке первые кофейни открылись в Мекке и Стамбуле, а оттуда кофе пришёл в Европу.",
+      recipe: [["120 мл", "горячего свежесваренного кофе"]],
+      steps: "Свари кофе покрепче и налей в прогретую чашку. Сахар и сливки — по желанию." },
+    { id: "c-tea", name: "Чай с лимоном и мёдом", base: "hot", origin: "Китай", method: "build", need: ["tea", "lemon", "syrup"],
+      cup: "highball", pour: "#b5651d", pourOp: .75, pourLevel: 30, garnish: "lemon",
+      tagline: "Согревающий чай без алкоголя",
+      history: "Чай пили в Китае ещё в древности, а в Европу его в начале XVII века привезли голландские купцы. Лимон добавляет свежести, мёд — мягкой сладости.",
+      recipe: [["150 мл", "горячего чёрного чая"], ["10 мл", "лимонного сока"], ["10 мл", "мёда или сахарного сиропа"], ["1", "долька лимона"]],
+      steps: "Завари чай, налей в прогретый стакан, добавь лимонный сок и мёд, размешай и укрась долькой лимона." }
   ];
   const SECRETS = [
     { id: "s-boulevardier", name: "Бульвардье", base: "whisky", origin: "Франция", method: "stir", need: ["whisky", "campari", "vermouthR"], secret: true,
@@ -2477,7 +2896,11 @@
     "s-bloodsand": [["ice", "tin"], ["jig", "whisky", 25], ["jig", "cherry", 25], ["jig", "vermouthR", 25], ["jig", "oj", 25], ["shake"], ["strain"], ["garnish"]],
     "s-gimlet": [["ice", "tin"], ["jig", "gin", 50], ["jig", "lime", 20], ["jig", "syrup", 15], ["shake"], ["strain"], ["garnish"]],
     "s-batanga": [["rim"], ["ice", "glass"], ["squeeze"], ["jig", "tequila", 50], ["top", "cola"], ["stirIn"], ["garnish"]],
-    "s-kalimotxo": [["ice", "glass"], ["pour", "wine", 80], ["top", "cola"], ["stirIn"], ["garnish"]]
+    "s-kalimotxo": [["ice", "glass"], ["pour", "wine", 80], ["top", "cola"], ["stirIn"], ["garnish"]],
+    "c-irish": [["jig", "syrup", 15], ["pour", "coffee", 90], ["jig", "whisky", 40], ["stirIn"], ["pour", "cream", 30]],
+    "c-toddy": [["jig", "syrup", 15], ["jig", "lemon", 15], ["jig", "whisky", 45], ["hot", 120], ["stirIn"], ["garnish"]],
+    "c-coffee": [["pour", "coffee", 120]],
+    "c-tea": [["pour", "tea", 150], ["jig", "lemon", 10], ["jig", "syrup", 10], ["stirIn"], ["garnish"]]
   });
 
   /* ---------- объём и крепость: считаем по шагам рецепта ---------- */
@@ -2529,6 +2952,7 @@
     FOUND.add(c.id);
     keepSet("hacheden-found", [...FOUND]);
     addDrink(c);
+    if (fresh) track("count", "recipe");
     return fresh;
   }
   SECRETS.forEach(s => { if (FOUND.has(s.id)) addDrink(s); });
@@ -2537,7 +2961,7 @@
   const ROLE = { rum: "spirit", tequila: "spirit", gin: "spirit", whisky: "spirit", cognac: "spirit", wine: "wine",
     triple: "liq", cherry: "liq", campari: "bitter", vermouthR: "verm", vermouthD: "verm", bitters: "dash",
     tonic: "top", soda: "top", cola: "top", oj: "juice", pineapple: "juice", coconut: "cream",
-    lime: "sour", lemon: "sour", mint: "mint", syrup: "sweet", grenadine: "sweet" };
+    lime: "sour", lemon: "sour", mint: "mint", syrup: "sweet", grenadine: "sweet", coffee: "top", tea: "top", cream: "cream" };
   // сначала недорогое, крепкое в самом конце: если ошибёшься, выльешь меньше
   const ROLE_ORDER = ["sour", "sweet", "juice", "cream", "liq", "bitter", "verm", "wine", "spirit"];
   const ICE_NAME = { none: "без льда", cubes: "лёд кубиками", crushed: "колотый лёд" };
@@ -2818,10 +3242,13 @@
   const CATS = [
     ["all", "Все", () => true],
     ["sig", "Фирменный", c => c.signature],
-    ["classic", "Классика", c => !c.signature && !c.custom && !c.secret],
+    ["classic", "Классика", c => !c.signature && !c.custom && !c.secret && c.base !== "hot"],
     ["fresh", "Освежающие", c => c.cup === "highball" || c.need.some(i => ROLE[i] === "top")],
-    ["strong", "Крепкие", c => c.stats.abv >= 20],
+    ["strong", "Покрепче", c => c.stats.abv >= 20],
     ["zero", "Без алкоголя", c => c.stats.abv < .5],
+    ["hot", "Кофе и чай", c => c.base === "hot"],
+    ["spirits", "Крепкие напитки", () => false],
+    ["wine", "Вино", () => false],
     ["found", "Тайные", c => c.secret],
     ["mine", "Мои", c => c.custom],
     ["fav", "★ Избранное", c => FAV.has(c.id)]
@@ -2846,7 +3273,7 @@
     const q = MENU.q.trim().toLowerCase();
     const visible = c => !q || c.name.toLowerCase().includes(q) || c.need.some(i => ING_NAME[i] && ING_NAME[i].toLowerCase().includes(q));
     document.getElementById("menu-cats").innerHTML = CATS.map(([id, title, f]) => {
-      const n = COCKTAILS.filter(f).length;
+      const n = id === "spirits" ? SHELF.filter(d => d.id !== "wine").length : id === "wine" ? SHELF.filter(d => d.id === "wine").length : COCKTAILS.filter(f).length;
       if ((id === "mine" || id === "fav") && !n && MENU.cat !== id) return "";
       const label = id === "found" ? `${title} ${FOUND.size}/${SECRETS.length}` : id === "all" ? title : `${title} · ${n}`;
       return `<button class="chip" type="button" data-cat="${id}" aria-pressed="${MENU.cat === id}">${label}</button>`;
@@ -2870,6 +3297,13 @@
       html = list.length ? `<ul class="drinks${MENU.cat === "sig" ? " sig" : ""}">${list.map(menuRow).join("")}</ul>`
         : `<p class="empty">${MENU.cat === "found" ? "Тайные рецепты ещё не найдены." : MENU.cat === "mine" ? "Своих коктейлей пока нет. Смешай что-нибудь во вкладке «Смешать» и сохрани." : MENU.cat === "fav" ? "Отмечай звёздочкой то, что понравилось." : "Ничего не нашлось."}</p>`;
     }
+    // бутылки с полки: крепкие напитки и вино
+    if (MENU.cat === "spirits" || MENU.cat === "wine" || (MENU.cat === "all" && MENU.sort === "base")) {
+      const shelf = SHELF.filter(d => (MENU.cat === "wine" ? d.id === "wine" : MENU.cat === "spirits" ? d.id !== "wine" : true) && (!q || d.name.toLowerCase().includes(q)));
+      if (MENU.cat !== "all") html = "";
+      if (shelf.length) html += `${MENU.cat === "all" ? "<h3>С полки: крепкое и вино</h3>" : ""}<ul class="drinks">${shelf.map(shelfRow).join("")}</ul>`;
+      else if (MENU.cat !== "all") html = `<p class="empty">Ничего не нашлось.</p>`;
+    }
     document.getElementById("menu-list").innerHTML = html;
     const left = SECRETS.filter(s => !FOUND.has(s.id));
     const box = document.getElementById("menu-secret");
@@ -2880,9 +3314,19 @@
         <p class="hint-line">Подсказка: ${s.hint}</p>${left.length > 1 ? `<button class="clear" type="button" data-hint>Другая подсказка</button>` : ""}`;
     }
   }
+  const SHELF = DRINKS;
+  function shelfRow(d) {
+    mixN++;
+    const abv = (d.facts.find(f => f[0] === "Крепость") || [, ""])[1];
+    return `<li class="drink">${glassSVG(d, { pre: "m" + mixN + "-", still: true })}
+      <div><b>${d.name}<i class="badge">с полки</i></b><span>${d.tagline}</span><span class="meta">${d.id === "wine" ? "бокал 125–150 мл" : "порция 40–50 мл"}${abv ? " · " + abv : ""}</span></div>
+      <span></span>
+      <div class="acts"><button class="make ghost" type="button" data-sinfo="${d.id}">Подробнее</button><button class="make" type="button" data-pour="${d.id}">Налить</button></div></li>`;
+  }
   function toggleFav(id) {
     FAV.has(id) ? FAV.delete(id) : FAV.add(id);
     keepSet("hacheden-fav", [...FAV]);
+    track("count", "fav");
   }
   function toggleIng(id) {
     inShaker.has(id) ? inShaker.delete(id) : inShaker.add(id);
@@ -2929,6 +3373,8 @@
     else if (t.dataset.add) { inShaker.add(t.dataset.add); renderMix(); }
     else if (t.dataset.make) makeCocktail(t.dataset.make);
     else if (t.dataset.info) openCard(COCKTAIL_BY_ID[t.dataset.info], { info: true });
+    else if (t.dataset.sinfo) openCard(DRINKS.find(d => d.id === t.dataset.sinfo));
+    else if (t.dataset.pour) { const id = t.dataset.pour; mixDlg.close(); hintEl.textContent = HINT; if (H3D.bottle) H3D.bottle(id); }
     else if (t.dataset.fav) { toggleFav(t.dataset.fav); renderMenu(); const f = mixDlg.querySelector(`[data-fav="${t.dataset.fav}"]`); if (f) f.focus(); }
     else if (t.dataset.cat) { MENU.cat = t.dataset.cat; renderMenu(); const f = mixDlg.querySelector(`[data-cat="${MENU.cat}"]`); if (f) f.focus(); }
     else if (t.dataset.opt) { const [k, v] = t.dataset.opt.split(":"); SERVE[k] = v; if (k === "cup" && (v === "coupe" || v === "martini")) SERVE.ice = "auto"; renderMix(); const f = mixDlg.querySelector(`[data-opt="${k}:${v}"]`); if (f) f.focus(); }
@@ -2972,6 +3418,7 @@
       const first = !c.saved;
       if (first) { c.saved = true; MINE.push(c); addDrink(c); }
       saveMine();
+      if (first) track("count", "mine");
       refreshExtras(c, first ? "Сохранено в «Мои коктейли» — ищите в меню." : "Название сохранено.");
       const f = dlg.querySelector("[data-save]"); if (f) f.focus();
     } else if (b.dataset.forget) {
@@ -3007,13 +3454,409 @@
     Bartender.done();
     hintEl.textContent = HINT;
     busy = false;
+    LAST_DRINK = c;
+    track("drink", c.id);
     openCard(c);
   }
+  let LAST_DRINK = null;
   addEventListener("keydown", e => {
     if (e.key === "Escape" && mixDlg.open && !dlg.open) { mixDlg.close(); orderBtn.focus(); }
   });
 
   
+/* ================= панели: общий каркас и настройки ================= */
+  /* боковая панель (на телефоне — шторка снизу) с заголовком и крестиком */
+  function makeSheet(id, title, extra = "") {
+    const d = document.createElement("dialog");
+    d.className = "sheet" + (extra ? " " + extra : "");
+    d.id = id;
+    d.setAttribute("aria-labelledby", id + "-title");
+    d.innerHTML = `<div class="sheet-in"><div class="sheet-top"><h2 id="${id}-title">${title}</h2>
+      <button class="close" type="button" aria-label="Закрыть" data-sheet-close>×</button></div><div class="sheet-body"></div></div>`;
+    document.body.appendChild(d);
+    d.addEventListener("click", e => {
+      if (e.target === d || e.target.closest("[data-sheet-close]")) d.close();
+    });
+    d.body = d.querySelector(".sheet-body");
+    return d;
+  }
+  function openSheet(d) {
+    if (d.open) return;
+    for (const o of document.querySelectorAll("dialog.sheet[open], dialog.atmo[open]")) o.close();
+    if (typeof mixDlg !== "undefined" && mixDlg.open) mixDlg.close();
+    d.showModal();
+    uiSound("open");
+    const f = d.querySelector(".sheet-body button, .sheet-body input, .sheet-body select");
+    (f || d.querySelector(".close")).focus({ preventScroll: true });
+  }
+  const pct = v => Math.round(v * 100) + "%";
+  const rngRow = (key, label, hint = "") => `<div class="row slider"><label for="s-${key}">${label}${hint ? `<small>${hint}</small>` : ""}</label>
+    <input class="rng" type="range" id="s-${key}" data-set="${key}" min="0" max="100" step="1" value="${Math.round(SET[key] * 100)}" style="--v:${pct(SET[key])}">
+    <output for="s-${key}">${pct(SET[key])}</output></div>`;
+  const swRow = (key, label, hint = "", invert = false) => `<div class="row"><label for="s-${key}">${label}${hint ? `<small>${hint}</small>` : ""}</label>
+    <span class="sw"><input type="checkbox" id="s-${key}" data-set="${key}"${(invert ? !SET[key] : SET[key]) ? " checked" : ""}><span></span></span></div>`;
+  const segRow = (key, label, opts) => `<div class="row" style="grid-template-columns:1fr"><span class="lbl">${label}</span>
+    <div class="seg" role="group" aria-label="${label}">${opts.map(([v, t]) => `<button class="chip" type="button" data-seg="${key}:${v}" aria-pressed="${String(SET[key]) === v}">${t}</button>`).join("")}</div></div>`;
+
+  const setDlg = makeSheet("settings", "Настройки");
+  let needReload = false, resetArm = false;
+  function renderSettings() {
+    setDlg.body.innerHTML = `
+      <h3>Звук</h3>
+      ${rngRow("master", "Общая громкость")}
+      ${rngRow("music", "Музыка", "джаз-бэнд и граммофон")}
+      ${rngRow("ambient", "Окружение", "дождь, камин, звуки бара")}
+      ${rngRow("ui", "Интерфейс", "щелчки кнопок, находки")}
+      ${swRow("mute", "Без звука", "всё сразу, громкости сохранятся")}
+      <div class="acts"><button class="make ghost" type="button" data-open-player>Музыкальный плеер</button></div>
+      <h3>Атмосфера</h3>
+      ${segRow("mood", "Время в баре", [["auto", "По часам"], ["evening", "Вечер"], ["midnight", "Полночь"], ["late", "Поздняя ночь"]])}
+      <p class="note">Меняет свет и оттенки зала. Открыт бар всё равно по настоящим часам: с 17:00 до 3:00.</p>
+      <h3>Графика и движение</h3>
+      ${segRow("quality", "Качество картинки", [["auto", "Авто"], ["high", "Высокое"], ["medium", "Среднее"], ["low", "Низкое"]])}
+      ${segRow("fps", "Плавность анимации", [["60", "60 кадров"], ["30", "30 кадров"]])}
+      ${swRow("effects", "Визуальные эффекты", "пыль в свете ламп, дымка, искры")}
+      ${segRow("motion", "Меньше движения", [["auto", "Как в системе"], ["reduce", "Включено"], ["full", "Выключено"]])}
+      ${swRow("saver", "Режим экономии", "для слабых телефонов: проще картинка, 30 кадров, без эффектов")}
+      <p class="note" id="set-reload"${needReload ? "" : " hidden"}>Часть изменений полностью применится после перезагрузки страницы.
+        <button class="clear" type="button" data-reload>Перезагрузить</button></p>
+      <div class="acts"><button class="make ghost${resetArm ? " warn" : ""}" type="button" data-reset>${resetArm ? "Точно сбросить? Нажмите ещё раз" : "Сбросить настройки"}</button></div>
+      <p class="note">Настройки хранятся только в этом браузере.</p>`;
+  }
+  setDlg.addEventListener("input", e => {
+    const t = e.target;
+    if (t.type !== "range") return;
+    const v = +t.value / 100;
+    t.style.setProperty("--v", t.value + "%");
+    t.nextElementSibling.textContent = t.value + "%";
+    setSetting(t.dataset.set, v);
+    if (t.dataset.set === "ambient" || t.dataset.set === "master") Music.wake();
+  });
+  setDlg.addEventListener("change", e => {
+    const t = e.target;
+    if (t.type === "range") uiSound("soft");
+    if (t.type !== "checkbox") return;
+    setSetting(t.dataset.set, t.checked);
+    if (t.dataset.set === "saver") { needReload = true; renderSettings(); }
+  });
+  setDlg.addEventListener("click", e => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    if (b.dataset.seg) {
+      const [k, v] = b.dataset.seg.split(":");
+      setSetting(k, v);
+      if (k === "quality" || k === "motion") needReload = true;
+      renderSettings();
+      const f = setDlg.querySelector(`[data-seg="${k}:${v}"]`); if (f) f.focus();
+    } else if ("reset" in b.dataset) {
+      if (!resetArm) { resetArm = true; renderSettings(); setDlg.querySelector("[data-reset]").focus(); return; }
+      resetArm = false;
+      const q = SET.quality, m = SET.motion;
+      Object.keys(SET_DEFAULT).forEach(k => setSetting(k, SET_DEFAULT[k]));
+      if (q !== SET.quality || m !== SET.motion) needReload = true;
+      renderSettings();
+      toast("Настройки сброшены", "Вернули всё как было по умолчанию");
+    } else if ("reload" in b.dataset) location.reload();
+    else if ("openPlayer" in b.dataset) { setDlg.close(); openPlayer(); }
+  });
+  setDlg.addEventListener("close", () => { resetArm = false; });
+  function openSettings() { renderSettings(); openSheet(setDlg); }
+  document.getElementById("t-settings").addEventListener("click", openSettings);
+
+/* ================= музыкальный плеер: композиции домашнего ансамбля ================= */
+  const IC = {
+    play: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg>`,
+    pause: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.6v14H7zM13.4 5H17v14h-3.6z" fill="currentColor"/></svg>`,
+    prev: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM19 5.5v13L9 12z" fill="currentColor"/></svg>`,
+    next: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM5 5.5v13L15 12z" fill="currentColor"/></svg>`
+  };
+  const mmss = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  const plDlg = makeSheet("player", "Музыка");
+  let vizRaf = 0;
+  const favTrack = id => PROG.favTracks.includes(id);
+  function renderPlayer() {
+    const I = Music.info(), T = I.track;
+    plDlg.body.innerHTML = `
+      <div class="np">
+        <p class="np-title" id="np-title">${T.title}</p>
+        <p class="np-artist">${T.artist} · ${MOODS_MUSIC[T.mood]}</p>
+        <canvas class="np-viz" id="np-viz" width="360" height="54" aria-hidden="true"></canvas>
+        <div class="np-bar" aria-hidden="true"><i id="np-prog"></i></div>
+        <div class="np-time"><span id="np-el">0:00</span><span>${mmss(TRACK_LEN)}</span></div>
+        <div class="np-ctl">
+          <button class="pbtn" type="button" data-p="prev" aria-label="Предыдущая композиция">${IC.prev}</button>
+          <button class="pbtn big" type="button" data-p="toggle" aria-label="${I.on ? "Пауза" : "Играть"}">${I.on ? IC.pause : IC.play}</button>
+          <button class="pbtn" type="button" data-p="next" aria-label="Следующая композиция">${IC.next}</button>
+          <button class="fav" type="button" data-pfav="${T.id}" aria-pressed="${favTrack(T.id)}" aria-label="${favTrack(T.id) ? "Убрать из любимых" : "В любимые"}: ${T.title}">${favTrack(T.id) ? "★" : "☆"}</button>
+        </div>
+      </div>
+      ${rngRow("music", "Громкость музыки")}
+      <h3>Настроение</h3>
+      <div class="seg" role="group" aria-label="Настроение музыки">${Object.entries(MOODS_MUSIC).map(([v, t]) => `<button class="chip" type="button" data-pm="${v}" aria-pressed="${I.mood === v}">${t}</button>`).join("")}</div>
+      <h3>Композиции</h3>
+      <ul class="tracks">${TRACKS.map((t, i) => `<li class="trk${i === I.i ? " cur" : ""}">
+        <button class="pbtn" type="button" data-pt="${i}" aria-label="${i === I.i && I.on ? "Играет" : "Включить"}: ${t.title}">${i === I.i && I.on ? IC.pause : IC.play}</button>
+        <div><b>${t.title}</b><span>${t.artist} · ${MOODS_MUSIC[t.mood]} · ${t.bpm} уд/мин</span></div>
+        <time>${mmss(TRACK_LEN)}</time>
+        <button class="fav" type="button" data-pfav="${t.id}" aria-pressed="${favTrack(t.id)}" aria-label="${favTrack(t.id) ? "Убрать из любимых" : "В любимые"}: ${t.title}">${favTrack(t.id) ? "★" : "☆"}</button>
+      </li>`).join("")}</ul>
+      <p class="note">Вся музыка сочиняется прямо в браузере: это импровизации нашего домашнего ансамбля, а не чужие записи. На сцене музыканты играют ровно те ноты, что звучат. В режиме «По часам» вечером играют спокойные пьесы, ближе к полуночи — свинг, после часа ночи — поздние баллады.</p>`;
+  }
+  function vizLoop() {
+    vizRaf = 0;
+    if (!plDlg.open) return;
+    const I = Music.info();
+    const prog = plDlg.querySelector("#np-prog"), el = plDlg.querySelector("#np-el");
+    if (prog) prog.style.width = Math.min(100, I.elapsed / I.len * 100) + "%";
+    if (el) el.textContent = mmss(Math.min(I.elapsed, I.len));
+    const cv = plDlg.querySelector("#np-viz");
+    if (cv) {
+      const g = cv.getContext("2d"), w = cv.width, h = cv.height, N = 32;
+      g.clearRect(0, 0, w, h);
+      const arr = vizLoop.arr || (vizLoop.arr = new Uint8Array(64));
+      const live = I.on && Music.spectrum(arr) && !reduceMotion.matches;
+      for (let i = 0; i < N; i++) {
+        const v = live ? arr[Math.floor(i * 1.6) + 1] / 255 : .06;
+        const bh = Math.max(2, v * h * .95), x = i * (w / N) + 2;
+        g.fillStyle = `rgba(${214 + i},${150 + i * 2},${80 + i * 2},${.45 + v * .5})`;
+        g.fillRect(x, h - bh, w / N - 4, bh);
+      }
+    }
+    if (I.on) vizRaf = requestAnimationFrame(vizLoop);
+    else setTimeout(() => { if (plDlg.open && !vizRaf) vizRaf = requestAnimationFrame(vizLoop); }, 500);
+  }
+  function refreshPlayer() {
+    if (!plDlg.open) return;
+    const f = document.activeElement && (document.activeElement.dataset.p || document.activeElement.dataset.pt || document.activeElement.dataset.pm || document.activeElement.dataset.pfav);
+    const key = f ? Object.entries(document.activeElement.dataset)[0] : null;
+    renderPlayer();
+    if (key) { const el = plDlg.querySelector(`[data-${key[0].replace(/[A-Z]/g, m => "-" + m.toLowerCase())}="${key[1]}"]`); if (el) el.focus({ preventScroll: true }); }
+    if (!vizRaf) vizRaf = requestAnimationFrame(vizLoop);
+  }
+  Music.onChange(() => {
+    const I = Music.info();
+    if (I.on && !I.switching) track("track", I.track.id);
+    refreshPlayer();
+  });
+  plDlg.addEventListener("input", e => {
+    const t = e.target; if (t.type !== "range") return;
+    t.style.setProperty("--v", t.value + "%"); t.nextElementSibling.textContent = t.value + "%";
+    setSetting("music", +t.value / 100);
+  });
+  plDlg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.p === "toggle") setMusic(!Music.on);
+    else if (b.dataset.p === "next") { Music.next(); if (!Music.on) setMusic(true); }
+    else if (b.dataset.p === "prev") { Music.prev(); if (!Music.on) setMusic(true); }
+    else if (b.dataset.pt != null) {
+      const i = +b.dataset.pt, I = Music.info();
+      if (i === I.i && I.on) setMusic(false);
+      else { Music.play(i); setMusic(true); }
+    } else if (b.dataset.pm) Music.setMood(b.dataset.pm);
+    else if (b.dataset.pfav) {
+      const id = b.dataset.pfav, k = PROG.favTracks.indexOf(id);
+      if (k >= 0) PROG.favTracks.splice(k, 1); else PROG.favTracks.push(id);
+      saveProgress(); track("count", "favtrack");
+      refreshPlayer();
+    }
+  });
+  plDlg.addEventListener("close", () => { cancelAnimationFrame(vizRaf); vizRaf = 0; });
+  function openPlayer() { renderPlayer(); openSheet(plDlg); if (!vizRaf) vizRaf = requestAnimationFrame(vizLoop); }
+  document.getElementById("t-player").addEventListener("click", openPlayer);
+
+/* ================= журнал: секреты, достижения и «мой вечер» =================
+   Секреты не раскрываются заранее: в журнале видно только найденное и сколько ещё спрятано. */
+  const SECRET_INFO = {
+    cellar: { name: "Погреб за книжным шкафом", text: "Книга, которая торчит из полки, открывает ход вниз — к сомелье и бочкам." },
+    glowbook: { name: "Книга, что светится в темноте", text: "Задуйте свечу в читальне — и одна книга на столе начнёт светиться." },
+    cat: { name: "Кошачье доверие", text: "Кот у камина замурлыкал и перевернулся на спину: его гладили достаточно долго." },
+    knock: { name: "Условный стук", text: "Три стука в дверь «Приват» — и за ней узнают своего." },
+    barkeep: { name: "Терпение бармена", text: "Если звать бармена слишком настойчиво, он ответит по-особому." },
+    midnight: { name: "Разговор после полуночи", text: "После полуночи у стойки можно попросить историю не для всех." },
+    closing: { name: "Конец смены", text: "Вы видели, как бар закрывается: музыканты кланяются, гаснет неон." },
+    catvisit: { name: "Гость на стойке", text: "Редкий вечер: кот пришёл из курилки и устроился прямо на стойке." }
+  };
+  const ACH = [
+    { id: "regular", icon: "⌂", name: "Завсегдатай", text: "Побывать во всех четырёх залах.", test: () => [0, 1, 2, 3].every(i => PROG.rooms.includes(i)) },
+    { id: "first", icon: "🍸", name: "Первый глоток", text: "Заказать первый коктейль.", test: () => Object.keys(PROG.drinks).length >= 1 },
+    { id: "taster", icon: "✧", name: "Дегустатор", text: "Попробовать 5 разных коктейлей.", test: () => Object.keys(PROG.drinks).length >= 5 },
+    { id: "collector", icon: "❖", name: "Коллекционер", text: "Попробовать 12 разных коктейлей.", test: () => Object.keys(PROG.drinks).length >= 12 },
+    { id: "author", icon: "✎", name: "Автор рецепта", text: "Придумать и сохранить свой коктейль.", test: () => MINE.length >= 1 },
+    { id: "offmenu", icon: "✦", name: "Не из меню", text: "Найти тайный рецепт.", test: () => FOUND.size >= 1 },
+    { id: "keeper", icon: "♛", name: "Хранитель рецептов", text: "Найти все тайные рецепты.", test: () => FOUND.size >= SECRETS.length },
+    { id: "sleuth", icon: "⌕", name: "Сыщик", text: "Найти три секрета бара.", test: () => Object.keys(PROG.secrets).length >= 3 },
+    { id: "insider", icon: "⚿", name: "Свой человек", text: "Найти все секреты бара.", test: () => Object.keys(SECRET_INFO).every(k => PROG.secrets[k]) },
+    { id: "sommelier", icon: "🍷", name: "Сомелье", text: "Попробовать все четыре вина в погребе.", test: () => { try { return JSON.parse(localStorage.getItem("hacheden-tasted") || "[]").length >= 4; } catch (e) { return false; } } },
+    { id: "melomane", icon: "♪", name: "Меломан", text: "Послушать три разные композиции.", test: () => PROG.tracks.length >= 3 },
+    { id: "bookworm", icon: "❦", name: "Книжный червь", text: "Прочитать три рассказа в читальне.", test: () => PROG.stories.length >= 3 },
+    { id: "favs", icon: "★", name: "Свой вечер", text: "Отметить три коктейля в избранном.", test: () => FAV.size >= 3 },
+    { id: "owl", icon: "☾", name: "Полуночник", text: "Зайти в бар после полуночи.", test: () => !!PROG.counters.owl }
+  ];
+  let jUnseen = false;
+  function checkAch(quiet) {
+    for (const a of ACH) {
+      if (PROG.ach[a.id]) continue;
+      let ok = false; try { ok = a.test(); } catch (e) {}
+      if (!ok) continue;
+      PROG.ach[a.id] = Date.now();
+      saveProgress();
+      if (!quiet) { setTimeout(() => { uiSound("chime"); toast("Достижение: " + a.name, a.text, "ach"); }, 900); jUnseen = true; }
+    }
+    const dot = document.getElementById("t-journal-dot");
+    if (dot) dot.hidden = !jUnseen;
+  }
+  onProgress((ev) => { if (ev === "secret") jUnseen = true; checkAch(); });
+  {
+    const h = new Date().getHours();
+    if (h < 3 && !PROG.counters.owl) { PROG.counters.owl = 1; saveProgress(); }
+  }
+  setTimeout(() => checkAch(true), 0);
+
+  const jDlg = makeSheet("journal", "Журнал", "wide");
+  let jTab = "secrets";
+  const dateRu = t => new Date(t).toLocaleDateString("ru-RU", { day: "numeric", month: "long" });
+  function renderJournal() {
+    const keys = Object.keys(SECRET_INFO), found = keys.filter(k => PROG.secrets[k]);
+    const tabs = `<div class="tabs jtabs" role="tablist">${[["secrets", "Секреты"], ["ach", "Достижения"], ["me", "Мой вечер"]].map(([id, t]) =>
+      `<button class="tab" type="button" role="tab" data-jt="${id}" aria-selected="${jTab === id}">${t}</button>`).join("")}</div>`;
+    let html = "";
+    if (jTab === "secrets") {
+      const n = found.length + FOUND.size, total = keys.length + SECRETS.length;
+      html = `<div class="jmeter"><span>Найдено ${n} из ${total}</span><div class="np-bar"><i style="width:${n / total * 100}%"></i></div></div>
+        ${found.length ? `<ul class="jlist">${found.map(k => `<li class="jitem"><span class="ji" aria-hidden="true">✦</span><div><b>${SECRET_INFO[k].name}</b><span>${SECRET_INFO[k].text}</span><em>${dateRu(PROG.secrets[k])}</em></div></li>`).join("")}</ul>`
+          : `<p class="note">Пока ни одного. В баре есть вещи, которые замечают не все: присматривайтесь, нажимайте, возвращайтесь в разное время.</p>`}
+        ${keys.length - found.length ? `<p class="note">Ещё спрятано: ${keys.length - found.length}. Подсказок здесь не будет — только намёки бармена.</p>` : `<p class="note">Все секреты бара найдены. Вы знаете Hacheden лучше многих.</p>`}
+        <h3>Тайные рецепты · ${FOUND.size} из ${SECRETS.length}</h3>
+        ${FOUND.size ? `<ul class="jlist">${SECRETS.filter(s => FOUND.has(s.id)).map(s => `<li class="jitem"><span class="ji" aria-hidden="true">🍸</span><div><b>${s.name}</b><span>${s.tagline}</span></div></li>`).join("")}</ul>`
+          : `<p class="note">Их собирают в шейкере во вкладке «Смешать». Подсказки — в барной карте.</p>`}`;
+    } else if (jTab === "ach") {
+      const got = ACH.filter(a => PROG.ach[a.id]).length;
+      html = `<div class="jmeter"><span>Открыто ${got} из ${ACH.length}</span><div class="np-bar"><i style="width:${got / ACH.length * 100}%"></i></div></div>
+        <ul class="jlist">${ACH.map(a => `<li class="jitem${PROG.ach[a.id] ? "" : " locked"}"><span class="ji" aria-hidden="true">${PROG.ach[a.id] ? a.icon : "·"}</span><div><b>${a.name}</b><span>${a.text}</span>${PROG.ach[a.id] ? `<em>${dateRu(PROG.ach[a.id])}</em>` : ""}</div></li>`).join("")}</ul>`;
+    } else {
+      const tried = Object.entries(PROG.drinks).sort((a, b) => b[1] - a[1]);
+      const top = tried.slice(0, 3).map(([id]) => COCKTAIL_BY_ID[id]).filter(Boolean);
+      const rooms = ["Читальня", "Бар", "Курилка", "Сцена", "Погреб"].filter((r, i) => PROG.rooms.includes(i));
+      const fav = [...FAV].map(id => COCKTAIL_BY_ID[id]).filter(Boolean);
+      const favT = PROG.favTracks.map(id => TRACKS.find(t => t.id === id)).filter(Boolean);
+      html = `<div class="stats">
+          <div class="stat"><b>${PROG.visits}</b><span>визитов в бар</span></div>
+          <div class="stat"><b>${tried.length}</b><span>разных коктейлей</span></div>
+          <div class="stat"><b>${MINE.length}</b><span>своих рецептов</span></div>
+          <div class="stat"><b>${Object.keys(PROG.secrets).length + FOUND.size}</b><span>найдено секретов</span></div>
+        </div>
+        <h3>Залы</h3><p class="note">${rooms.length ? rooms.join(", ") : "Пока только улица."}</p>
+        <h3>Чаще всего</h3><p class="note">${top.length ? top.map(c => escH(c.name)).join(", ") : "Ещё ничего не заказано."}</p>
+        <h3>Избранные коктейли</h3><p class="note">${fav.length ? fav.map(c => escH(c.name)).join(", ") : "Отмечайте звёздочкой в барной карте."}</p>
+        <h3>Свои рецепты</h3><p class="note">${MINE.length ? MINE.map(c => escH(c.name)).join(", ") : "Смешайте что-нибудь своё во вкладке «Смешать»."}</p>
+        <h3>Любимые композиции</h3><p class="note">${favT.length ? favT.map(t => t.title).join(", ") : "Отмечайте звёздочкой в плеере."}</p>
+        <p class="note">Первый визит: ${dateRu(PROG.first)}. Всё хранится только в этом браузере — без регистрации.</p>
+        <div class="acts"><button class="make ghost${jWipe ? " warn" : ""}" type="button" data-jwipe>${jWipe ? "Точно стереть? Нажмите ещё раз" : "Стереть прогресс"}</button></div>`;
+    }
+    jDlg.body.innerHTML = tabs + html;
+  }
+  let jWipe = false;
+  jDlg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.jt) { jTab = b.dataset.jt; jWipe = false; renderJournal(); jDlg.querySelector(`[data-jt="${jTab}"]`).focus(); }
+    else if ("jwipe" in b.dataset) {
+      if (!jWipe) { jWipe = true; renderJournal(); jDlg.querySelector("[data-jwipe]").focus(); return; }
+      for (const k of ["hacheden-progress", "hacheden-found", "hacheden-mine", "hacheden-fav", "hacheden-tasted", "hacheden-cellar"]) { try { localStorage.removeItem(k); } catch (er) {} }
+      location.reload();
+    }
+  });
+  jDlg.addEventListener("close", () => { jWipe = false; });
+  function openJournal(tab) {
+    if (tab) jTab = tab;
+    checkAch(true);
+    jUnseen = false;
+    const dot = document.getElementById("t-journal-dot"); if (dot) dot.hidden = true;
+    renderJournal(); openSheet(jDlg);
+  }
+  document.getElementById("t-journal").addEventListener("click", () => openJournal());
+
+/* ================= читальня: рассказы, цитата дня, тайная рукопись =================
+   Рассказы и записи написаны для Hacheden; персонажи и события вымышлены. */
+  const STORIES = [
+    { id: "s-key", title: "Ключ под стаканом", sub: "О том, как в бар пускают своих",
+      text: ["Он пришёл в дождь, без шляпы, и долго стоял у двери, не решаясь постучать. Окошко открылось само.",
+        "— Пароль?",
+        "— Я не знаю пароля, — сказал он. — Я знаю, что вчера здесь играли «Тихий час», и пианист сбился на третьем такте.",
+        "За дверью помолчали. Потом засов отъехал, и швейцар впервые за вечер улыбнулся: «Сбился. Мы думали, никто не заметил».",
+        "С тех пор его пускали без пароля. Иногда лучший пароль — это внимание."] },
+    { id: "s-ice", title: "Лёд для мисс Л.", sub: "Короткая история одной стойки",
+      text: ["Мисс Л. заказывала всегда одно и то же: стакан воды и самый большой кубик льда, какой найдётся.",
+        "Она не пила. Она смотрела, как лёд медленно тает, и уходила, когда от кубика оставалась тонкая пластинка.",
+        "Бармен однажды спросил, зачем. «Я ставлю на него желание, — ответила она. — Если успею досидеть, пока растает, — сбудется».",
+        "В ту ночь он долго выбирал лёд и нашёл самый прозрачный. Она досидела. Что она загадала, никто так и не узнал, но с тех пор она стала заказывать коктейль."] },
+    { id: "s-piano", title: "Пианино без одной клавиши", sub: "Легенда сцены",
+      text: ["У старого пианино в нашем баре когда-то не хватало одной клавиши — ре второй октавы. Её потерял грузчик, когда инструмент заносили по лестнице.",
+        "Пианист не стал ждать мастера. Он просто перестал играть эту ноту: обходил её, как лужу на тротуаре, менял аккорды, придумывал новые ходы.",
+        "Через месяц завсегдатаи говорили, что у него появился «свой стиль». Через год клавишу вернули на место — а он так и продолжал её обходить.",
+        "Иногда то, чего не хватает, и делает музыку твоей."] },
+    { id: "s-rain", title: "Человек, который ждал дождя", sub: "Из записок читальни",
+      text: ["В читальню приходил человек, который садился только у окна и только в дождь. В сухие вечера его не было.",
+        "Он писал письма — длинные, на нескольких страницах, — и ни одного не отправил. Перед уходом складывал их между книгами на верхней полке.",
+        "Когда полку однажды разбирали, писем было больше сотни. Все начинались одинаково: «Сегодня снова дождь, и я снова думаю о тебе».",
+        "Мы оставили их там же. Если однажды за окном пойдёт дождь, а в кресле никого не будет, — значит, он всё-таки отправил последнее."] },
+    { id: "s-last", title: "Последний заказ", sub: "О закрытии смены",
+      text: ["Без четверти три бармен всегда говорит одну и ту же фразу: «Последний заказ». Её произносят тихо, почти шёпотом, — так, будто это секрет.",
+        "Кто-то торопится заказать ещё. Кто-то, наоборот, отставляет бокал и начинает искать пальто.",
+        "А один старик много лет отвечал одинаково: «Тогда мне — ещё пять минут». Бармен наливал ему воды, и старик сидел ровно пять минут, глядя, как гаснут лампы.",
+        "Говорят, лучшие вечера заканчиваются не выпитым бокалом, а теми самыми пятью минутами."] }
+  ];
+  const SECRET_STORY = { id: "s-glow", title: "Рукопись без названия", sub: "Книга, которая светится только в темноте",
+    text: ["Эту книгу нельзя прочитать при свете. Буквы проступают, только когда гаснет свеча.",
+      "«Если вы читаете это, значит, вы из тех, кто замечает. Бар строили не для тех, кто пьёт, а для тех, кто замечает: как лёд звенит о стекло, как пианист задерживает аккорд, как кот у камина поворачивает ухо на скрип двери.",
+      "Под этим баром есть погреб. За стойкой есть рецепты, которых нет в меню. А после полуночи бармен рассказывает истории, которые не рассказывает днём.",
+      "Ищите. Hacheden открывается тем, кто ищет».",
+      "Подписи нет. Только оттиск ключа на последней странице."] };
+  /* «из записной книжки Hacheden»: короткие мысли о баре и вечере */
+  const QUOTES = [
+    "Хороший бар — это место, где время идёт медленнее, чем снаружи.",
+    "Лёд тает честно: он никогда не торопится и никогда не опаздывает.",
+    "Лучший коктейль — тот, который вам смешали, глядя в глаза.",
+    "Джаз — это когда ошибка, сыгранная дважды, становится мелодией.",
+    "Дождь за окном читальни делает любую книгу на десять страниц длиннее.",
+    "Вежливый гость оставляет за стойкой не чаевые, а хорошее настроение. Чаевые тоже не помешают.",
+    "Бармен помнит не имена, а то, что вы пили в прошлый раз.",
+    "Тишина в баре бывает только между двумя тостами.",
+    "Камин не греет того, кто не сел к нему поближе.",
+    "Свеча на столе — самый старый способ сказать «не торопитесь».",
+    "Хорошая история, как хороший виски, не любит, когда её разбавляют.",
+    "В баре без вывески всегда есть свои: просто они не здороваются громко.",
+    "Последний заказ звучит грустно только для тех, кто не придёт завтра.",
+    "Коктейль начинается не с бутылки, а со льда.",
+    "Пианист играет для зала, саксофонист — для одного человека в зале.",
+    "Книги в читальне не просят, чтобы их дочитали. Они просят, чтобы к ним вернулись."
+  ];
+  function quoteOfDay(d = new Date()) {
+    const day = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5);
+    return QUOTES[(day * 7 + d.getFullYear()) % QUOTES.length];
+  }
+  const stDlg = makeSheet("stories", "Полка рассказов");
+  function renderStories(open) {
+    if (open) {
+      const s = open === SECRET_STORY.id ? SECRET_STORY : STORIES.find(x => x.id === open);
+      const i = STORIES.indexOf(s), nx = STORIES[i + 1];
+      stDlg.body.innerHTML = `<div class="story-text"><h3>${s.title}</h3><p class="note" style="margin:-4px 0 14px">${s.sub}</p>${s.text.map(p => `<p>${p}</p>`).join("")}</div>
+        <div class="acts"><button class="make ghost" type="button" data-sback>К полке</button>${nx ? `<button class="make" type="button" data-sopen="${nx.id}">Следующий: ${nx.title}</button>` : ""}</div>`;
+      track("story", s.id);
+      stDlg.scrollTop = 0;
+      return;
+    }
+    stDlg.body.innerHTML = `<div class="quote"><p>«${quoteOfDay()}»</p><span>Мысль дня · из записной книжки Hacheden</span></div>
+      <h3>Рассказы</h3>
+      <ul class="story-list">${STORIES.map(s => `<li><button type="button" data-sopen="${s.id}"><b>${s.title}</b><span class="${PROG.stories.includes(s.id) ? "read" : ""}">${s.sub}</span></button></li>`).join("")}</ul>
+      <p class="note">Короткие истории, написанные для нашего бара. Каждый день на полке новая мысль.</p>`;
+  }
+  stDlg.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    if (b.dataset.sopen) { renderStories(b.dataset.sopen); const f = stDlg.querySelector("[data-sback]"); if (f) f.focus({ preventScroll: true }); }
+    else if ("sback" in b.dataset) renderStories();
+  });
+  function openStories(id) { renderStories(id); openSheet(stDlg); }
+
 </script>
 <script type="module">
 import * as THREE from "three";
@@ -3033,7 +3876,9 @@ const lerp = (a, b, k) => a + (b - a) * k;
 const STILL = reduceMotion.matches;
 const COARSE = matchMedia("(pointer: coarse)").matches;
 const SMALL = Math.min(innerWidth, innerHeight) < 620;
-let QUALITY = COARSE || SMALL ? 1 : 2;   // 1 — телефон, 2 — компьютер
+/* 1 — телефон, 2 — компьютер; гость может выбрать сам в настройках */
+const LOWQ = SET.saver || SET.quality === "low";
+let QUALITY = LOWQ ? 1 : SET.quality === "high" || SET.quality === "medium" ? 2 : (COARSE || SMALL ? 1 : 2);
 
 let renderer;
 try {
@@ -3045,7 +3890,8 @@ try {
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
-let DPR = Math.min(devicePixelRatio || 1, QUALITY > 1 ? 1.75 : 1.5);
+const dprCap = () => SET.saver || SET.quality === "low" ? 1 : SET.quality === "medium" ? 1.25 : SET.quality === "high" ? 2 : QUALITY > 1 ? 1.75 : 1.5;
+let DPR = Math.min(devicePixelRatio || 1, dprCap());
 renderer.setPixelRatio(DPR);
 const ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 
@@ -4501,7 +5347,7 @@ float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3. - 2. 
   return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y); }
 float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= .5; } return v; }`;
 const VERT_UV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
-const FIRE = { boost: 1, t: 0 };
+const FIRE = { boost: 1, t: 0, lvl: 1, on: true };
 const flameMats = [];
 function flameMat(seedV) {
   const m = new THREE.ShaderMaterial({
@@ -4612,7 +5458,7 @@ let fxCtx = null;
 const fx = () => {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
-  fxCtx = fxCtx || new AC();
+  fxCtx = fxCtx || AUDIO.route(new AC(), "ambient");
   fxCtx.resume();
   return fxCtx;
 };
@@ -5011,7 +5857,7 @@ function lightning() {
   if (STILL) return;
   NOOK.flash = 1;
   setTimeout(() => { NOOK.flash = .7; }, 140);
-  setTimeout(() => { if (Music.on) Music.thunder(); }, 600 + Math.random() * 900);
+  setTimeout(() => { Music.thunder(); }, 600 + Math.random() * 900);
 }
 
 /* ---------- стол писателя у окна ---------- */
@@ -5605,7 +6451,7 @@ const PROG = () => Closeup.PROGRAMS;
 const NOM = { rum: "Ром", tequila: "Текила", gin: "Джин", whisky: "Виски", cognac: "Коньяк", wine: "Красное вино", triple: "Апельсиновый ликёр", cherry: "Вишнёвый ликёр",
   campari: "Кампари", vermouthR: "Красный вермут", vermouthD: "Сухой вермут", bitters: "Ангостура", tonic: "Тоник", soda: "Содовая",
   cola: "Кола", oj: "Апельсиновый сок", pineapple: "Ананасовый сок", coconut: "Кокосовые сливки", lime: "Сок лайма",
-  lemon: "Лимонный сок", syrup: "Сахарный сироп", grenadine: "Гренадин" };
+  lemon: "Лимонный сок", syrup: "Сахарный сироп", grenadine: "Гренадин", coffee: "Кофе", tea: "Чай", cream: "Сливки" };
 const liqOf = ing => new THREE.Color((Closeup.LOOK[ing] || {}).liq || "#ffffff");
 
 /* ---------- координаты: всё считается от места бармена (x — его левая рука, z — к гостю) ---------- */
@@ -7151,6 +7997,7 @@ async function setupStation(c) {
     place(P.mugA.g, ST.tin); place(P.mugB.g, ST.cap); place(P.kettle.g, ST.kettle); place(P.mbox, ST.mbox); place(P.saucer.g, ST.saucer);
     P.bucket.g.visible = P.scoop.g.visible = false;
   }
+  if (!fiery && prog.some(s => s[0] === "hot")) place(P.kettle.g, ST.kettle);
   if (SHOW.glassV) world.remove(SHOW.glassV.g);
   SHOW.glassV = buildGlass(c);
   place(SHOW.glassV.g, ST.glass);
@@ -7357,7 +8204,7 @@ async function laugh(G) {
   for (let i = 0; i < 10; i++) { F.sway = Math.sin(i * 2.1) * .03; F.nod = -.14 + Math.sin(i * 1.7) * .05; F.leanT = -.02; await sleep(.12); }
   F.sway = 0; F.nod = 0; F.leanT = .12;
 }
-async function toast(A, B) {
+async function clinkToast(A, B) {
   if (A.busy || B.busy) return;
   A.busy = B.busy = true;
   const mid = V3((A.F.x + B.F.x) / 2, 1.42, -1.82);
@@ -7429,7 +8276,7 @@ async function guestLife() {
     const free = GUESTS.filter(g => !g.busy);
     if (!free.length) continue;
     const r = rng();
-    if (pair.length === 2 && r < .12) toast(pair[0], pair[1]);
+    if (pair.length === 2 && r < .12) clinkToast(pair[0], pair[1]);
     else if (pair.length === 2 && r < .55) {
       const [a, b] = rng() < .5 ? pair : [pair[1], pair[0]];
       if (!a.busy) { b.F.look = a.F.head.getWorldPosition(V3()); gesture(a, b).then(() => { if (rng() < .4) laugh(b); setTimeout(() => { if (!b.busy) b.F.look = null; }, 1500); }); }
@@ -7591,7 +8438,7 @@ async function ladyLife() {
   }
 }
 function companyLife() { guestLife(); readerLife(); smokerLife(); writerLife(); ladyLife(); }
-Object.assign(H3D, { toast: () => pair.length === 2 && toast(pair[0], pair[1]), sip: i => GUESTS[i] && sip(GUESTS[i]), guests: GUESTS });
+Object.assign(H3D, { toast: () => pair.length === 2 && clinkToast(pair[0], pair[1]), sip: i => GUESTS[i] && sip(GUESTS[i]), guests: GUESTS });
 
 /* ================= сцена: джаз-бэнд играет ровно те ноты, что звучат ================= */
 const STG = { x0: -7.6, x1: -2.0, z0: 3.85, z1: 5.95, h: .3, active: false };
@@ -8369,6 +9216,7 @@ async function bookcaseTo(open, dur = 2.4) {
   CEL.open = open ? 1 : 0;
 }
 async function enterCellar() {
+  track("secret", "cellar");
   if (CEL.busy || busy) return;
   CEL.busy = true;
   hideTip();
@@ -8520,6 +9368,7 @@ async function taste(w) {
   say(SOM, w.taste, 7);
   CEL.tasted.add(w.id);
   try { localStorage.setItem("hacheden-tasted", JSON.stringify([...CEL.tasted])); } catch (e) {}
+  track("count", "wine");
   if (CEL.tasted.size === WINES.length) setTimeout(() => { if (CEL.on) say(SOM, "Вы попробовали все четыре. Теперь вы знаете погреб лучше многих завсегдатаев.", 6); }, 7000);
   CEL.busy = false;
   menu();
@@ -9382,6 +10231,7 @@ const navBtns = [...document.querySelectorAll("#nav button")];
 const titleEl = document.getElementById("zone-title"), subEl = document.getElementById("zone-sub");
 const spotsEl = document.getElementById("spots"), tip = document.getElementById("tip");
 function renderZoneUI(i) {
+  track("room", i);
   navBtns.forEach(b => b.setAttribute("aria-current", String(+b.dataset.zone === i)));
   titleEl.classList.add("swap");
   setTimeout(() => {
@@ -9410,6 +10260,8 @@ function goZone(i, dur = 1.9) {
   leaveSeat();
   const same = i === curZone;
   curZone = i; cur = i;
+  applyTime();
+  track("room", i);
   Music.room(i === 3 ? 4 : i === 4 ? 5 : i);
   if (mixDlg.open && i !== 1) mixDlg.close();
   renderZoneUI(i);
@@ -9538,7 +10390,7 @@ const DUST = (() => {
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffc890, size: .012, map: TEX.glow, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending }));
   world.add(p);
-  return { N, pos, base, g };
+  return { N, pos, base, g, p };
 })();
 
 /* ---------- окружение для отражений: снимок самой комнаты ---------- */
@@ -9556,6 +10408,8 @@ let last = performance.now(), frames = 0, slowAcc = 0, slowN = 0, neonT = 6 + Ma
 const _p = V3(), _t = V3(), _d = V3();
 function tick(now) {
   requestAnimationFrame(tick);
+  // 30 кадров в секунду в режиме экономии: пропускаем каждый второй кадр
+  if ((SET.fps === "30" || SET.saver) && now - last < 30) return;
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
   if (PAUSED || document.hidden || (closedNow && !started)) return;
@@ -9611,10 +10465,13 @@ function tick(now) {
   // камин
   FIRE.boost += (1 - FIRE.boost) * dt * .5;
   const fl = .78 + .14 * Math.sin(t * 7.3) + .1 * Math.sin(t * 13.1 + 1) + .06 * Math.sin(t * 23.7);
-  LIGHTS.fire.intensity = LIGHTS.fire.userData.base * fl * FIRE.boost;
+  FIRE.lvl += ((FIRE.on ? 1 : .1) - FIRE.lvl) * Math.min(1, dt * 1.2);
+  LIGHTS.fire.intensity = LIGHTS.fire.userData.base * fl * FIRE.boost * FIRE.lvl;
+  for (const f of FIRE.flames) { f.visible = FIRE.lvl > .25; f.scale.y = Math.max(.05, Math.min(1, (FIRE.lvl - .2) * 1.3)); }
   for (const m of flameMats) { m.uniforms.uTime.value = t; m.uniforms.uBoost.value = Math.min(1.35, FIRE.boost); }
   FIRE.logMat.emissiveIntensity = .3 + .12 * Math.sin(t * 2.1) * fl;
-  FIRE.glow.material.opacity = .38 * fl * FIRE.boost;
+  FIRE.glow.material.opacity = .38 * fl * FIRE.boost * (.25 + .75 * FIRE.lvl);
+  FIRE.embers.pts.visible = FIRE.lvl > .4 && SET.effects && !SET.saver;
   {
     const e = FIRE.embers;
     for (let i = 0; i < e.N; i++) {
@@ -9655,7 +10512,7 @@ function tick(now) {
   rainMat.uniforms.uFlash.value = NOOK.flash;
   const sky = rainMat.uniforms.uSky.value;
   if (!STREET.on) LIGHTS.window.intensity = LIGHTS.window.userData.base * (1 + sky * 2.5) + NOOK.flash * 30;
-  LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
+  LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.lampMode || 1) * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
   if (NOOK.candleOn) { NOOK.flame.scale.set(1, 1 + .15 * Math.sin(t * 13), 1); NOOK.flameGlow.material.opacity = .7 + .1 * Math.sin(t * 9); }
@@ -9672,13 +10529,13 @@ function tick(now) {
   neonMat.opacity = nb; neonGlow.material.opacity = .35 * nb;
   LIGHTS.red.intensity = LIGHTS.red.userData.base * (.8 + .2 * nb) * (.08 + .92 * SHUT.back);
   // пыль
-  for (let i = 0; i < DUST.N; i++) {
+  if (DUST.p.visible) for (let i = 0; i < DUST.N; i++) {
     const b = DUST.base[i];
     DUST.pos[i * 3] = b[0] + Math.sin(t * .2 + b[3]) * .3;
     DUST.pos[i * 3 + 1] = b[1] + Math.sin(t * b[4] * 4 + b[3]) * .2;
     DUST.pos[i * 3 + 2] = b[2] + Math.cos(t * .17 + b[3]) * .2;
   }
-  DUST.g.attributes.position.needsUpdate = true;
+  if (DUST.p.visible) DUST.g.attributes.position.needsUpdate = true;
   for (const fn of tickers) fn(t, dt);
 
   if (!TEST) renderer.render(scene, camera);
@@ -9729,11 +10586,23 @@ ownerOut.addEventListener("click", () => {
 const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
 /* конец смены: лампы и неон гаснут по одной (1 — горит, 0 — погашено) */
 const SHUT = { pendL: 1, pendC: 1, pendR: 1, fill: 1, neon: 1, back: 1 };
+/* атмосфера: по часам или вручную — вечер, полночь, поздняя ночь */
+function moodDate() {
+  const m = SET.mood;
+  if (m === "auto") return sceneDate();
+  const e = new Date(sceneDate());
+  if (m === "evening") { const h = Math.max(17, SUNSET - .35); e.setHours(Math.floor(h), Math.round((h % 1) * 60), 0, 0); }
+  else if (m === "midnight") e.setHours(0, 0, 0, 0);
+  else e.setHours(2, 30, 0, 0);
+  return e;
+}
+const ZONE_LIGHT = [1, 1, 1, 1, 1];
 function applyTime() {
-  const d = sceneDate(), sky = skyLight(d), late = lateness(d);
+  const d = moodDate(), sky = skyLight(d), late = lateness(d);
+  hemi.intensity = 1.6 * (1 + .1 * sky - .18 * late);
   rainMat.uniforms.uSky.value = sky;
   if (!STREET.on) LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
-  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k];
+  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k] * (k === "fill" ? ZONE_LIGHT[curZone] ?? 1 : 1);
 }
 function showClosed(afterVisit) {
   intro.classList.add("closed");
@@ -9840,6 +10709,7 @@ peekBtn.addEventListener("click", () => {
 function cCaption(t) { caption("", t); }
 const CL_LINES = ["Спокойной ночи!", "До завтра, Hacheden!", "Лучший вечер за неделю.", "Ещё увидимся."];
 async function playClosing() {
+  track("secret", "closing");
   if (CLOSING.on) return;
   CLOSING.on = true; CLOSING.skip = false;
   const g = ++CLOSING.gen;
@@ -10066,6 +10936,330 @@ function buzz() {
   o.connect(gg).connect(c.destination); o.start(t); o.stop(t + .14);
 }
 Object.assign(H3D, { closing: playClosing });
+
+/* ================= атмосфера залов, настройки графики, секреты и редкие события ================= */
+const ROOMS = Object.assign({ lamp: "warm", rain: 1, fire: true, smoke: "warm", crackle: 1, lib: "warm" },
+  (() => { try { return JSON.parse(localStorage.getItem("hacheden-rooms")) || {}; } catch (e) { return {}; } })());
+const saveRooms = () => { try { localStorage.setItem("hacheden-rooms", JSON.stringify(ROOMS)); } catch (e) {} };
+const LAMP_MUL = { bright: 1.45, warm: 1, dim: .45 }, FILL_MUL = { bright: 1.15, warm: 1, dim: .55 };
+
+/* ---------- эффекты и качество из настроек ---------- */
+function applyEffects() {
+  const on = SET.effects && !SET.saver;
+  DUST.p.visible = on;
+  for (const s of haze) s.visible = on;
+  for (const s of smoke) s.visible = on;
+}
+applyEffects();
+onSetting(k => {
+  if (k === "effects" || k === "saver") applyEffects();
+  if (k === "quality" || k === "saver") { DPR = Math.min(devicePixelRatio || 1, dprCap()); renderer.setPixelRatio(DPR); resize(); }
+  if (k === "mood") applyTime();
+});
+
+/* ---------- свет и звук комнат ---------- */
+function applyRooms() {
+  NOOK.lampMode = LAMP_MUL[ROOMS.lamp] || 1;
+  if (NOOK.lampGlow) NOOK.lampGlow.material.opacity = .5 * Math.min(1.3, NOOK.lampMode);
+  ZONE_LIGHT[0] = FILL_MUL[ROOMS.lib] || 1;
+  ZONE_LIGHT[2] = ROOMS.smoke === "dim" ? .5 : 1;
+  FIRE.on = ROOMS.fire;
+  Music.mix({ rain: ROOMS.rain, fire: ROOMS.crackle * (ROOMS.fire ? 1 : .12) });
+  const st = HOT.find(o => o.userData.hot.label === "Подбросить дров" || o.userData.hot.label === "Разжечь камин");
+  if (st) { st.userData.hot.label = ROOMS.fire ? "Подбросить дров" : "Разжечь камин"; if (st.userData.chip) st.userData.chip.textContent = st.userData.hot.label; }
+  applyTime();
+}
+/* камин: «Подбросить дров» разжигает погасший огонь */
+{
+  const st = HOT.find(o => o.userData.hot.label === "Подбросить дров");
+  if (st) {
+    const base = st.userData.hot.act;
+    st.userData.hot.act = () => { if (!ROOMS.fire) { ROOMS.fire = true; saveRooms(); applyRooms(); FIRE.boost = 1.8; crackle(); toast("Камин разгорается", "Дрова потрескивают"); } else base(); };
+  }
+}
+
+/* панель «Атмосфера» для читальни и курилки */
+const atmoDlg = document.createElement("dialog");
+atmoDlg.className = "atmo";
+atmoDlg.setAttribute("aria-labelledby", "atmo-title");
+document.body.appendChild(atmoDlg);
+function renderAtmo() {
+  const z = curZone;
+  const segB = (key, v, t) => `<button class="chip" type="button" data-room="${key}:${v}" aria-pressed="${ROOMS[key] === v}">${t}</button>`;
+  const rangeRow = (key, label) => `<div class="row slider"><label for="r-${key}">${label}</label><input class="rng" type="range" id="r-${key}" data-rr="${key}" min="0" max="100" value="${Math.round(ROOMS[key] * 100)}" style="--v:${Math.round(ROOMS[key] * 100)}%"><output>${Math.round(ROOMS[key] * 100)}%</output></div>`;
+  let html = `<button class="close" type="button" aria-label="Закрыть" data-atmo-close>×</button>`;
+  if (z === 0) {
+    html += `<h2 id="atmo-title">Атмосфера читальни</h2>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Настольная лампа</span><div class="seg">${segB("lamp", "bright", "Яркая")}${segB("lamp", "warm", "Тёплая")}${segB("lamp", "dim", "Приглушённая")}</div></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Свет в комнате</span><div class="seg">${segB("lib", "bright", "Светлее")}${segB("lib", "warm", "Как обычно")}${segB("lib", "dim", "Полумрак")}</div></div>
+      <div class="row"><span class="lbl">Свеча на столе</span><button class="make ghost" type="button" data-candle>${NOOK.candleOn ? "Задуть" : "Зажечь"}</button></div>
+      ${rangeRow("rain", "Шум дождя")}
+      <div class="acts"><button class="make" type="button" data-stories>Полка рассказов</button></div>`;
+  } else {
+    html += `<h2 id="atmo-title">Атмосфера курилки</h2>
+      <div class="row"><span class="lbl">Камин</span><span class="sw"><input type="checkbox" data-fire aria-label="Камин горит"${ROOMS.fire ? " checked" : ""}><span></span></span></div>
+      <div class="row" style="grid-template-columns:1fr"><span class="lbl">Свет</span><div class="seg">${segB("smoke", "warm", "Тёплый")}${segB("smoke", "dim", "Приглушённый")}</div></div>
+      ${rangeRow("crackle", "Треск дров")}
+      <div class="acts"><button class="make" type="button" data-player>Граммофон: выбрать музыку</button></div>`;
+  }
+  atmoDlg.innerHTML = html;
+}
+function openAtmo() {
+  for (const o of document.querySelectorAll("dialog.sheet[open]")) o.close();
+  renderAtmo();
+  atmoDlg.show();
+  uiSound("open");
+  const f = atmoDlg.querySelector(".chip, .make, input"); if (f) f.focus({ preventScroll: true });
+}
+atmoDlg.addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if ("atmoClose" in b.dataset) { atmoDlg.close(); return; }
+  if (b.dataset.room) { const [k, v] = b.dataset.room.split(":"); ROOMS[k] = v; saveRooms(); applyRooms(); renderAtmo(); const f = atmoDlg.querySelector(`[data-room="${k}:${v}"]`); if (f) f.focus(); }
+  else if ("candle" in b.dataset) { toggleCandle(); renderAtmo(); const f = atmoDlg.querySelector("[data-candle]"); if (f) f.focus(); }
+  else if ("stories" in b.dataset) { atmoDlg.close(); openStories(); }
+  else if ("player" in b.dataset) { atmoDlg.close(); openPlayer(); }
+});
+atmoDlg.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.rr) { ROOMS[t.dataset.rr] = +t.value / 100; t.style.setProperty("--v", t.value + "%"); t.nextElementSibling.textContent = t.value + "%"; saveRooms(); applyRooms(); Music.wake(); }
+});
+atmoDlg.addEventListener("change", e => { if ("fire" in e.target.dataset) { ROOMS.fire = e.target.checked; saveRooms(); applyRooms(); if (ROOMS.fire) { FIRE.boost = 1.6; crackle(); } } });
+addEventListener("keydown", e => { if (e.key === "Escape" && atmoDlg.open) atmoDlg.close(); });
+/* кнопки-«чипы» без предмета в зале */
+function chipOnly(zone, label, act, x = 0, y = -5, z = 0) {
+  const m = mesh(new THREE.BoxGeometry(.01, .01, .01), basic({ visible: false }), x, y, z);
+  m.userData.noHit = true;
+  return hot(m, zone, label, act, { grow: 0 });
+}
+chipOnly(0, "Атмосфера", openAtmo);
+chipOnly(2, "Атмосфера", openAtmo);
+
+/* ---------- читальня: стопка рассказов и книга, что светится без свечи ---------- */
+const LIB = {};
+{
+  const dx = NOOK.lampGlow.position.x + .5, top = .785;   // стол писателя у окна
+  const stack = group(dx - .64, top, -4.1);
+  const covers = [0x5a1420, 0x1f3a2c, 0x2a2440];
+  covers.forEach((c, i) => {
+    const b = mesh(new THREE.BoxGeometry(.2 - i * .015, .035, .15 - i * .01), std({ color: c, roughness: .7 }), 0, .018 + i * .036, 0, stack);
+    b.rotation.y = (i - 1) * .18;
+    mesh(new THREE.BoxGeometry(.19 - i * .015, .028, .004), std({ color: 0xeee2c4, roughness: .9 }), 0, .018 + i * .036, (.15 - i * .01) / 2 - .001, stack).rotation.y = (i - 1) * .18;
+  });
+  hot(stack, 0, "Полка рассказов", () => openStories(), { grow: .08 });
+  LIB.stack = stack;
+  // книга без названия: днём обычная, без свечи на обложке проступают светящиеся строки
+  const book = group(dx - .2, top + .186, -4.5);   // сверху на стопке книг
+  book.rotation.y = .25;
+  mesh(new THREE.BoxGeometry(.17, .03, .23), std({ color: 0x1a1210, roughness: .8 }), 0, .015, 0, book);
+  LIB.glowMat = basic({ map: canvasTex(256, 340, (c, w, h) => {
+    c.clearRect(0, 0, w, h); c.strokeStyle = "#bfe8ff"; c.fillStyle = "#bfe8ff"; c.lineWidth = 3;
+    c.strokeRect(18, 18, w - 36, h - 36);
+    c.font = "28px Forum, Georgia, serif"; c.textAlign = "center";
+    c.fillText("HACHEDEN", w / 2, 90);
+    for (let i = 0; i < 7; i++) c.fillRect(48, 140 + i * 24, w - 96 - (i % 3) * 30, 3);
+    c.beginPath(); c.arc(w / 2, 300, 12, 0, Math.PI * 2); c.stroke();
+  }), transparent: true, opacity: 0, depthWrite: false, toneMapped: false });
+  const face = mesh(new THREE.PlaneGeometry(.16, .22), LIB.glowMat, 0, .031, 0, book);
+  face.rotation.x = -Math.PI / 2; face.userData.noHit = true;
+  LIB.glow = glowSprite(0x9fd8ff, .5, 0, .06, 0, book, 0);
+  LIB.book = book;
+  hot(book, 0, "Книга без названия", () => {
+    if (LIB.lit > .6) { track("secret", "glowbook"); openStories(SECRET_STORY.id); }
+    else toast("Книга без названия", "На обложке ни слова, страницы пустые. Странно…");
+  }, { grow: .06 });
+  LIB.lit = 0;
+  onTick((t, dt) => {
+    const want = NOOK.candleOn || curZone !== 0 ? 0 : 1;
+    LIB.lit += (want - LIB.lit) * Math.min(1, dt * (want ? .5 : 2));
+    LIB.glowMat.opacity = LIB.lit * (.75 + .15 * Math.sin(t * 1.7));
+    LIB.glow.material.opacity = LIB.lit * .35;
+  });
+}
+
+/* ---------- кот: если гладить долго, он доверяет ---------- */
+{
+  const h = HOT.find(o => o.userData.hot.label === "Кот");
+  if (h) {
+    const base = h.userData.hot.act;
+    let n = 0;
+    h.userData.hot.act = () => {
+      base();
+      if (++n === 5) {
+        const g = CAT.head.parent;
+        tween(g.rotation, { z: .5 }, .6, ease.out).then(() => wait(2.2)).then(() => tween(g.rotation, { z: 0 }, .8));
+        track("secret", "cat");
+      }
+    };
+  }
+}
+/* ---------- дверь «Приват»: условный стук ---------- */
+{
+  const h = HOT.find(o => o.userData.hot.label === "Постучать в дверь" && o.userData.hot.zone === 2);
+  if (h) {
+    const base = h.userData.hot.act;
+    let n = 0, t0 = 0;
+    h.userData.hot.act = () => {
+      const now = performance.now();
+      if (now - t0 > 20000) n = 0;
+      t0 = now;
+      if (++n === 3) track("secret", "knock");
+      base();
+    };
+  }
+}
+/* ---------- граммофон и сцена открывают плеер ---------- */
+{
+  const g = HOT.find(o => o.userData.hot.label === "Граммофон: музыка");
+  if (g) { g.userData.hot.label = "Граммофон: плеер"; g.userData.hot.act = () => openPlayer(); }
+  chipOnly(3, "Плеер: выбрать композицию", () => openPlayer());
+}
+
+/* ---------- редкое событие: кот приходит на стойку ---------- */
+const CATV = { chance: QS.get("rare") === "cat" ? 1 : .2, done: false, on: false, since: 0 };
+CATV.today = Math.random() < CATV.chance;
+setInterval(() => {
+  if (!CATV.today || CATV.done || CATV.on || !started || curZone !== 1 || busy || SEAT.on || modalOpen() || mixDlg.open || STREET.on) { CATV.since = 0; return; }
+  CATV.since += 5;
+  if (CATV.since < (QS.get("rare") === "cat" ? 5 : 75)) return;
+  catVisit();
+}, 5000);
+function catVisit() {
+  const g = CAT.head.parent, h = g.userData.hot;
+  CATV.on = true;
+  CATV.home = { p: g.position.clone(), r: g.rotation.y, act: h.act, label: h.label, zone: h.zone, y0: h.y0 };
+  g.position.set(2.1, CT.top + .005, (CT.z0 + CT.z1) / 2 - .1);
+  g.rotation.y = -2.1;
+  h.zone = 1; h.label = "Кот на стойке"; h.y0 = g.position.y;
+  h.act = () => { CATV.home.act(); track("secret", "catvisit"); hintEl.textContent = "Кот щурится и мурлычет. Бармен делает вид, что ничего не видит."; setTimeout(catHome, 25000); };
+  renderZoneUI(1);
+  hintEl.textContent = "На стойку запрыгнул кот из курилки. Бармен делает вид, что не замечает.";
+  setTimeout(catHome, 120000);
+}
+function catHome() {
+  if (!CATV.on) return;
+  const g = CAT.head.parent, h = g.userData.hot, H = CATV.home;
+  g.position.copy(H.p); g.rotation.y = H.r;
+  Object.assign(h, { act: H.act, label: H.label, zone: H.zone, y0: H.y0 });
+  CATV.on = false; CATV.done = true;
+  renderZoneUI(curZone);
+  if (curZone === 1 && !busy) hintEl.textContent = ZONES[1].hint;
+}
+
+applyRooms();
+Object.assign(H3D, { rooms: ROOMS, applyRooms, lib: LIB, catVisit, atmo: openAtmo });
+
+/* ================= разговор с барменом: темы, советы, контекст, случайные фразы ================= */
+const TALK = { story: Math.floor(Math.random() * 8), clicks: [], idleT: 0 };
+/* правдивые истории из жизни баров */
+const BAR_TALES = [
+  "Сухой закон в США вступил в силу 17 января 1920 года, а отменили его 5 декабря 1933-го. Тринадцать лет люди пили в таких местах, как наше, — за дверью без вывески.",
+  "«Спикизи» — от английского «говори тише». О таком баре не кричали на улице: стучали условным стуком и говорили вполголоса.",
+  "Слово «коктейль» впервые объяснили в печати в 1806 году, в нью-йоркской газете: крепкий напиток, сахар, вода и биттер. Почти наш «Олд фэшн».",
+  "Лёд в бокалах — заслуга Фредерика Тюдора, «ледяного короля». В 1806 году он отправил первый корабль со льдом из Новой Англии на Мартинику. Над ним смеялись — а потом весь мир пил со льдом.",
+  "Ангостуру придумал немецкий врач Иоганн Зигерт в 1824 году в венесуэльском городе Ангостура. Сначала это было лекарство для солдат, а стало — главной каплей в баре.",
+  "Первую книгу для барменов выпустил Джерри Томас в 1862 году. Он работал с таким размахом, что его называли «профессором».",
+  "Когда в США запретили алкоголь, многие бармены уехали в Европу. Гарри Крэддок перебрался в Лондон, в отель «Савой», и в 1930 году выпустил там знаменитую книгу коктейлей.",
+  "«Гарриз Нью-Йорк бар» в Париже открылся в 1911 году, а в 1923-м его выкупил бармен Гарри Макэлхоун. Там до сих пор помнят «Бульвардье» — кстати, он есть в нашем тайном меню."
+];
+const BT_OWN = [
+  "Сам? После смены — «Олд фэшн», медленно, с одним большим кубиком льда. А за работой только вода: бармену нужна ясная голова.",
+  "Я люблю «Негрони». Горький, честный и не притворяется сладким. Как хороший разговор.",
+  "Признаюсь: самый вкусный напиток — первый кофе перед сменой, когда зал ещё пустой и лампы только загораются."
+];
+const BT_RANDOM = [
+  "Лёд сегодня особенно прозрачный. Хороший знак.",
+  "Если не знаете, что выбрать, — садитесь за стойку. Подберу под настроение.",
+  "Слышите? Пианист сегодня в ударе.",
+  "В барной карте можно смешать и своё. Я подскажу пропорции.",
+  "Кот из курилки иногда заходит в гости. Не говорите хозяину."
+];
+function hourNow() { const d = sceneDate(); return d.getHours() + d.getMinutes() / 60; }
+function eveningLine() {
+  const h = hourNow(), parts = [];
+  parts.push(h >= 17 && h < 20 ? "Вечер только начинается, зал понемногу наполняется." : h >= 20 && h < 23 ? "Самое время: музыка, разговоры, лёд звенит." : h >= 23 || h < 1 ? "Ближе к полуночи — лучшее время в баре." : "Поздно уже. Остались самые свои.");
+  if (WEATHER.snow) parts.push("За окном метёт — хорошо, что у нас тепло.");
+  else if (WEATHER.rain) parts.push("Слышите дождь? В такую погоду бар особенно уютный.");
+  else if (WEATHER.stars) parts.push("Ночь звёздная, а у нас вместо звёзд — лампы.");
+  if (BAND_HERE && Music.on) parts.push(`Ансамбль играет «${Music.info().track.title}».`);
+  else if (BAND_HERE) parts.push("Музыканты на сцене, но ждут, пока их попросят сыграть.");
+  if (LAST_DRINK) {
+    const c = LAST_DRINK;
+    parts.push(c.custom ? `А ваш «${c.name}» — смелый рецепт. Я его запомнил.` : c.secret ? `И вы нашли «${c.name}». Его знают немногие.` : c.signature ? "И вы выбрали наш фирменный — уважаю." : `Как вам «${c.name}»?`);
+  }
+  return parts.join(" ");
+}
+function talkMenu(first = false) {
+  const h = hourNow(), late = h < 3;
+  const list = [["Как вечер?", () => talkSay(eveningLine())],
+    ["Расскажите историю", () => { TALK.story = (TALK.story + 1) % BAR_TALES.length; talkSay(BAR_TALES[TALK.story]); }],
+    ["А вы сами что пьёте?", () => talkSay(BT_OWN[Math.floor(Math.random() * BT_OWN.length)])],
+    ["Есть что-то не из меню?", offMenu]];
+  if (late) list.push(["Расскажите что-нибудь не для всех", midnightTale]);
+  list.push(["Посоветуйте коктейль", () => { answers([]); btSay("С удовольствием. Какое настроение?").then(askMood); }]);
+  list.push(standBtn);
+  if (first) answers(list); else answers(list);
+}
+async function talkSay(text) {
+  answers([]);
+  bt.look = camera.position;
+  await btSay(text);
+  await sleep(.4);
+  if (SEAT.on) talkMenu();
+}
+function offMenu() {
+  const left = SECRETS.filter(s => !FOUND.has(s.id));
+  if (!left.length) return talkSay("Вы знаете меню лучше меня. Все тайные рецепты уже ваши.");
+  const s = left[Math.floor(Math.random() * left.length)];
+  talkSay(`Есть пара рецептов, которых нет в карте. Намекну: ${s.hint.charAt(0).toLowerCase() + s.hint.slice(1)} Соберите это в шейкере — я узнаю.`);
+}
+function midnightTale() {
+  track("secret", "midnight");
+  talkSay("Ладно, только между нами. Говорят, первый хозяин этого бара прятал ключи от погреба в книгах. В читальне одна книга до сих пор торчит из полки — я бы на вашем месте присмотрелся.");
+}
+/* в разговоре у стойки появляется «Поговорить» */
+{
+  const baseAsk = askMood;
+  askMood = function () {
+    answers([...MOODS.map(([id, label]) => [label, () => askStrength(id)]), ["Просто поговорить", () => { answers([]); btSay("С удовольствием. О чём?").then(() => talkMenu(true)); }, true], standBtn]);
+  };
+  void baseAsk;
+}
+/* бармена можно позвать: щелчок по нему — сесть за стойку; слишком настойчиво — особая реакция */
+hot(bt.root, 1, "Бармен", () => {
+  const now = performance.now();
+  TALK.clicks = TALK.clicks.filter(t => now - t < 6000);
+  TALK.clicks.push(now);
+  if (TALK.clicks.length >= 5) {
+    TALK.clicks = [];
+    track("secret", "barkeep");
+    say(bt, "Я вас вижу, вижу! Пять раз звать не обязательно — хотя за упорство полагается секрет: попробуйте задуть свечу в читальне.", 7);
+    return;
+  }
+  if (!SEAT.on && !busy) sitDown();
+}, { grow: 0, noChip: true });
+/* после подачи бармен отзывается о выборе гостя */
+{
+  const base = afterServe;
+  afterServe = async function () {
+    if (!SEAT.on) return;
+    const g = SEAT.gen;
+    BT.busy = true;
+    await walkTo(SEAT_X + .04, BT_Z + .1, 0);
+    if (g !== SEAT.gen) return;
+    bt.look = camera.position;
+    prepSip();
+    const c = LAST_DRINK;
+    await btSay(c && c.custom ? `Ваш «${c.name}». Смелый рецепт — я бы и сам такой заказал.` : c && c.secret ? `«${c.name}» — не из карты. Приятно встретить знающего человека.` : "Приятного вечера. Если что — я рядом.");
+    if (g !== SEAT.gen) return;
+    answers([["Сделать глоток", () => takeSip()], ["Ещё по одной", oneMore], ["Поговорить", () => talkMenu()], standBtn]);
+  };
+  void base;
+}
+/* редкие случайные фразы, когда гость рядом со стойкой и ничем не занят */
+setInterval(() => {
+  if (!started || curZone !== 1 || busy || SEAT.on || BT.busy || modalOpen() || mixDlg.open || bubble || STREET.on || CLOSING.on) return;
+  if (Math.random() < .35) say(bt, BT_RANDOM[Math.floor(Math.random() * BT_RANDOM.length)], 5);
+}, 45000);
 
 </script>
 </body>

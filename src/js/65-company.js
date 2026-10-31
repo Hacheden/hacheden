@@ -111,7 +111,7 @@ async function laugh(G) {
   for (let i = 0; i < 10; i++) { F.sway = Math.sin(i * 2.1) * .03; F.nod = -.14 + Math.sin(i * 1.7) * .05; F.leanT = -.02; await sleep(.12); }
   F.sway = 0; F.nod = 0; F.leanT = .12;
 }
-async function toast(A, B) {
+async function clinkToast(A, B) {
   if (A.busy || B.busy) return;
   A.busy = B.busy = true;
   const mid = V3((A.F.x + B.F.x) / 2, 1.42, -1.82);
@@ -183,7 +183,7 @@ async function guestLife() {
     const free = GUESTS.filter(g => !g.busy);
     if (!free.length) continue;
     const r = rng();
-    if (pair.length === 2 && r < .12) toast(pair[0], pair[1]);
+    if (pair.length === 2 && r < .12) clinkToast(pair[0], pair[1]);
     else if (pair.length === 2 && r < .55) {
       const [a, b] = rng() < .5 ? pair : [pair[1], pair[0]];
       if (!a.busy) { b.F.look = a.F.head.getWorldPosition(V3()); gesture(a, b).then(() => { if (rng() < .4) laugh(b); setTimeout(() => { if (!b.busy) b.F.look = null; }, 1500); }); }
@@ -345,4 +345,4 @@ async function ladyLife() {
   }
 }
 function companyLife() { guestLife(); readerLife(); smokerLife(); writerLife(); ladyLife(); }
-Object.assign(H3D, { toast: () => pair.length === 2 && toast(pair[0], pair[1]), sip: i => GUESTS[i] && sip(GUESTS[i]), guests: GUESTS });
+Object.assign(H3D, { toast: () => pair.length === 2 && clinkToast(pair[0], pair[1]), sip: i => GUESTS[i] && sip(GUESTS[i]), guests: GUESTS });

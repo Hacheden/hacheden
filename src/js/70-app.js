@@ -64,6 +64,7 @@ const navBtns = [...document.querySelectorAll("#nav button")];
 const titleEl = document.getElementById("zone-title"), subEl = document.getElementById("zone-sub");
 const spotsEl = document.getElementById("spots"), tip = document.getElementById("tip");
 function renderZoneUI(i) {
+  track("room", i);
   navBtns.forEach(b => b.setAttribute("aria-current", String(+b.dataset.zone === i)));
   titleEl.classList.add("swap");
   setTimeout(() => {
@@ -92,6 +93,8 @@ function goZone(i, dur = 1.9) {
   leaveSeat();
   const same = i === curZone;
   curZone = i; cur = i;
+  applyTime();
+  track("room", i);
   Music.room(i === 3 ? 4 : i === 4 ? 5 : i);
   if (mixDlg.open && i !== 1) mixDlg.close();
   renderZoneUI(i);
@@ -220,7 +223,7 @@ const DUST = (() => {
   g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
   const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffc890, size: .012, map: TEX.glow, transparent: true, opacity: .55, depthWrite: false, blending: THREE.AdditiveBlending }));
   world.add(p);
-  return { N, pos, base, g };
+  return { N, pos, base, g, p };
 })();
 
 /* ---------- окружение для отражений: снимок самой комнаты ---------- */
@@ -238,6 +241,8 @@ let last = performance.now(), frames = 0, slowAcc = 0, slowN = 0, neonT = 6 + Ma
 const _p = V3(), _t = V3(), _d = V3();
 function tick(now) {
   requestAnimationFrame(tick);
+  // 30 кадров в секунду в режиме экономии: пропускаем каждый второй кадр
+  if ((SET.fps === "30" || SET.saver) && now - last < 30) return;
   const dt = Math.min(.05, (now - last) / 1000);
   last = now;
   if (PAUSED || document.hidden || (closedNow && !started)) return;
@@ -293,10 +298,13 @@ function tick(now) {
   // камин
   FIRE.boost += (1 - FIRE.boost) * dt * .5;
   const fl = .78 + .14 * Math.sin(t * 7.3) + .1 * Math.sin(t * 13.1 + 1) + .06 * Math.sin(t * 23.7);
-  LIGHTS.fire.intensity = LIGHTS.fire.userData.base * fl * FIRE.boost;
+  FIRE.lvl += ((FIRE.on ? 1 : .1) - FIRE.lvl) * Math.min(1, dt * 1.2);
+  LIGHTS.fire.intensity = LIGHTS.fire.userData.base * fl * FIRE.boost * FIRE.lvl;
+  for (const f of FIRE.flames) { f.visible = FIRE.lvl > .25; f.scale.y = Math.max(.05, Math.min(1, (FIRE.lvl - .2) * 1.3)); }
   for (const m of flameMats) { m.uniforms.uTime.value = t; m.uniforms.uBoost.value = Math.min(1.35, FIRE.boost); }
   FIRE.logMat.emissiveIntensity = .3 + .12 * Math.sin(t * 2.1) * fl;
-  FIRE.glow.material.opacity = .38 * fl * FIRE.boost;
+  FIRE.glow.material.opacity = .38 * fl * FIRE.boost * (.25 + .75 * FIRE.lvl);
+  FIRE.embers.pts.visible = FIRE.lvl > .4 && SET.effects && !SET.saver;
   {
     const e = FIRE.embers;
     for (let i = 0; i < e.N; i++) {
@@ -337,7 +345,7 @@ function tick(now) {
   rainMat.uniforms.uFlash.value = NOOK.flash;
   const sky = rainMat.uniforms.uSky.value;
   if (!STREET.on) LIGHTS.window.intensity = LIGHTS.window.userData.base * (1 + sky * 2.5) + NOOK.flash * 30;
-  LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
+  LIGHTS.lamp.intensity = LIGHTS.lamp.userData.base * LIGHTS.lamp.userData.mul * (NOOK.lampMode || 1) * (NOOK.candleOn ? 1 + .04 * Math.sin(t * 11) : 1);
   NOOK.globeSpeed += (.25 - NOOK.globeSpeed) * dt * .45;
   NOOK.globe.rotation.y += NOOK.globeSpeed * dt;
   if (NOOK.candleOn) { NOOK.flame.scale.set(1, 1 + .15 * Math.sin(t * 13), 1); NOOK.flameGlow.material.opacity = .7 + .1 * Math.sin(t * 9); }
@@ -354,13 +362,13 @@ function tick(now) {
   neonMat.opacity = nb; neonGlow.material.opacity = .35 * nb;
   LIGHTS.red.intensity = LIGHTS.red.userData.base * (.8 + .2 * nb) * (.08 + .92 * SHUT.back);
   // пыль
-  for (let i = 0; i < DUST.N; i++) {
+  if (DUST.p.visible) for (let i = 0; i < DUST.N; i++) {
     const b = DUST.base[i];
     DUST.pos[i * 3] = b[0] + Math.sin(t * .2 + b[3]) * .3;
     DUST.pos[i * 3 + 1] = b[1] + Math.sin(t * b[4] * 4 + b[3]) * .2;
     DUST.pos[i * 3 + 2] = b[2] + Math.cos(t * .17 + b[3]) * .2;
   }
-  DUST.g.attributes.position.needsUpdate = true;
+  if (DUST.p.visible) DUST.g.attributes.position.needsUpdate = true;
   for (const fn of tickers) fn(t, dt);
 
   if (!TEST) renderer.render(scene, camera);
@@ -411,11 +419,23 @@ ownerOut.addEventListener("click", () => {
 const BAR_COLD = new THREE.Color(0x7d9cff), BAR_WARM = new THREE.Color(0xffb27a);
 /* конец смены: лампы и неон гаснут по одной (1 — горит, 0 — погашено) */
 const SHUT = { pendL: 1, pendC: 1, pendR: 1, fill: 1, neon: 1, back: 1 };
+/* атмосфера: по часам или вручную — вечер, полночь, поздняя ночь */
+function moodDate() {
+  const m = SET.mood;
+  if (m === "auto") return sceneDate();
+  const e = new Date(sceneDate());
+  if (m === "evening") { const h = Math.max(17, SUNSET - .35); e.setHours(Math.floor(h), Math.round((h % 1) * 60), 0, 0); }
+  else if (m === "midnight") e.setHours(0, 0, 0, 0);
+  else e.setHours(2, 30, 0, 0);
+  return e;
+}
+const ZONE_LIGHT = [1, 1, 1, 1, 1];
 function applyTime() {
-  const d = sceneDate(), sky = skyLight(d), late = lateness(d);
+  const d = moodDate(), sky = skyLight(d), late = lateness(d);
+  hemi.intensity = 1.6 * (1 + .1 * sky - .18 * late);
   rainMat.uniforms.uSky.value = sky;
   if (!STREET.on) LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
-  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k];
+  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k] * (k === "fill" ? ZONE_LIGHT[curZone] ?? 1 : 1);
 }
 function showClosed(afterVisit) {
   intro.classList.add("closed");

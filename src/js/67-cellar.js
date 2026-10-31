@@ -341,6 +341,7 @@ async function bookcaseTo(open, dur = 2.4) {
   CEL.open = open ? 1 : 0;
 }
 async function enterCellar() {
+  track("secret", "cellar");
   if (CEL.busy || busy) return;
   CEL.busy = true;
   hideTip();
@@ -492,6 +493,7 @@ async function taste(w) {
   say(SOM, w.taste, 7);
   CEL.tasted.add(w.id);
   try { localStorage.setItem("hacheden-tasted", JSON.stringify([...CEL.tasted])); } catch (e) {}
+  track("count", "wine");
   if (CEL.tasted.size === WINES.length) setTimeout(() => { if (CEL.on) say(SOM, "Вы попробовали все четыре. Теперь вы знаете погреб лучше многих завсегдатаев.", 6); }, 7000);
   CEL.busy = false;
   menu();

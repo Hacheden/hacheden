@@ -30,6 +30,7 @@ peekBtn.addEventListener("click", () => {
 function cCaption(t) { caption("", t); }
 const CL_LINES = ["Спокойной ночи!", "До завтра, Hacheden!", "Лучший вечер за неделю.", "Ещё увидимся."];
 async function playClosing() {
+  track("secret", "closing");
   if (CLOSING.on) return;
   CLOSING.on = true; CLOSING.skip = false;
   const g = ++CLOSING.gen;

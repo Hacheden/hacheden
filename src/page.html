@@ -113,12 +113,12 @@
   }
   .show-card { transition: opacity .5s; }
   @keyframes cap-rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-  .app.showing .hud, .app.showing .zone-title, .app.showing #order { opacity: 0; visibility: hidden; }
+  .app.showing .hud, .app.showing .zone-title, .app.showing #order, .app.showing .tools { opacity: 0; visibility: hidden; }
   .hud { transition: opacity .6s, visibility .6s; }
   @media (max-width: 640px) { .show-title { top: 74px; padding: 0 16px; font-size: 28px; } }
   /* на улице: только подсказка и ответы, без навигации по залам */
-  .app.street .nav, .app.street .spots, .app.street .zone-title, .app.street #order { opacity: 0; visibility: hidden; pointer-events: none; }
-  .nav, .spots, .zone-title, #order { transition: opacity .8s, visibility .8s; }
+  .app.street .nav, .app.street .spots, .app.street .zone-title, .app.street #order, .app.street .tools { opacity: 0; visibility: hidden; pointer-events: none; }
+  .nav, .spots, .zone-title, #order, .tools { transition: opacity .8s, visibility .8s; }
 
   /* за стойкой: ответы бармену вместо подсказок */
   .fade { position: absolute; inset: 0; z-index: 7; background: #000; opacity: 0; pointer-events: none; transition: opacity .6s ease; }
@@ -233,7 +233,6 @@
 <!--@@HTML@@-->
 <script>
   /* общие связки между 3D-сценой и модулями основной версии */
-  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
   let busy = false, cur = 1;
   const app = document.getElementById("app");
   const H3D = {};

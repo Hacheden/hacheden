@@ -5,7 +5,7 @@ float noise(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3. - 2. 
   return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y); }
 float fbm(vec2 p){ float v = 0., a = .5; for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.03; a *= .5; } return v; }`;
 const VERT_UV = `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.); }`;
-const FIRE = { boost: 1, t: 0 };
+const FIRE = { boost: 1, t: 0, lvl: 1, on: true };
 const flameMats = [];
 function flameMat(seedV) {
   const m = new THREE.ShaderMaterial({
@@ -116,7 +116,7 @@ let fxCtx = null;
 const fx = () => {
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return null;
-  fxCtx = fxCtx || new AC();
+  fxCtx = fxCtx || AUDIO.route(new AC(), "ambient");
   fxCtx.resume();
   return fxCtx;
 };

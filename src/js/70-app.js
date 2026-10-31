@@ -433,12 +433,17 @@ function moodDate() {
   return e;
 }
 const ZONE_LIGHT = [1, 1, 1, 1, 1];
+/* свет меняется плавно: смена атмосферы, зала или времени суток идёт за пару секунд, а не рывком */
+let atFirst = true;
+const _wc = new THREE.Color();
 function applyTime() {
   const d = moodDate(), sky = skyLight(d), late = lateness(d);
-  hemi.intensity = 1.6 * (1 + .1 * sky - .18 * late);
-  rainMat.uniforms.uSky.value = sky;
-  if (!STREET.on) LIGHTS.window.color.copy(BAR_COLD).lerp(BAR_WARM, sky);
-  for (const k of ["pendL", "pendC", "pendR", "fill"]) LIGHTS[k].intensity = LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k] * (k === "fill" ? ZONE_LIGHT[curZone] ?? 1 : 1);
+  const soft = (obj, key, v, dur = 2.2) => { if (atFirst || STILL) obj[key] = v; else if (Math.abs(obj[key] - v) > 1e-3) tween(obj, { [key]: v }, dur); };
+  soft(hemi, "intensity", 1.6 * (1 + .1 * sky - .18 * late));
+  soft(rainMat.uniforms.uSky, "value", sky, 3);
+  if (!STREET.on) { _wc.copy(BAR_COLD).lerp(BAR_WARM, sky); if (atFirst) LIGHTS.window.color.copy(_wc); else tween(LIGHTS.window.color, { r: _wc.r, g: _wc.g, b: _wc.b }, 3); }
+  for (const k of ["pendL", "pendC", "pendR", "fill"]) soft(LIGHTS[k], "intensity", LIGHTS[k].userData.base * (1 - .3 * late) * SHUT[k] * (k === "fill" ? ZONE_LIGHT[curZone] ?? 1 : 1), k === "fill" ? 1.2 : 2.2);
+  atFirst = false;
 }
 function showClosed(afterVisit) {
   intro.classList.add("closed");

@@ -412,10 +412,10 @@
      и смешиваются в общий; громкости — из настроек. Звук включается только после действия гостя. */
   const Music = (() => {
     let BEAT = 60 / 68, EIGHTH = BEAT / 2, SWING = 1.25;
-    let ctx = null, tone, master, musBus, ambBus, band, analyser, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null;
+    let ctx = null, tone, master, musBus, ambBus, band, analyser, timer = null, nextTime = 0, step = 0, on = false, roomIdx = 1, anchor = 0, sfx = null, fire = null, rain = null, crick = null, wind = null, murmur = null, bedT = 0;
     let trackI = 0, trackStart = 0, mood = "auto", switching = false;
     const WX = { rain: .32, crickets: 0, wind: 0, fire: .5 };
-    const MIX = { rain: 1, fire: 1 };   // ручки из комнат: громкость дождя в читальне, камин в курилке
+    const MIX = { rain: 1, fire: 1, crowd: 1 };   // ручки из комнат: громкость дождя в читальне, камин в курилке
     const NOTE = [], LISTEN = [];
     const outside = () => roomIdx === 0 ? 1 : roomIdx === 3 ? 1.8 : 0;
     const roomFreq = () => roomIdx === 4 ? 6200 : roomIdx === 1 ? 3400 : roomIdx === 3 ? 420 : 950;   // в соседних комнатах музыка звучит глуше, как из-за стены
@@ -485,6 +485,41 @@
         for (let i = 0; i < wd.length; i++) { lp = lp * .995 + (Math.random() * 2 - 1) * .005; const k = i / wd.length; wd[i] = lp * 9 * (.55 + .45 * Math.sin(k * Math.PI * 2 * 2 + Math.sin(k * 9))); }
       }, 8);
       wsrc.connect(wind).connect(ambBus); wsrc.start();
+      // гул голосов: десяток собеседников, слова не разобрать — только живой фон зала
+      murmur = ctx.createGain(); murmur.gain.value = 0;
+      const [msrc] = loopNoise((md, sr) => {
+        const talkers = Array.from({ length: 9 }, () => ({ next: Math.random() * sr, left: 0, amp: 0, f: .2 + Math.random() * .5, ph: 0 }));
+        let lp1 = 0, lp2 = 0;
+        for (let i = 0; i < md.length; i++) {
+          let env = 0;
+          for (const t of talkers) {
+            if (t.left <= 0 && i >= t.next) { t.left = sr * (.08 + Math.random() * .28); t.amp = .3 + Math.random() * .7; t.next = i + t.left + sr * (.03 + Math.random() * (Math.random() < .2 ? 1.2 : .25)); }
+            if (t.left > 0) { t.left--; env += t.amp * (.6 + .4 * Math.sin(i / sr * 2 * Math.PI * (3 + t.f * 4))); }
+          }
+          lp1 += ((Math.random() * 2 - 1) - lp1) * .18; lp2 += (lp1 - lp2) * .3;
+          md[i] = lp2 * env * .5;
+        }
+      }, 8);
+      const mbp = ctx.createBiquadFilter(); mbp.type = "bandpass"; mbp.frequency.value = 650; mbp.Q.value = .7;
+      msrc.connect(mbp).connect(murmur).connect(ambBus); msrc.start();
+      // мелкие звуки комнат: звон бокалов у стойки, часы в читальне
+      bedT = setInterval(() => {
+        if (!ctx || ctx.state !== "running" || document.hidden) return;
+        const t = ctx.currentTime + .02;
+        if (roomIdx === 0) {   // часы в читальне: тик-так
+          const o = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+          o.buffer = sfx || (sfx = (() => { const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * .2), ctx.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; return b; })());
+          f.type = "bandpass"; f.frequency.value = (Math.floor(ctx.currentTime) % 2) ? 3400 : 2900; f.Q.value = 4;
+          g.gain.setValueAtTime(.05, t); g.gain.exponentialRampToValueAtTime(.0001, t + .03);
+          o.connect(f).connect(g).connect(ambBus); o.start(t, Math.random() * .1, .04);
+        } else if (roomIdx === 1 && Math.random() < .09) {   // где-то звякнули бокалы
+          for (const [fr, v] of [[2600 + Math.random() * 600, .025], [3900 + Math.random() * 600, .014]]) {
+            const o = ctx.createOscillator(), g = ctx.createGain();
+            o.frequency.value = fr; g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.0001, t + .7);
+            o.connect(g).connect(ambBus); o.start(t); o.stop(t + .75);
+          }
+        }
+      }, 1000);
       levels(true);
       room(roomIdx);
       return true;
@@ -593,6 +628,7 @@
       rain.gain.setTargetAtTime(outside() * WX.rain * (roomIdx === 0 ? MIX.rain : 1), now, .6);
       crick.gain.setTargetAtTime(outside() * WX.crickets, now, .6);
       wind.gain.setTargetAtTime(outside() * WX.wind, now, .6);
+      murmur.gain.setTargetAtTime(roomIdx === 1 ? .55 * MIX.crowd : roomIdx === 4 ? .35 * MIX.crowd : roomIdx === 2 || roomIdx === 0 ? .1 * MIX.crowd : 0, now, .8);
     }
     function weather(o) { Object.assign(WX, o); room(roomIdx); }
     function mix(o) { Object.assign(MIX, o); room(roomIdx); }

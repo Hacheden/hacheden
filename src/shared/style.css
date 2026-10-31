@@ -532,3 +532,26 @@
   .coach-row span { color: var(--muted); font-size: 13px; margin-right: auto; }
   .coach-row .clear { margin: 0; }
   @media (prefers-reduced-motion: reduce) { .intro h1.neon-in .nl, .nl-sweep, .skip-intro, .coach.in { animation: none; } .intro.dive { transform: none; filter: none; } }
+
+  /* «сейчас играет» */
+  .np-pill { position: absolute; z-index: 5; left: 50%; top: 92px; transform: translate(-50%, -6px); display: flex; align-items: center; gap: 10px;
+    max-width: calc(100% - 140px); padding: 7px 14px 7px 10px; border-radius: 999px; border: 1px solid rgba(214,170,92,.4); background: rgba(16,6,9,.7);
+    color: var(--cream); font-size: 13.5px; white-space: nowrap; overflow: hidden; opacity: 0; pointer-events: none; transition: opacity .5s, transform .5s;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); cursor: pointer; }
+  .np-pill.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  .np-pill b { font: 400 15px/1.2 var(--font-display); color: #ffe0b0; }
+  .np-pill > span:last-child { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .np-eq { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; }
+  .np-eq i { width: 3px; height: 100%; background: var(--brass); border-radius: 1px; animation: eq 1s ease-in-out infinite; }
+  .np-eq i:nth-child(2) { animation-delay: -.35s; } .np-eq i:nth-child(3) { animation-delay: -.7s; }
+  @keyframes eq { 0%, 100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+  .app.showing .np-pill, .app.street .np-pill { display: none; }
+  .tool-more { display: none; }
+  @media (max-width: 620px) {
+    .np-pill { top: 84px; max-width: calc(100% - 110px); }
+    .tool-more { display: grid; }
+    .tools:not(.open) .tool:not(.tool-more) { display: none; }
+    .tools.open { padding: 6px; margin: -6px; border-radius: 28px; background: rgba(14,5,8,.55); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  }
+  @media (prefers-reduced-motion: reduce) { .np-eq i { animation: none; } }
+  .app.showing .coach, .app.street .coach, .app.seated .coach { display: none; }

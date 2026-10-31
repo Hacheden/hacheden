@@ -220,7 +220,7 @@ function finishClosing() {
     restoreBar();
     showOpen();
   }
-  intro.classList.remove("gone");
+  intro.classList.remove("gone", "dive");
   updatePeek();
 }
 function restoreBar() {

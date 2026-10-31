@@ -69,6 +69,15 @@ setInterval(() => {
     if (SHADOW.on) F.root.traverse(o => { if (o.isMesh && !o.material.transparent && !o.material.isMeshBasicMaterial) { o.castShadow = true; o.receiveShadow = true; } });
   }
 }, 3000);
+/* тени отбрасывает только то, что рядом с заполняющим светом: дальние залы в карту теней не попадают */
+const CASTERS = [];
+if (SHADOW.on) world.traverse(o => { if (o.isMesh && o.castShadow) CASTERS.push(o); });
+const _sp = V3();
+function cullCasters() {
+  const L = LIGHTS.fill.position;
+  for (const o of CASTERS) { o.getWorldPosition(_sp); o.castShadow = o.visible && _sp.distanceTo(L) < 5.5; }
+}
+setInterval(() => { if (SHADOW.on && POST.tier === 2) { for (const F of FIGS) F.root.traverse(o => { if (o.isMesh && o.castShadow && !CASTERS.includes(o)) CASTERS.push(o); }); cullCasters(); } }, 1500);
 onTick(() => {
   if (!SHADOW.on || POST.tier < 2) { if (renderer.shadowMap.enabled && POST.tier < 2) { renderer.shadowMap.enabled = false; LIGHTS.fill.castShadow = false; } return; }
   if (++SHADOW.n % 6 === 0) renderer.shadowMap.needsUpdate = true;

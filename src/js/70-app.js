@@ -501,7 +501,7 @@ function closeBar() {
   started = false;
   visited = true;
   showClosed(true);
-  intro.classList.remove("gone");
+  intro.classList.remove("gone", "dive");
 }
 enter.addEventListener("click", async () => {
   if (started || !isOpen()) return;

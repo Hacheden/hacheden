@@ -8,7 +8,7 @@ const choose = list => list[Math.floor(Math.random() * list.length)];
 function live() { if (SHOW.on && SHOW.gen !== SG) throw ABORT; }
 const SL = () => SHOW.slow || 1;
 async function ws(s) { await sleep(SHOW.fast ? Math.min(s, .01) : s * SL()); live(); }
-const PROG = () => Closeup.PROGRAMS;
+const PROGS = () => Closeup.PROGRAMS;
 const NOM = { rum: "Ром", tequila: "Текила", gin: "Джин", whisky: "Виски", cognac: "Коньяк", wine: "Красное вино", triple: "Апельсиновый ликёр", cherry: "Вишнёвый ликёр",
   campari: "Кампари", vermouthR: "Красный вермут", vermouthD: "Сухой вермут", bitters: "Ангостура", tonic: "Тоник", soda: "Содовая",
   cola: "Кола", oj: "Апельсиновый сок", pineapple: "Ананасовый сок", coconut: "Кокосовые сливки", lime: "Сок лайма",
@@ -1548,7 +1548,7 @@ async function setupStation(c) {
   place(P.jig.g, ST.jig); place(P.spoon.g, ST.spoon, Qx(Math.PI / 2));
   place(P.strainer.g, ST.strainer);
   P.jig.liq.visible = false;
-  const prog = PROG()[c.id] || [];
+  const prog = PROGS()[c.id] || [];
   const shaken = prog.some(s => s[0] === "shake"), stirred = prog.some(s => s[0] === "stir"), fiery = prog.some(s => s[0] === "fire");
   SHOW.main = fiery ? P.mugA : shaken ? P.tin : stirred ? P.mixer : null;
   if (shaken) { place(P.tin.g, ST.tin); place(P.cap.g, ST.cap); }
@@ -1613,7 +1613,7 @@ async function playShow(c) {
   abortSip();
   SHOW.on = true; SHOW.ran = true; SHOW.fast = false; SHOW.served = false; SHOW.c = c;
   SG = ++SHOW.gen;
-  const prog = (PROG()[c.id] || [["garnish"]]).concat([["serve"]]);
+  const prog = (PROGS()[c.id] || [["garnish"]]).concat([["serve"]]);
   showUI.title.textContent = c.name;
   buildCard(c, prog);
   showUI.root.hidden = false;

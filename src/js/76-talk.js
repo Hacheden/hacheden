@@ -106,8 +106,4 @@ hot(bt.root, 1, "Бармен", () => {
   };
   void base;
 }
-/* редкие случайные фразы, когда гость рядом со стойкой и ничем не занят */
-setInterval(() => {
-  if (!started || curZone !== 1 || busy || SEAT.on || BT.busy || modalOpen() || mixDlg.open || bubble || STREET.on || CLOSING.on) return;
-  if (Math.random() < .35) say(bt, BT_RANDOM[Math.floor(Math.random() * BT_RANDOM.length)], 5);
-}, 45000);
+/* фразы «между делом» теперь подбирает состояние бармена: src/js/88-mind.js */

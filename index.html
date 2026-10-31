@@ -501,6 +501,13 @@
   .fbubble.show { opacity: 1; }
   .app.showing .nametag, .app.showing .fbubble, .app.street .nametag { display: none; }
 
+  /* фото на память */
+  .flash { position: fixed; inset: 0; z-index: 30; background: #fff; opacity: 0; pointer-events: none; }
+  .flash.go { animation: flash .6s ease-out; }
+  @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+  .photo-img { display: block; width: 100%; height: auto; margin-top: 14px; border-radius: 6px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  @media (prefers-reduced-motion: reduce) { .flash.go { animation: none; } }
+
 
   /* ================= 3D ================= */
   html, body { overflow: hidden; overscroll-behavior: none; }
@@ -736,6 +743,9 @@
     <button class="tool" id="t-friends" type="button" aria-label="Кто в баре" aria-haspopup="dialog" title="Кто в баре">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16.5" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c.6-.3 1.3-.5 2-.5 2.2 0 4 1.5 4.5 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <i class="tool-count" id="t-friends-n" hidden></i>
+    </button>
+    <button class="tool" id="t-photo" type="button" aria-label="Фото на память" aria-haspopup="dialog" title="Фото на память">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2.2l1.3-2h6l1.3 2h2.2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>
     </button>
     <button class="tool" id="t-player" type="button" aria-label="Музыкальный плеер" aria-haspopup="dialog" title="Музыкальный плеер">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 17.5V6l10-2v11.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="6.6" cy="17.5" r="2.4" fill="currentColor"/><circle cx="16.6" cy="15.5" r="2.4" fill="currentColor"/></svg>
@@ -3715,6 +3725,7 @@
     { id: "melomane", icon: "♪", name: "Меломан", text: "Послушать три разные композиции.", test: () => PROG.tracks.length >= 3 },
     { id: "bookworm", icon: "❦", name: "Книжный червь", text: "Прочитать три рассказа в читальне.", test: () => PROG.stories.length >= 3 },
     { id: "favs", icon: "★", name: "Свой вечер", text: "Отметить три коктейля в избранном.", test: () => FAV.size >= 3 },
+    { id: "photo", icon: "◉", name: "Снимок на память", text: "Сделать фото в баре.", test: () => !!PROG.counters.photo },
     { id: "owl", icon: "☾", name: "Полуночник", text: "Зайти в бар после полуночи.", test: () => !!PROG.counters.owl }
   ];
   let jUnseen = false;
@@ -4293,11 +4304,13 @@ const FESTIVE = (() => {
 })();
 /* когда садится солнце (примерно, для наших широт) */
 const SUNSET = { winter: 17, spring: 19.4, summer: 21, autumn: 18.2 }[SEASON];
+/* настоящий закат в Алматы приходит вместе с погодой (77-weather.js) */
+const SUN = { set: null };
 /* 1 — за окном ещё светлое вечернее небо, 0 — ночь */
 function skyLight(d = nowDate()) {
   let h = hoursOf(d);
   if (h < 12) h += 24;
-  return clamp((SUNSET + .9 - h) / 1.5, 0, 1);
+  return clamp(((SUN.set ?? SUNSET) + .9 - h) / 1.5, 0, 1);
 }
 /* после часа ночи свет потихоньку приглушают */
 function lateness(d = nowDate()) { const h = hoursOf(d); return h < CLOSE_H ? clamp((h - 1) / 2, 0, 1) : 0; }
@@ -10209,7 +10222,7 @@ const doorway = mesh(new THREE.PlaneGeometry(1.2, 2.42), basic({ color: 0xffb070
 /* ---------- дождь или снег, брызги, пар ---------- */
 const PREC = (() => {
   const snow = WEATHER.snow > 0, dry = !snow && WEATHER.rain === 0;
-  const N = dry ? 0 : (QUALITY > 1 ? 900 : 500), box = { x0: -5, x1: 5, z0: FZ + .5, z1: FZ + 9, h: 6.5 };
+  const N = QUALITY > 1 ? 900 : 500, box = { x0: -5, x1: 5, z0: FZ + .5, z1: FZ + 9, h: 6.5 };
   const pos = new Float32Array(N * 6), seeds = [];
   for (let i = 0; i < N; i++) seeds.push([R(box.x0, box.x1), R(0, box.h), R(box.z0, box.z1), R(.8, 1.2)]);
   const g = new THREE.BufferGeometry();
@@ -10218,9 +10231,9 @@ const PREC = (() => {
   lines.frustumCulled = false;
   street.add(lines);
   // кольца от капель на лужах
-  const RN = dry || snow ? 0 : 40;
+  const RN = 40;
   const rings = new THREE.InstancedMesh(new THREE.RingGeometry(.8, 1, 20), basic({ color: 0xa0b0d0, transparent: true, opacity: .35, depthWrite: false }), Math.max(1, RN));
-  rings.count = RN;
+  rings.count = dry || snow ? 0 : RN;
   const ringT = [];
   for (let i = 0; i < RN; i++) ringT.push([R(-4, 4), R(FZ + .6, FZ + 8), R(0, 1)]);
   street.add(rings);
@@ -10230,13 +10243,15 @@ const PREC = (() => {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.puff, color: 0x8a8a96, transparent: true, opacity: 0, depthWrite: false }));
     s.userData.t = i / 8; street.add(s); steam.push(s);
   }
-  return { N, pos, seeds, g, box, snow, rings, ringT, RN, steam };
+  const active = dry ? 0 : N;
+  g.setDrawRange(0, active * 2);
+  return { N, active, pos, seeds, g, box, snow, rings, ringT, RN, steam, lines };
 })();
 const _rm = new THREE.Matrix4(), _rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)), _rs = V3();
 onTick((t, dt) => {
   if (!street.visible) return;
   const P = PREC, b = P.box;
-  for (let i = 0; i < P.N; i++) {
+  for (let i = 0; i < P.active; i++) {
     const s = P.seeds[i];
     if (P.snow) { s[1] -= dt * .55 * s[3]; s[0] += Math.sin(t * .8 + i) * dt * .15; }
     else s[1] -= dt * 7.5 * s[3];
@@ -10245,8 +10260,8 @@ onTick((t, dt) => {
     P.pos[k] = s[0]; P.pos[k + 1] = s[1]; P.pos[k + 2] = s[2];
     P.pos[k + 3] = s[0] + (P.snow ? .02 : .01); P.pos[k + 4] = s[1] + len; P.pos[k + 5] = s[2];
   }
-  if (P.N) P.g.attributes.position.needsUpdate = true;
-  for (let i = 0; i < P.RN; i++) {
+  if (P.active) P.g.attributes.position.needsUpdate = true;
+  for (let i = 0; i < P.rings.count; i++) {
     const r = P.ringT[i];
     r[2] += dt * 1.4;
     if (r[2] > 1) { r[2] = 0; r[0] = R(-4, 4); r[1] = R(FZ + .6, FZ + 8); }
@@ -10254,7 +10269,7 @@ onTick((t, dt) => {
     _rm.compose(_rs.set(r[0], .02, r[1]), _rq, V3(sc, sc, sc));
     P.rings.setMatrixAt(i, _rm);
   }
-  if (P.RN) P.rings.instanceMatrix.needsUpdate = true;
+  if (P.rings.count) P.rings.instanceMatrix.needsUpdate = true;
   for (const s of P.steam) {
     s.userData.t += dt * .12;
     if (s.userData.t > 1) s.userData.t -= 1;
@@ -10327,7 +10342,7 @@ function streetIntro() {
   streetLights(true);
   Music.room(3);
   setCam(framed(SHOT.wide));
-  hintEl.textContent = SEASON === "winter" ? "Снег, фонарь и дверь без вывески. Постучи." : WEATHER.rain ? "Ночь, дождь и дверь без вывески. Постучи." : "Тёплая ночь и дверь без вывески. Постучи.";
+  hintEl.textContent = WX_NOW.ok ? `${weatherLine()} Дверь без вывески. Постучи.` : SEASON === "winter" ? "Снег, фонарь и дверь без вывески. Постучи." : WEATHER.rain ? "Ночь, дождь и дверь без вывески. Постучи." : "Тёплая ночь и дверь без вывески. Постучи.";
   flyTo(framed(SHOT.near), STILL ? 0 : 5.5, 0).then(() => {
     if (STREET.step === "outside") streetTalk([["Постучать в дверь", () => knockStreet()], ["Сразу войти", () => openDoor(), true]]);
   });
@@ -11408,6 +11423,7 @@ function eveningLine() {
   if (WEATHER.snow) parts.push("За окном метёт — хорошо, что у нас тепло.");
   else if (WEATHER.rain) parts.push("Слышите дождь? В такую погоду бар особенно уютный.");
   else if (WEATHER.stars) parts.push("Ночь звёздная, а у нас вместо звёзд — лампы.");
+  if (WX_NOW.ok) { const t = Math.round(WX_NOW.temp); parts.push(t <= 0 ? `На улице ${t}°, так что горячий тодди сегодня в самый раз.` : t < 10 ? `Снаружи всего +${t}°. Согрейтесь.` : `На улице +${t}°.`); }
   if (BAND_HERE && Music.on) parts.push(`Ансамбль играет «${Music.info().track.title}».`);
   else if (BAND_HERE) parts.push("Музыканты на сцене, но ждут, пока их попросят сыграть.");
   if (LAST_DRINK) {
@@ -11488,6 +11504,85 @@ setInterval(() => {
   if (!started || curZone !== 1 || busy || SEAT.on || BT.busy || modalOpen() || mixDlg.open || bubble || STREET.on || CLOSING.on) return;
   if (Math.random() < .35) say(bt, BT_RANDOM[Math.floor(Math.random() * BT_RANDOM.length)], 5);
 }, 45000);
+
+/* ================= настоящая погода в Алматы за окнами и на улице =================
+   Open-Meteo (бесплатно, без ключа). Обновляется каждые 15 минут; без интернета — погода по сезону.
+   Проверить любую погоду: ?wx=rain | snow | storm | clear | fog */
+const WX_CITY = { name: "Алматы", lat: 43.2389, lon: 76.8897, tz: "Asia/Almaty" };
+const WX_NOW = { ok: false, temp: null, code: null, wind: 0, label: "" };
+function wxLabel(code) {
+  if (code === 0) return "ясно";
+  if (code <= 2) return "небольшая облачность";
+  if (code === 3) return "пасмурно";
+  if (code === 45 || code === 48) return "туман";
+  if (code >= 51 && code <= 57) return "морось";
+  if (code >= 61 && code <= 67) return code >= 65 ? "ливень" : "дождь";
+  if (code >= 71 && code <= 77) return code >= 75 ? "сильный снег" : "снег";
+  if (code >= 80 && code <= 82) return "ливень";
+  if (code >= 85 && code <= 86) return "снегопад";
+  if (code >= 95) return "гроза";
+  return "облачно";
+}
+function weatherLine() {
+  if (!WX_NOW.ok) return "";
+  const t = Math.round(WX_NOW.temp), sign = t > 0 ? "+" : t < 0 ? "−" : "";
+  return `${WX_CITY.name}, ${sign}${Math.abs(t)}°, ${WX_NOW.label}.`;
+}
+/* погода → дождь, снег, звёзды, иней, звуки */
+function applyWeather(code, temp, wind) {
+  const rain = code >= 51 && code <= 57 ? .35 : code === 61 ? .5 : code === 63 ? .75 : code >= 64 && code <= 67 ? 1 : code >= 80 && code <= 82 ? .85 : code >= 95 ? 1 : 0;
+  const snow = code === 71 || code === 77 ? .45 : code === 73 ? .7 : code === 75 ? 1 : code >= 85 && code <= 86 ? .85 : 0;
+  const stars = code === 0 ? 1 : code === 1 ? .7 : code === 2 ? .35 : 0;
+  const fog = code === 45 || code === 48;
+  Object.assign(WEATHER, {
+    rain, snow, stars: fog ? 0 : stars, storm: code >= 95, frost: temp < -1 ? 1 : temp < 2 ? .4 : 0,
+    leaves: SEASON === "autumn" && !snow ? (wind > 14 ? 1 : .45) : 0
+  });
+  const u = rainMat.uniforms;
+  for (const [k, v] of [["uRain", WEATHER.rain], ["uSnow", WEATHER.snow], ["uStars", WEATHER.stars], ["uLeaves", WEATHER.leaves], ["uFrost", WEATHER.frost]]) tween(u[k], { value: v }, 3);
+  Music.weather({ rain: rain * .34, wind: Math.min(.55, wind / 45) + (snow ? .1 : 0), crickets: SEASON === "summer" && !rain && temp > 15 ? .35 : 0, fire: temp < 12 ? .55 : SEASON === "summer" ? 0 : .4 });
+  // улица: капли, снежинки или сухо
+  const P = PREC;
+  P.snow = snow > 0;
+  P.active = Math.round(P.N * (snow ? Math.max(.35, snow) : rain ? Math.max(.3, rain) : 0));
+  P.g.setDrawRange(0, P.active * 2);
+  P.lines.material.color.setHex(P.snow ? 0xffffff : 0xb8c8e8);
+  P.lines.material.opacity = P.snow ? .8 : .33;
+  P.rings.count = !P.snow && rain ? Math.round(P.RN * Math.max(.4, rain)) : 0;
+  // подзаголовок читальни: что сейчас за окном
+  const outside = snow ? "снег" : code >= 95 ? "гроза" : rain >= .8 ? "ливень" : rain ? "дождь" : code === 45 || code === 48 ? "туман" : stars > .5 ? "звёзды" : "ночной город";
+  ZONES[0].sub = `Книги до потолка, ${outside} за окном`;
+  if (curZone === 0 && !SEAT.on) subEl.textContent = ZONES[0].sub;
+  // подпись у окна читальни
+  const h = HOT.find(o => o.userData.hot.zone === 0 && /^Окно/.test(o.userData.hot.label));
+  if (h) { h.userData.hot.label = `Окно: ${WX_NOW.label}, ${Math.round(temp) > 0 ? "+" : ""}${Math.round(temp)}°`; if (h.userData.chip) h.userData.chip.textContent = h.userData.hot.label; }
+}
+async function fetchWeather() {
+  const force = QS.get("wx");
+  if (force) {
+    const code = { rain: 63, snow: 73, storm: 95, clear: 0, fog: 45, drizzle: 53 }[force] ?? 3;
+    Object.assign(WX_NOW, { ok: true, code, temp: force === "snow" ? -6 : 9, wind: 8, label: wxLabel(code) });
+    applyWeather(code, WX_NOW.temp, 8);
+    return;
+  }
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${WX_CITY.lat}&longitude=${WX_CITY.lon}&current=temperature_2m,weather_code,wind_speed_10m&daily=sunset&forecast_days=1&timezone=${encodeURIComponent(WX_CITY.tz)}`;
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 8000);
+    const r = await fetch(url, { signal: ctl.signal });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    const j = await r.json(), c = j.current;
+    Object.assign(WX_NOW, { ok: true, code: c.weather_code, temp: c.temperature_2m, wind: c.wind_speed_10m, label: wxLabel(c.weather_code) });
+    const ss = j.daily && j.daily.sunset && j.daily.sunset[0];
+    if (ss) { const [hh, mm] = ss.slice(11, 16).split(":").map(Number); SUN.set = hh + mm / 60; }
+    applyWeather(WX_NOW.code, WX_NOW.temp, WX_NOW.wind);
+    applyTime();
+  } catch (e) {
+    console.info("погода недоступна, остаётся сезонная:", e.message);
+  }
+}
+fetchWeather();
+setInterval(fetchWeather, 15 * 60 * 1000);
+Object.assign(H3D, { weather: WX_NOW, applyWeather });
 
 /* ================= Хэллоуин: бар украшен на одну ночь (31 октября, до 3:00 1 ноября) =================
    Проверить в другой день: ?holiday=halloween */
@@ -11835,6 +11930,124 @@ H3D.friends = { sync: liveSync, event: liveEvent, cheers: liveCheers, slots: LIV
     FRIENDS.live();
   }, 1500);
 }
+
+/* ================= фото на память: снимок зала в рамке Hacheden ================= */
+const PHOTO = { style: "warm", raw: null, meta: null, url: null };
+const PHOTO_STYLES = [["warm", "Тёплый", "sepia(.22) saturate(1.12) contrast(1.06)"], ["film", "Плёнка", "sepia(.7) contrast(1.12) brightness(.96) saturate(.9)"], ["bw", "Ч/Б", "grayscale(1) contrast(1.22) brightness(1.04)"], ["none", "Как есть", "none"]];
+const flashEl = document.createElement("div"); flashEl.className = "flash"; document.body.appendChild(flashEl);
+function shutter() {
+  const c = uiAudio(); if (!c || AUDIO.level("ui") <= .001) return;
+  const t = c.currentTime + .01, len = Math.floor(c.sampleRate * .09), b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3) * (i < len * .4 || i > len * .55 ? 1 : .2);
+  const s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+  s.buffer = b; f.type = "bandpass"; f.frequency.value = 2400; f.Q.value = .7; g.gain.value = .5;
+  s.connect(f).connect(g).connect(c.destination); s.start(t);
+}
+/* снимок: кадр 3D-сцены и имена посетителей рядом */
+function capture() {
+  renderer.render(scene, camera);
+  const src = renderer.domElement, W = src.width, H = src.height;
+  const raw = document.createElement("canvas"); raw.width = W; raw.height = H;
+  raw.getContext("2d").drawImage(src, 0, 0);
+  const tags = [];
+  if (typeof LIVE_SLOTS !== "undefined") for (const s of LIVE_SLOTS) {
+    if (!s.uid || s.zone !== curZone || !s.F) continue;
+    const p = s.F.head.getWorldPosition(V3()); p.y += .22; p.project(camera);
+    if (p.z < 1 && Math.abs(p.x) < 1 && Math.abs(p.y) < 1) tags.push({ x: (p.x + 1) / 2 * W, y: (1 - p.y) / 2 * H, name: s.name });
+  }
+  const d = new Date();
+  PHOTO.raw = raw;
+  PHOTO.meta = { zone: curZone === 4 ? "Погреб" : ZONES[curZone].name, when: d, tags, wx: weatherLine(), people: tags.map(t => t.name) };
+}
+function compose() {
+  const raw = PHOTO.raw, M = PHOTO.meta, W = raw.width, H = raw.height;
+  const b = Math.round(Math.min(W, H) * .035), band = Math.round(Math.min(W, H) * .13);
+  const cv = document.createElement("canvas"); cv.width = W + b * 2; cv.height = H + b * 2 + band;
+  const g = cv.getContext("2d");
+  g.fillStyle = "#14080a"; g.fillRect(0, 0, cv.width, cv.height);
+  const st = PHOTO_STYLES.find(s => s[0] === PHOTO.style) || PHOTO_STYLES[0];
+  const canFilter = "filter" in g;
+  if (canFilter) g.filter = st[2];
+  g.drawImage(raw, b, b);
+  g.filter = "none";
+  if (!canFilter && st[0] !== "none") {   // старые Safari: тонируем вручную
+    const img = g.getImageData(b, b, W, H), px = img.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const r = px[i], gg = px[i + 1], bb = px[i + 2], y = .3 * r + .59 * gg + .11 * bb;
+      if (st[0] === "bw") px[i] = px[i + 1] = px[i + 2] = Math.min(255, (y - 128) * 1.2 + 132);
+      else { const k = st[0] === "film" ? .7 : .22; px[i] = r + (Math.min(255, y * 1.07 + 30) - r) * k; px[i + 1] = gg + (Math.min(255, y * .95 + 12) - gg) * k; px[i + 2] = bb + (y * .78 - bb) * k; }
+    }
+    g.putImageData(img, b, b);
+  }
+  // виньетка и лёгкое зерно — как на старой фотографии
+  const vg = g.createRadialGradient(b + W / 2, b + H / 2, Math.min(W, H) * .35, b + W / 2, b + H / 2, Math.max(W, H) * .72);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.45)");
+  g.fillStyle = vg; g.fillRect(b, b, W, H);
+  if (st[0] === "film" || st[0] === "bw") { g.globalAlpha = .05; for (let i = 0; i < W * H / 900; i++) { g.fillStyle = Math.random() < .5 ? "#fff" : "#000"; g.fillRect(b + Math.random() * W, b + Math.random() * H, 1.5, 1.5); } g.globalAlpha = 1; }
+  // имена посетителей
+  const fs = Math.round(H * .024);
+  g.font = `${fs}px Literata, Georgia, serif`; g.textAlign = "center"; g.textBaseline = "middle";
+  for (const t of M.tags) {
+    const w = g.measureText(t.name).width + fs * 1.2, x = b + t.x, y = b + t.y - fs;
+    g.fillStyle = "rgba(20,8,11,.8)"; g.strokeStyle = "rgba(214,170,92,.7)"; g.lineWidth = Math.max(1, fs * .08);
+    g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - fs * .8, w, fs * 1.6, fs * .8) : g.rect(x - w / 2, y - fs * .8, w, fs * 1.6); g.fill(); g.stroke();
+    g.fillStyle = "#ffe0b0"; g.fillText(t.name, x, y);
+  }
+  // рамка: латунная линия и подпись
+  g.strokeStyle = "#c9944a"; g.lineWidth = Math.max(2, b * .12);
+  g.strokeRect(b * .5, b * .5, cv.width - b, cv.height - b);
+  const cy = H + b * 2 + band * .42;
+  g.textBaseline = "alphabetic"; g.textAlign = "left";
+  g.fillStyle = "#ff8aa0"; g.shadowColor = "#ff2a50"; g.shadowBlur = band * .15;
+  g.font = `${Math.round(band * .42)}px Forum, Georgia, serif`;
+  g.fillText("Hacheden", b * 1.4, cy);
+  g.shadowBlur = 0;
+  const date = M.when.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" }) + ", " + M.when.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
+  g.fillStyle = "#e8d8bc"; g.font = `${Math.round(band * .2)}px Literata, Georgia, serif`;
+  g.fillText(`${M.zone} · ${date}`, b * 1.4, cy + band * .32);
+  g.textAlign = "right"; g.fillStyle = "#c2a784";
+  const right = M.people.length ? "Вместе с: " + M.people.slice(0, 4).join(", ") + (M.people.length > 4 ? " и др." : "") : M.wx || "Фото на память";
+  g.fillText(right.slice(0, 70), cv.width - b * 1.4, cy + band * .32);
+  if (M.people.length && M.wx) { g.fillText(M.wx, cv.width - b * 1.4, cy - band * .02); }
+  return cv;
+}
+const phDlg = makeSheet("photo", "Фото на память", "wide");
+function renderPhoto() {
+  const cv = compose();
+  PHOTO.url = cv.toDataURL("image/jpeg", .92);
+  PHOTO.canvas = cv;
+  phDlg.body.innerHTML = `<img class="photo-img" src="${PHOTO.url}" alt="Снимок: ${escH(PHOTO.meta.zone)}, ${escH(PHOTO.meta.when.toLocaleString("ru-RU"))}">
+    <h3>Тон</h3>
+    <div class="seg" role="group" aria-label="Тон снимка">${PHOTO_STYLES.map(([id, t]) => `<button class="chip" type="button" data-ph-style="${id}" aria-pressed="${PHOTO.style === id}">${t}</button>`).join("")}</div>
+    <div class="acts"><button class="make" type="button" data-ph-save>Скачать</button>${navigator.canShare ? `<button class="make ghost" type="button" data-ph-share>Отправить…</button>` : ""}<button class="make ghost" type="button" data-ph-again>Ещё снимок</button></div>
+    <p class="note">Снимок остаётся только у вас: на сервер ничего не отправляется.</p>`;
+}
+function fileName() { const d = PHOTO.meta.when, p = n => String(n).padStart(2, "0"); return `hacheden-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.jpg`; }
+async function takePhoto() {
+  if (!started || STREET.on) { toast("Фото можно сделать внутри бара"); return; }
+  for (const o of document.querySelectorAll("dialog.sheet[open], dialog.atmo[open]")) o.close();
+  if (mixDlg.open) mixDlg.close();
+  await new Promise(r => requestAnimationFrame(() => r()));
+  capture();
+  shutter();
+  flashEl.classList.remove("go"); void flashEl.offsetWidth; flashEl.classList.add("go");
+  track("count", "photo");
+  setTimeout(() => { renderPhoto(); openSheet(phDlg); }, STILL ? 0 : 450);
+}
+phDlg.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.dataset.phStyle) { PHOTO.style = b.dataset.phStyle; renderPhoto(); const f = phDlg.querySelector(`[data-ph-style="${PHOTO.style}"]`); if (f) f.focus(); }
+  else if ("phSave" in b.dataset) { const a = document.createElement("a"); a.href = PHOTO.url; a.download = fileName(); document.body.appendChild(a); a.click(); a.remove(); toast("Снимок сохранён", fileName()); }
+  else if ("phShare" in b.dataset) {
+    PHOTO.canvas.toBlob(async blob => {
+      const file = new File([blob], fileName(), { type: "image/jpeg" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: "Hacheden", text: "Вечер в баре Hacheden" }); } catch (er) {} }
+      else toast("Отправка недоступна", "Скачайте снимок и отправьте его сами");
+    }, "image/jpeg", .92);
+  } else if ("phAgain" in b.dataset) { phDlg.close(); setTimeout(takePhoto, 300); }
+});
+document.getElementById("t-photo").addEventListener("click", takePhoto);
+Object.assign(H3D, { photo: takePhoto });
 
 </script>
 </body>

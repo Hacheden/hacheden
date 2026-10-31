@@ -491,3 +491,10 @@
     font: 400 14px/1.4 var(--font-text); box-shadow: 0 8px 24px rgba(0,0,0,.45); pointer-events: none; opacity: 0; transition: opacity .25s; }
   .fbubble.show { opacity: 1; }
   .app.showing .nametag, .app.showing .fbubble, .app.street .nametag { display: none; }
+
+  /* фото на память */
+  .flash { position: fixed; inset: 0; z-index: 30; background: #fff; opacity: 0; pointer-events: none; }
+  .flash.go { animation: flash .6s ease-out; }
+  @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+  .photo-img { display: block; width: 100%; height: auto; margin-top: 14px; border-radius: 6px; box-shadow: 0 12px 30px rgba(0,0,0,.5); }
+  @media (prefers-reduced-motion: reduce) { .flash.go { animation: none; } }

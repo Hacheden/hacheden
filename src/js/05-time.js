@@ -67,11 +67,13 @@ const FESTIVE = (() => {
 })();
 /* когда садится солнце (примерно, для наших широт) */
 const SUNSET = { winter: 17, spring: 19.4, summer: 21, autumn: 18.2 }[SEASON];
+/* настоящий закат в Алматы приходит вместе с погодой (77-weather.js) */
+const SUN = { set: null };
 /* 1 — за окном ещё светлое вечернее небо, 0 — ночь */
 function skyLight(d = nowDate()) {
   let h = hoursOf(d);
   if (h < 12) h += 24;
-  return clamp((SUNSET + .9 - h) / 1.5, 0, 1);
+  return clamp(((SUN.set ?? SUNSET) + .9 - h) / 1.5, 0, 1);
 }
 /* после часа ночи свет потихоньку приглушают */
 function lateness(d = nowDate()) { const h = hoursOf(d); return h < CLOSE_H ? clamp((h - 1) / 2, 0, 1) : 0; }

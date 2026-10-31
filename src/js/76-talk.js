@@ -30,6 +30,7 @@ function eveningLine() {
   if (WEATHER.snow) parts.push("За окном метёт — хорошо, что у нас тепло.");
   else if (WEATHER.rain) parts.push("Слышите дождь? В такую погоду бар особенно уютный.");
   else if (WEATHER.stars) parts.push("Ночь звёздная, а у нас вместо звёзд — лампы.");
+  if (WX_NOW.ok) { const t = Math.round(WX_NOW.temp); parts.push(t <= 0 ? `На улице ${t}°, так что горячий тодди сегодня в самый раз.` : t < 10 ? `Снаружи всего +${t}°. Согрейтесь.` : `На улице +${t}°.`); }
   if (BAND_HERE && Music.on) parts.push(`Ансамбль играет «${Music.info().track.title}».`);
   else if (BAND_HERE) parts.push("Музыканты на сцене, но ждут, пока их попросят сыграть.");
   if (LAST_DRINK) {

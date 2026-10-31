@@ -25,6 +25,7 @@
     { id: "melomane", icon: "♪", name: "Меломан", text: "Послушать три разные композиции.", test: () => PROG.tracks.length >= 3 },
     { id: "bookworm", icon: "❦", name: "Книжный червь", text: "Прочитать три рассказа в читальне.", test: () => PROG.stories.length >= 3 },
     { id: "favs", icon: "★", name: "Свой вечер", text: "Отметить три коктейля в избранном.", test: () => FAV.size >= 3 },
+    { id: "photo", icon: "◉", name: "Снимок на память", text: "Сделать фото в баре.", test: () => !!PROG.counters.photo },
     { id: "owl", icon: "☾", name: "Полуночник", text: "Зайти в бар после полуночи.", test: () => !!PROG.counters.owl }
   ];
   let jUnseen = false;

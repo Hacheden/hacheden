@@ -211,7 +211,7 @@ const doorway = mesh(new THREE.PlaneGeometry(1.2, 2.42), basic({ color: 0xffb070
 /* ---------- дождь или снег, брызги, пар ---------- */
 const PREC = (() => {
   const snow = WEATHER.snow > 0, dry = !snow && WEATHER.rain === 0;
-  const N = dry ? 0 : (QUALITY > 1 ? 900 : 500), box = { x0: -5, x1: 5, z0: FZ + .5, z1: FZ + 9, h: 6.5 };
+  const N = QUALITY > 1 ? 900 : 500, box = { x0: -5, x1: 5, z0: FZ + .5, z1: FZ + 9, h: 6.5 };
   const pos = new Float32Array(N * 6), seeds = [];
   for (let i = 0; i < N; i++) seeds.push([R(box.x0, box.x1), R(0, box.h), R(box.z0, box.z1), R(.8, 1.2)]);
   const g = new THREE.BufferGeometry();
@@ -220,9 +220,9 @@ const PREC = (() => {
   lines.frustumCulled = false;
   street.add(lines);
   // кольца от капель на лужах
-  const RN = dry || snow ? 0 : 40;
+  const RN = 40;
   const rings = new THREE.InstancedMesh(new THREE.RingGeometry(.8, 1, 20), basic({ color: 0xa0b0d0, transparent: true, opacity: .35, depthWrite: false }), Math.max(1, RN));
-  rings.count = RN;
+  rings.count = dry || snow ? 0 : RN;
   const ringT = [];
   for (let i = 0; i < RN; i++) ringT.push([R(-4, 4), R(FZ + .6, FZ + 8), R(0, 1)]);
   street.add(rings);
@@ -232,13 +232,15 @@ const PREC = (() => {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.puff, color: 0x8a8a96, transparent: true, opacity: 0, depthWrite: false }));
     s.userData.t = i / 8; street.add(s); steam.push(s);
   }
-  return { N, pos, seeds, g, box, snow, rings, ringT, RN, steam };
+  const active = dry ? 0 : N;
+  g.setDrawRange(0, active * 2);
+  return { N, active, pos, seeds, g, box, snow, rings, ringT, RN, steam, lines };
 })();
 const _rm = new THREE.Matrix4(), _rq = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)), _rs = V3();
 onTick((t, dt) => {
   if (!street.visible) return;
   const P = PREC, b = P.box;
-  for (let i = 0; i < P.N; i++) {
+  for (let i = 0; i < P.active; i++) {
     const s = P.seeds[i];
     if (P.snow) { s[1] -= dt * .55 * s[3]; s[0] += Math.sin(t * .8 + i) * dt * .15; }
     else s[1] -= dt * 7.5 * s[3];
@@ -247,8 +249,8 @@ onTick((t, dt) => {
     P.pos[k] = s[0]; P.pos[k + 1] = s[1]; P.pos[k + 2] = s[2];
     P.pos[k + 3] = s[0] + (P.snow ? .02 : .01); P.pos[k + 4] = s[1] + len; P.pos[k + 5] = s[2];
   }
-  if (P.N) P.g.attributes.position.needsUpdate = true;
-  for (let i = 0; i < P.RN; i++) {
+  if (P.active) P.g.attributes.position.needsUpdate = true;
+  for (let i = 0; i < P.rings.count; i++) {
     const r = P.ringT[i];
     r[2] += dt * 1.4;
     if (r[2] > 1) { r[2] = 0; r[0] = R(-4, 4); r[1] = R(FZ + .6, FZ + 8); }
@@ -256,7 +258,7 @@ onTick((t, dt) => {
     _rm.compose(_rs.set(r[0], .02, r[1]), _rq, V3(sc, sc, sc));
     P.rings.setMatrixAt(i, _rm);
   }
-  if (P.RN) P.rings.instanceMatrix.needsUpdate = true;
+  if (P.rings.count) P.rings.instanceMatrix.needsUpdate = true;
   for (const s of P.steam) {
     s.userData.t += dt * .12;
     if (s.userData.t > 1) s.userData.t -= 1;
@@ -329,7 +331,7 @@ function streetIntro() {
   streetLights(true);
   Music.room(3);
   setCam(framed(SHOT.wide));
-  hintEl.textContent = SEASON === "winter" ? "Снег, фонарь и дверь без вывески. Постучи." : WEATHER.rain ? "Ночь, дождь и дверь без вывески. Постучи." : "Тёплая ночь и дверь без вывески. Постучи.";
+  hintEl.textContent = WX_NOW.ok ? `${weatherLine()} Дверь без вывески. Постучи.` : SEASON === "winter" ? "Снег, фонарь и дверь без вывески. Постучи." : WEATHER.rain ? "Ночь, дождь и дверь без вывески. Постучи." : "Тёплая ночь и дверь без вывески. Постучи.";
   flyTo(framed(SHOT.near), STILL ? 0 : 5.5, 0).then(() => {
     if (STREET.step === "outside") streetTalk([["Постучать в дверь", () => knockStreet()], ["Сразу войти", () => openDoor(), true]]);
   });

@@ -1,7 +1,9 @@
-/* ================= бар с друзьями: общая комната по ссылке =================
-   Связь через Firebase Realtime Database (бесплатный тариф). Ключи ниже не секретные:
-   их видит любой браузер, а защиту дают правила базы (docs/firebase-rules.json).
-   Для проверки без сервера: ?room=…&net=local — вкладки одного браузера видят друг друга. */
+/* ================= живой бар: все посетители сайта видят друг друга =================
+   Каждый, кто сейчас в баре, — фигура в том зале, где он находится, с именем над головой.
+   С незнакомцами общаются готовыми фразами (свободный текст не показывается — так никто не испортит вечер).
+   Связь — Firebase Realtime Database (бесплатный тариф, до 100 одновременных подключений).
+   Ключи ниже не секретные; защиту дают правила базы (docs/firebase-rules.json).
+   Проверка без сервера: ?net=local — вкладки одного браузера видят друг друга. */
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAGn2L_2GiVGIADqtomVD14jTVZlQlP4Dc",
     authDomain: "hacheden-9946b.firebaseapp.com",
@@ -10,220 +12,191 @@
     appId: "1:774316675789:web:9347526f7df621d2d34f84"
   };
   const FB_VER = "10.12.2";
-  const ROOM_MAX = 5;
-  const FR = { room: null, me: null, uid: null, peers: {}, log: [], net: null, joining: false, lastSay: 0 };
-  const roomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
-  const validRoom = s => /^[a-z0-9]{8}$/.test(s || "");
-  const friendsReady = () => !!FIREBASE_CONFIG || QS_FR.get("net") === "local";
+  const PUBLIC_ROOM = "hacheden";   // один общий бар для всех
+  /* готовые фразы: показываются только они, что бы ни пришло из сети */
+  const PHRASES = [
+    ["hi", "Добрый вечер!"], ["cheers", "За вас! 🥂"], ["music", "Отличная музыка"], ["advice", "Что посоветуете выпить?"],
+    ["wow", "Красиво здесь"], ["thanks", "Спасибо!"], ["laugh", "Ха-ха!"], ["bye", "Мне пора. Хорошего вечера!"]
+  ];
+  const PHRASE = Object.fromEntries(PHRASES);
   const QS_FR = new URLSearchParams(location.search);
-  const myName = () => { try { return localStorage.getItem("hacheden-name") || ""; } catch (e) { return ""; } };
+  const FR = { me: null, uid: null, peers: {}, log: [], net: null, on: false, connecting: false, lastSay: 0, failed: false,
+    hidden: new Set((() => { try { return JSON.parse(localStorage.getItem("hacheden-muted") || "[]"); } catch (e) { return []; } })()),
+    invisible: (() => { try { return localStorage.getItem("hacheden-invisible") === "1"; } catch (e) { return false; } })() };
+  /* простой фильтр имён: грубые корни заменяются на «Гость» */
+  const BAD = /х[уy][йиеёяю]|п[иi]зд|[её]б[аеиуы]|бл[яэ]|сук[аи]|муда|пид[оа]р|шлюх|гандон|залуп|f+u+c+k|sh[i1]t|b[i1]tch|n[i1]gg|c[u]nt|wh[o0]re|fag/i;
+  const cleanName = s => { s = String(s || "").replace(/[<>{}\[\]\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return !s || BAD.test(s.replace(/[\s._\-*0-9]/g, "")) ? "Гость" : s; };
+  const myName = () => { try { return cleanName(localStorage.getItem("hacheden-name") || "Гость"); } catch (e) { return "Гость"; } };
+  const ZONE_WORD = ["в читальне", "за стойкой", "в курилке", "у сцены", "в погребе"];
 
   /* транспорт: Firebase или (для проверки) BroadcastChannel между вкладками */
   function localNet() {
-    const ch = new BroadcastChannel("hacheden-room"), H = {}, users = {};
-    let room = null, uid = "u" + Math.random().toString(36).slice(2, 10), timer = 0;
+    const ch = new BroadcastChannel("hacheden-live"), H = {}, users = {};
+    const uid = "u" + Math.random().toString(36).slice(2, 10);
+    let timer = 0;
     const emit = (e, d) => (H[e] || []).forEach(f => f(d));
-    const post = m => ch.postMessage(Object.assign({ room }, m));
     ch.onmessage = e => {
-      const m = e.data; if (m.room !== room) return;
+      const m = e.data;
       if (m.type === "user") { if (m.data) users[m.uid] = m.data; else delete users[m.uid]; emit("peers", Object.assign({}, users)); }
-      else if (m.type === "hello") post({ type: "user", uid, data: users[uid] });
+      else if (m.type === "hello" && users[uid]) ch.postMessage({ type: "user", uid, data: users[uid] });
       else if (m.type === "msg") emit("msg", m.data);
     };
     return {
-      get uid() { return uid; },
+      uid,
       on(e, f) { (H[e] = H[e] || []).push(f); },
-      async join(code, me) {
-        room = code; users[uid] = Object.assign({}, me, { t: Date.now() });
-        post({ type: "hello" });
-        await new Promise(r => setTimeout(r, 300));
-        const taken = Object.entries(users).filter(([k]) => k !== uid).map(([, u]) => u.seat);
-        if (taken.length >= ROOM_MAX) throw new Error("full");
-        let s = 0; while (taken.includes(s)) s++;
-        users[uid].seat = s;
-        post({ type: "user", uid, data: users[uid] });
+      async join(me) {
+        users[uid] = Object.assign({}, me, { seat: 0, seen: Date.now() });
+        ch.postMessage({ type: "hello" }); ch.postMessage({ type: "user", uid, data: users[uid] });
         emit("peers", Object.assign({}, users));
-        addEventListener("pagehide", () => post({ type: "user", uid, data: null }));
-        timer = setInterval(() => post({ type: "user", uid, data: users[uid] }), 15000);
-        return uid;
+        addEventListener("pagehide", () => ch.postMessage({ type: "user", uid, data: null }));
+        timer = setInterval(() => { users[uid].seen = Date.now(); ch.postMessage({ type: "user", uid, data: users[uid] }); }, 15000);
       },
-      update(p) { Object.assign(users[uid], p); post({ type: "user", uid, data: users[uid] }); emit("peers", Object.assign({}, users)); },
-      send(m) { const d = Object.assign({ uid, t: Date.now() }, m); post({ type: "msg", data: d }); emit("msg", d); },
-      leave() { clearInterval(timer); post({ type: "user", uid, data: null }); delete users[uid]; room = null; }
+      update(p) { if (!users[uid]) return; Object.assign(users[uid], p); ch.postMessage({ type: "user", uid, data: users[uid] }); emit("peers", Object.assign({}, users)); },
+      send(m) { const d = Object.assign({ uid, t: Date.now() }, m); ch.postMessage({ type: "msg", data: d }); emit("msg", d); },
+      leave() { clearInterval(timer); ch.postMessage({ type: "user", uid, data: null }); delete users[uid]; emit("peers", Object.assign({}, users)); }
     };
   }
   function firebaseNet() {
     const H = {}, emit = (e, d) => (H[e] || []).forEach(f => f(d));
-    let F = null, db = null, uid = null, meRef = null, room = null, offs = [], hb = 0, joinedAt = 0;
-    async function load() {
-      const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
-      const [app, auth, rdb] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-database.js")]);
-      const a = app.initializeApp(FIREBASE_CONFIG);
-      const au = auth.getAuth(a);
-      const cred = await auth.signInAnonymously(au);
-      uid = cred.user.uid;
-      db = rdb.getDatabase(a);
-      F = rdb;
-    }
-    return {
-      get uid() { return uid; },
+    let F = null, db = null, meRef = null, offs = [], hb = 0;
+    const api = {
+      uid: null,
       on(e, f) { (H[e] = H[e] || []).push(f); },
-      async join(code, me) {
-        if (!F) await load();
-        room = code;
-        const usersRef = F.ref(db, `rooms/${room}/users`);
-        const snap = await F.get(usersRef);
-        const now = Date.now(), cur = snap.val() || {};
-        const live = Object.entries(cur).filter(([k, u]) => k !== uid && u && now - (u.seen || 0) < 120000);
-        if (live.length >= ROOM_MAX) throw new Error("full");
-        const taken = live.map(([, u]) => u.seat);
-        let s = 0; while (taken.includes(s)) s++;
-        meRef = F.ref(db, `rooms/${room}/users/${uid}`);
+      async join(me) {
+        if (!F) {
+          const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+          const [app, auth, rdb] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-database.js")]);
+          const a = app.initializeApp(FIREBASE_CONFIG);
+          const cred = await auth.signInAnonymously(auth.getAuth(a));
+          api.uid = cred.user.uid;
+          db = rdb.getDatabase(a); F = rdb;
+        }
+        const usersRef = F.ref(db, `rooms/${PUBLIC_ROOM}/users`);
+        meRef = F.ref(db, `rooms/${PUBLIC_ROOM}/users/${api.uid}`);
         await F.onDisconnect(meRef).remove();
-        await F.set(meRef, Object.assign({}, me, { seat: s, seen: Date.now(), t: F.serverTimestamp() }));
-        joinedAt = Date.now();
+        await F.set(meRef, Object.assign({}, me, { seat: 0, seen: Date.now() }));
+        const since = Date.now();
         offs.push(F.onValue(usersRef, sn => {
           const all = sn.val() || {}, t = Date.now(), out = {};
-          for (const [k, u] of Object.entries(all)) if (k === uid || t - (u.seen || 0) < 120000) out[k] = u;
+          for (const [k, u] of Object.entries(all)) if (u && (k === api.uid || t - (u.seen || 0) < 150000)) out[k] = u;
           emit("peers", out);
         }));
-        const q = F.query(F.ref(db, `rooms/${room}/chat`), F.orderByChild("t"), F.startAt(joinedAt - 60000));
+        const q = F.query(F.ref(db, `rooms/${PUBLIC_ROOM}/chat`), F.orderByChild("t"), F.startAt(since - 5000));
         offs.push(F.onChildAdded(q, sn => emit("msg", sn.val())));
-        hb = setInterval(() => F.update(meRef, { seen: Date.now() }), 30000);
-        return uid;
+        hb = setInterval(() => { if (meRef) F.update(meRef, { seen: Date.now() }); }, 45000);
       },
       update(p) { if (meRef) F.update(meRef, Object.assign({}, p, { seen: Date.now() })); },
-      send(m) { if (room) F.push(F.ref(db, `rooms/${room}/chat`), Object.assign({ uid, t: F.serverTimestamp() }, m)); },
-      leave() { clearInterval(hb); offs.forEach(f => f()); offs = []; if (meRef) F.remove(meRef); meRef = null; room = null; }
+      send(m) { if (meRef) F.push(F.ref(db, `rooms/${PUBLIC_ROOM}/chat`), Object.assign({ uid: api.uid, t: F.serverTimestamp() }, m)); },
+      leave() { clearInterval(hb); offs.forEach(f => f()); offs = []; if (meRef) { F.onDisconnect(meRef).cancel(); F.remove(meRef); } meRef = null; emit("peers", {}); }
     };
+    return api;
   }
 
-  /* ---------- состояние и события ---------- */
-  const frDlg = makeSheet("friends", "Бар с друзьями");
+  /* ---------- присутствие ---------- */
   function drinkInfo(c) { return c ? { id: c.id, name: String(c.name).slice(0, 32), cup: c.cup, pour: c.pour, garnish: c.garnish || "", ice: !!c.ice } : null; }
-  function zoneName(z) { return ["в читальне", "за стойкой", "в курилке", "у сцены", "в погребе"][z] || "в баре"; }
-  async function joinRoom(code, name) {
-    if (FR.joining || FR.room) return;
-    if (!validRoom(code)) { toast("Неверный код комнаты", "Код — 8 латинских букв и цифр"); return; }
-    name = (name || "").trim().replace(/\s+/g, " ").slice(0, 24);
-    if (!name) { toast("Как вас зовут?", "Напишите имя — его увидят друзья"); return; }
-    try { localStorage.setItem("hacheden-name", name); } catch (e) {}
-    FR.joining = true; renderFriends();
+  function mySnapshot() { return { name: myName(), look: FR.look, zone: typeof cur === "number" ? cur : 1, drink: drinkInfo(LAST_DRINK) }; }
+  FR.look = (() => { try { let v = localStorage.getItem("hacheden-look"); if (v == null) { v = String(Math.floor(Math.random() * 6)); localStorage.setItem("hacheden-look", v); } return +v; } catch (e) { return 0; } })();
+  async function goLive() {
+    if (FR.on || FR.connecting || FR.invisible) return;
+    FR.connecting = true;
     try {
-      FR.net = FR.net || (FIREBASE_CONFIG && QS_FR.get("net") !== "local" ? firebaseNet() : localNet());
+      FR.net = FR.net || (QS_FR.get("net") === "local" ? localNet() : firebaseNet());
       if (!FR.bound) {
         FR.bound = true;
-        FR.net.on("peers", p => { FR.uid = FR.net.uid; FR.peers = p; if (H3D.friends) H3D.friends.sync(p, FR.uid); renderFriends(true); });
-        FR.net.on("msg", m => onMsg(m));
+        FR.net.on("peers", p => { FR.uid = FR.net.uid; FR.peers = p; pushScene(); renderLive(true); });
+        FR.net.on("msg", onMsg);
       }
-      FR.me = { name, look: Math.floor(Math.random() * 5), drink: drinkInfo(LAST_DRINK), zone: typeof cur === "number" ? cur : 1 };
-      FR.uid = await FR.net.join(code, FR.me);
-      FR.room = code;
-      const u = new URL(location.href); u.searchParams.set("room", code); history.replaceState(null, "", u.pathname + u.search + u.hash);
-      toast("Вы в комнате", "Отправьте друзьям ссылку — и они сядут рядом");
-      uiSound("chime");
-      track("count", "friends");
+      await FR.net.join(mySnapshot());
+      FR.uid = FR.net.uid; FR.on = true; FR.failed = false;
     } catch (e) {
-      console.warn(e);
-      toast(e.message === "full" ? "Комната заполнена" : "Не получилось подключиться", e.message === "full" ? `За стойкой помещается ${ROOM_MAX} человек` : "Проверьте интернет и попробуйте ещё раз");
+      console.warn("live bar:", e && e.message);
+      FR.failed = true;
     }
-    FR.joining = false; renderFriends();
+    FR.connecting = false;
+    renderLive();
   }
-  function leaveRoom() {
-    if (!FR.room) return;
-    FR.net.leave();
-    FR.room = null; FR.peers = {}; FR.log = [];
-    if (H3D.friends) H3D.friends.sync({}, FR.uid);
-    const u = new URL(location.href); u.searchParams.delete("room"); history.replaceState(null, "", u.pathname + u.search + u.hash);
-    renderFriends();
+  function goQuiet() { if (!FR.on) return; FR.net.leave(); FR.on = false; FR.peers = {}; pushScene(); renderLive(); }
+  function pushScene() {
+    const shown = {};
+    for (const [k, u] of Object.entries(FR.peers)) if (k !== FR.uid && !FR.hidden.has(k)) shown[k] = Object.assign({}, u, { name: cleanName(u.name) });
+    if (H3D.friends) H3D.friends.sync(shown);
+    const n = Object.keys(shown).length, badge = document.getElementById("t-friends-n");
+    if (badge) { badge.hidden = n < 1; badge.textContent = n; }
   }
   function onMsg(m) {
-    if (!m || !m.uid) return;
-    const who = (FR.peers[m.uid] && FR.peers[m.uid].name) || m.name || "Гость";
-    FR.log.push({ who, me: m.uid === FR.uid, text: m.text, kind: m.kind });
-    if (FR.log.length > 40) FR.log.shift();
-    if (m.uid !== FR.uid) {
-      if (H3D.friends) H3D.friends.event(m.uid, m.kind, m.text);
-      if (m.kind === "cheers") toast(`${who} поднимает бокал`, "За вас!");
-      else if (!frDlg.open && (typeof cur !== "number" || cur !== 1)) toast(who, m.text);
-    }
+    if (!m || !m.uid || FR.hidden.has(m.uid)) return;
+    const text = PHRASE[m.p];
+    if (!text) return;   // только готовые фразы
+    const u = FR.peers[m.uid] || {}, who = cleanName(u.name), mine = m.uid === FR.uid;
+    const zone = mine ? (typeof cur === "number" ? cur : 1) : u.zone;
+    FR.log.push({ who, mine, text, zone, t: Date.now() });
+    if (FR.log.length > 30) FR.log.shift();
+    if (!mine && H3D.friends) H3D.friends.event(m.uid, m.p, text);
     renderLog();
   }
-  function say(text) {
-    text = (text || "").trim().slice(0, 140);
-    if (!text || !FR.room) return;
-    if (Date.now() - FR.lastSay < 1200) return;
+  function sayPhrase(p) {
+    if (!FR.on || !PHRASE[p] || Date.now() - FR.lastSay < 1500) return;
     FR.lastSay = Date.now();
-    FR.net.send({ kind: "say", text, name: FR.me.name });
+    FR.net.send({ kind: p === "cheers" ? "cheers" : "say", p, text: PHRASE[p] });
+    if (p === "cheers" && H3D.friends) H3D.friends.cheers();
   }
-  function cheers() {
-    if (!FR.room) return;
-    FR.net.send({ kind: "cheers", text: "За вас!", name: FR.me.name });
-    if (H3D.friends) H3D.friends.cheers();
-  }
-  onProgress((ev) => { if (ev === "drink" && FR.room) FR.net.update({ drink: drinkInfo(LAST_DRINK) }); if (ev === "room" && FR.room) FR.net.update({ zone: cur }); });
+  onProgress(ev => { if (FR.on && (ev === "drink" || ev === "room")) FR.net.update({ drink: drinkInfo(LAST_DRINK), zone: cur }); });
 
-  /* ---------- панель ---------- */
-  function linkFor(code) { const u = new URL(location.origin + location.pathname); u.searchParams.set("room", code); if (QS_FR.get("net") === "local") u.searchParams.set("net", "local"); return u.toString(); }
+  /* ---------- панель «Кто в баре» ---------- */
+  const frDlg = makeSheet("friends", "Кто в баре");
   function renderLog() {
     const box = frDlg.querySelector("#fr-log"); if (!box) return;
-    box.innerHTML = FR.log.length ? FR.log.map(l => `<p class="${l.me ? "me" : ""}"><b>${escH(l.who)}</b>${l.kind === "cheers" ? " 🥂 " : ": "}${escH(l.text)}</p>`).join("") : `<p class="note">Здесь появятся ваши разговоры.</p>`;
+    const here = typeof cur === "number" ? cur : 1, items = FR.log.filter(l => l.zone === here || l.mine).slice(-12);
+    box.innerHTML = items.length ? items.map(l => `<p class="${l.mine ? "me" : ""}"><b>${escH(l.mine ? "Вы" : l.who)}</b>: ${escH(l.text)}</p>`).join("") : `<p class="note">Здесь появится то, что говорят рядом с вами.</p>`;
     box.scrollTop = box.scrollHeight;
   }
-  function renderFriends(soft) {
-    if (soft && FR.room && frDlg.open) {
-      const pl = frDlg.querySelector("#fr-people");
-      if (pl) { pl.innerHTML = peopleHTML(); return; }
-    }
-    if (!friendsReady()) {
-      frDlg.body.innerHTML = `<p class="note">Скоро здесь можно будет позвать друзей: вы сядете рядом за стойкой, будете видеть их напитки, говорить и чокаться. Подключаем сервер.</p>`;
-      return;
-    }
-    if (!FR.room) {
-      const code = validRoom(QS_FR.get("room")) ? QS_FR.get("room") : "";
-      frDlg.body.innerHTML = `
-        <p class="note">Позовите друзей в Hacheden: каждый садится за стойку со своим именем, видно, кто что пьёт, можно говорить и чокаться. Без регистрации, до ${ROOM_MAX} человек.</p>
-        <div class="row" style="grid-template-columns:1fr"><label for="fr-name">Ваше имя</label><input class="fr-in" id="fr-name" maxlength="24" autocomplete="nickname" value="${escH(myName())}" placeholder="Как вас называть"></div>
-        ${code ? `<div class="acts"><button class="make big" type="button" data-fr-join="${code}"${FR.joining ? " disabled" : ""}>${FR.joining ? "Подключаемся…" : "Войти в комнату друга"}</button></div>`
-          : `<div class="acts"><button class="make big" type="button" data-fr-new${FR.joining ? " disabled" : ""}>${FR.joining ? "Подключаемся…" : "Создать комнату"}</button></div>
-        <h3>Есть код от друга?</h3>
-        <div class="fr-row"><input class="fr-in" id="fr-code" maxlength="8" autocomplete="off" placeholder="например, k3m9pqrs"><button class="make" type="button" data-fr-code>Войти</button></div>`}
-        <p class="note">Ссылку на комнату видят только те, кому вы её отправите.</p>`;
-      return;
-    }
+  function peopleHTML() {
+    const list = Object.entries(FR.peers).filter(([k]) => k !== FR.uid);
+    if (!list.length) return `<li class="note" style="list-style:none">Кроме вас пока никого. Как только кто-то зайдёт на сайт, он появится в зале — и здесь.</li>`;
+    return list.map(([k, u]) => `<li class="jitem${FR.hidden.has(k) ? " locked" : ""}"><span class="ji" aria-hidden="true">☺</span><div><b>${escH(cleanName(u.name))}</b><span>${ZONE_WORD[u.zone] || "в баре"}${u.drink ? " · пьёт «" + escH(u.drink.name) + "»" : ""}</span>
+      <button class="clear" type="button" data-fr-mute="${escH(k)}">${FR.hidden.has(k) ? "Показать" : "Скрыть у себя"}</button></div></li>`).join("");
+  }
+  function renderLive(soft) {
+    if (soft && frDlg.open && FR.on) { const pl = frDlg.querySelector("#fr-people"); if (pl) { pl.innerHTML = peopleHTML(); const c = frDlg.querySelector("#fr-count"); if (c) c.textContent = Object.keys(FR.peers).length; return; } }
+    if (!frDlg.open && soft) return;
+    const n = Object.keys(FR.peers).length;
     frDlg.body.innerHTML = `
-      <div class="fr-link"><span>Ссылка для друзей</span><code id="fr-url">${escH(linkFor(FR.room))}</code>
-        <div class="acts"><button class="make" type="button" data-fr-copy>Скопировать</button>${navigator.share ? `<button class="make ghost" type="button" data-fr-share>Отправить…</button>` : ""}</div></div>
-      <h3>За стойкой</h3>
-      <ul class="jlist" id="fr-people">${peopleHTML()}</ul>
-      <h3>Разговор</h3>
-      <div class="fr-log" id="fr-log" aria-live="polite"></div>
-      <form class="fr-row" id="fr-form"><input class="fr-in" id="fr-text" maxlength="140" autocomplete="off" placeholder="Сказать что-нибудь…" aria-label="Сообщение"><button class="make" type="submit">Сказать</button></form>
-      <div class="acts"><button class="make" type="button" data-fr-cheers>🥂 Чокнуться</button><button class="make ghost" type="button" data-fr-leave>Выйти из комнаты</button></div>`;
+      <p class="note">${FR.invisible ? "Вы невидимка: вас никто не видит, и вы не видите других." : FR.on ? `Сейчас на сайте: <b id="fr-count">${n}</b>. Все посетители видят друг друга в том зале, где находятся.` : FR.failed ? "Не получилось подключиться к живому бару. Проверьте интернет — попробуем ещё раз." : "Подключаемся к живому бару…"}</p>
+      <div class="row" style="grid-template-columns:1fr"><label for="fr-name">Ваше имя над головой</label>
+        <div class="fr-row" style="margin-top:6px"><input class="fr-in" id="fr-name" maxlength="20" autocomplete="nickname" value="${escH(myName())}"><button class="make" type="button" data-fr-name>Сохранить</button></div></div>
+      ${swRow("frVisible", "Меня видят другие", "выключите, чтобы сидеть невидимкой")}
+      ${FR.on ? `<h3>Сказать тем, кто рядом</h3>
+      <div class="seg" role="group" aria-label="Готовые фразы">${PHRASES.map(([id, t]) => `<button class="chip" type="button" data-fr-say="${id}">${t}</button>`).join("")}</div>
+      <div class="fr-log" id="fr-log" aria-live="polite" style="margin-top:12px"></div>
+      <h3>Посетители</h3><ul class="jlist" id="fr-people">${peopleHTML()}</ul>
+      <p class="note">С незнакомцами общаются только готовыми фразами — так вечер никому не испортят. Любого посетителя можно скрыть у себя.</p>` : FR.failed ? `<div class="acts"><button class="make" type="button" data-fr-retry>Подключиться снова</button></div>` : ""}`;
+    const sw = frDlg.querySelector("#s-frVisible"); if (sw) sw.checked = !FR.invisible;
     renderLog();
   }
-  function peopleHTML() {
-    const list = Object.entries(FR.peers).sort((a, b) => (a[1].seat || 0) - (b[1].seat || 0));
-    return list.map(([k, u]) => `<li class="jitem"><span class="ji" aria-hidden="true">${k === FR.uid ? "★" : "☺"}</span><div><b>${escH(u.name)}${k === FR.uid ? " (вы)" : ""}</b><span>${zoneName(u.zone)}${u.drink ? " · пьёт «" + escH(u.drink.name) + "»" : ""}</span></div></li>`).join("")
-      + (list.length < 2 ? `<li class="note" style="list-style:none">Пока вы одни. Отправьте ссылку — друзья появятся на соседних табуретах.</li>` : "");
-  }
-  frDlg.addEventListener("click", async e => {
+  frDlg.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    const name = () => (frDlg.querySelector("#fr-name") || {}).value || myName();
-    if ("frNew" in b.dataset) joinRoom(roomCode(), name());
-    else if (b.dataset.frJoin) joinRoom(b.dataset.frJoin, name());
-    else if ("frCode" in b.dataset) joinRoom(((frDlg.querySelector("#fr-code") || {}).value || "").trim().toLowerCase(), name());
-    else if ("frCopy" in b.dataset) { try { await navigator.clipboard.writeText(linkFor(FR.room)); toast("Ссылка скопирована", "Отправьте её друзьям"); } catch (er) { toast("Скопируйте ссылку вручную", linkFor(FR.room)); } }
-    else if ("frShare" in b.dataset) navigator.share({ title: "Hacheden", text: "Заходи в бар Hacheden, я за стойкой", url: linkFor(FR.room) }).catch(() => {});
-    else if ("frCheers" in b.dataset) cheers();
-    else if ("frLeave" in b.dataset) leaveRoom();
+    if (b.dataset.frSay) sayPhrase(b.dataset.frSay);
+    else if ("frName" in b.dataset) {
+      const v = cleanName(frDlg.querySelector("#fr-name").value);
+      try { localStorage.setItem("hacheden-name", v); } catch (er) {}
+      frDlg.querySelector("#fr-name").value = v;
+      if (FR.on) FR.net.update({ name: v });
+      toast("Имя сохранено", v === "Гость" ? "Над вами будет написано «Гость»" : `Над вами будет написано «${v}»`);
+    } else if (b.dataset.frMute) {
+      const k = b.dataset.frMute;
+      FR.hidden.has(k) ? FR.hidden.delete(k) : FR.hidden.add(k);
+      try { localStorage.setItem("hacheden-muted", JSON.stringify([...FR.hidden])); } catch (er) {}
+      pushScene(); renderLive(true);
+    } else if ("frRetry" in b.dataset) { FR.failed = false; renderLive(); goLive(); }
   });
-  frDlg.addEventListener("submit", e => {
-    e.preventDefault();
-    const inp = frDlg.querySelector("#fr-text"); say(inp.value); inp.value = ""; inp.focus();
+  frDlg.addEventListener("change", e => {
+    if (e.target.id !== "s-frVisible") return;
+    FR.invisible = !e.target.checked;
+    try { localStorage.setItem("hacheden-invisible", FR.invisible ? "1" : "0"); } catch (er) {}
+    if (FR.invisible) goQuiet(); else goLive().then(() => renderLive());
+    renderLive();
   });
-  function openFriends() { renderFriends(); openSheet(frDlg); }
-  document.getElementById("t-friends").addEventListener("click", openFriends);
-  // пока сервер не подключён, кнопку не показываем (кроме проверки ?net=local)
-  document.getElementById("t-friends").hidden = !friendsReady();
-  const FRIENDS = { get room() { return FR.room; }, get uid() { return FR.uid; }, get peers() { return FR.peers; }, open: openFriends, join: joinRoom, say, cheers, leave: leaveRoom };
+  frDlg.addEventListener("keydown", e => { if (e.target.id === "fr-name" && e.key === "Enter") { e.preventDefault(); frDlg.querySelector("[data-fr-name]").click(); } });
+  function openLive() { renderLive(); openSheet(frDlg); }
+  document.getElementById("t-friends").addEventListener("click", openLive);
+  const FRIENDS = { get on() { return FR.on; }, get uid() { return FR.uid; }, get peers() { return FR.peers; }, open: openLive, live: goLive, quiet: goQuiet, say: sayPhrase };

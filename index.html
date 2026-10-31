@@ -733,7 +733,7 @@
 
   
   <div class="tools" id="tools" role="group" aria-label="Плеер, журнал и настройки">
-    <button class="tool" id="t-friends" type="button" aria-label="Бар с друзьями" aria-haspopup="dialog" title="Бар с друзьями">
+    <button class="tool" id="t-friends" type="button" aria-label="Кто в баре" aria-haspopup="dialog" title="Кто в баре">
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="8.5" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="16.5" cy="9" r="2.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M3 19c.6-3.2 2.9-5 5.5-5s4.9 1.8 5.5 5M14.5 14.6c.6-.3 1.3-.5 2-.5 2.2 0 4 1.5 4.5 4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
       <i class="tool-count" id="t-friends-n" hidden></i>
     </button>
@@ -3882,10 +3882,12 @@
   });
   function openStories(id) { renderStories(id); openSheet(stDlg); }
 
-/* ================= бар с друзьями: общая комната по ссылке =================
-   Связь через Firebase Realtime Database (бесплатный тариф). Ключи ниже не секретные:
-   их видит любой браузер, а защиту дают правила базы (docs/firebase-rules.json).
-   Для проверки без сервера: ?room=…&net=local — вкладки одного браузера видят друг друга. */
+/* ================= живой бар: все посетители сайта видят друг друга =================
+   Каждый, кто сейчас в баре, — фигура в том зале, где он находится, с именем над головой.
+   С незнакомцами общаются готовыми фразами (свободный текст не показывается — так никто не испортит вечер).
+   Связь — Firebase Realtime Database (бесплатный тариф, до 100 одновременных подключений).
+   Ключи ниже не секретные; защиту дают правила базы (docs/firebase-rules.json).
+   Проверка без сервера: ?net=local — вкладки одного браузера видят друг друга. */
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAGn2L_2GiVGIADqtomVD14jTVZlQlP4Dc",
     authDomain: "hacheden-9946b.firebaseapp.com",
@@ -3894,223 +3896,194 @@
     appId: "1:774316675789:web:9347526f7df621d2d34f84"
   };
   const FB_VER = "10.12.2";
-  const ROOM_MAX = 5;
-  const FR = { room: null, me: null, uid: null, peers: {}, log: [], net: null, joining: false, lastSay: 0 };
-  const roomCode = () => Array.from(crypto.getRandomValues(new Uint8Array(8)), b => "abcdefghjkmnpqrstuvwxyz23456789"[b % 31]).join("");
-  const validRoom = s => /^[a-z0-9]{8}$/.test(s || "");
-  const friendsReady = () => !!FIREBASE_CONFIG || QS_FR.get("net") === "local";
+  const PUBLIC_ROOM = "hacheden";   // один общий бар для всех
+  /* готовые фразы: показываются только они, что бы ни пришло из сети */
+  const PHRASES = [
+    ["hi", "Добрый вечер!"], ["cheers", "За вас! 🥂"], ["music", "Отличная музыка"], ["advice", "Что посоветуете выпить?"],
+    ["wow", "Красиво здесь"], ["thanks", "Спасибо!"], ["laugh", "Ха-ха!"], ["bye", "Мне пора. Хорошего вечера!"]
+  ];
+  const PHRASE = Object.fromEntries(PHRASES);
   const QS_FR = new URLSearchParams(location.search);
-  const myName = () => { try { return localStorage.getItem("hacheden-name") || ""; } catch (e) { return ""; } };
+  const FR = { me: null, uid: null, peers: {}, log: [], net: null, on: false, connecting: false, lastSay: 0, failed: false,
+    hidden: new Set((() => { try { return JSON.parse(localStorage.getItem("hacheden-muted") || "[]"); } catch (e) { return []; } })()),
+    invisible: (() => { try { return localStorage.getItem("hacheden-invisible") === "1"; } catch (e) { return false; } })() };
+  /* простой фильтр имён: грубые корни заменяются на «Гость» */
+  const BAD = /х[уy][йиеёяю]|п[иi]зд|[её]б[аеиуы]|бл[яэ]|сук[аи]|муда|пид[оа]р|шлюх|гандон|залуп|f+u+c+k|sh[i1]t|b[i1]tch|n[i1]gg|c[u]nt|wh[o0]re|fag/i;
+  const cleanName = s => { s = String(s || "").replace(/[<>{}\[\]\\]/g, "").replace(/\s+/g, " ").trim().slice(0, 20); return !s || BAD.test(s.replace(/[\s._\-*0-9]/g, "")) ? "Гость" : s; };
+  const myName = () => { try { return cleanName(localStorage.getItem("hacheden-name") || "Гость"); } catch (e) { return "Гость"; } };
+  const ZONE_WORD = ["в читальне", "за стойкой", "в курилке", "у сцены", "в погребе"];
 
   /* транспорт: Firebase или (для проверки) BroadcastChannel между вкладками */
   function localNet() {
-    const ch = new BroadcastChannel("hacheden-room"), H = {}, users = {};
-    let room = null, uid = "u" + Math.random().toString(36).slice(2, 10), timer = 0;
+    const ch = new BroadcastChannel("hacheden-live"), H = {}, users = {};
+    const uid = "u" + Math.random().toString(36).slice(2, 10);
+    let timer = 0;
     const emit = (e, d) => (H[e] || []).forEach(f => f(d));
-    const post = m => ch.postMessage(Object.assign({ room }, m));
     ch.onmessage = e => {
-      const m = e.data; if (m.room !== room) return;
+      const m = e.data;
       if (m.type === "user") { if (m.data) users[m.uid] = m.data; else delete users[m.uid]; emit("peers", Object.assign({}, users)); }
-      else if (m.type === "hello") post({ type: "user", uid, data: users[uid] });
+      else if (m.type === "hello" && users[uid]) ch.postMessage({ type: "user", uid, data: users[uid] });
       else if (m.type === "msg") emit("msg", m.data);
     };
     return {
-      get uid() { return uid; },
+      uid,
       on(e, f) { (H[e] = H[e] || []).push(f); },
-      async join(code, me) {
-        room = code; users[uid] = Object.assign({}, me, { t: Date.now() });
-        post({ type: "hello" });
-        await new Promise(r => setTimeout(r, 300));
-        const taken = Object.entries(users).filter(([k]) => k !== uid).map(([, u]) => u.seat);
-        if (taken.length >= ROOM_MAX) throw new Error("full");
-        let s = 0; while (taken.includes(s)) s++;
-        users[uid].seat = s;
-        post({ type: "user", uid, data: users[uid] });
+      async join(me) {
+        users[uid] = Object.assign({}, me, { seat: 0, seen: Date.now() });
+        ch.postMessage({ type: "hello" }); ch.postMessage({ type: "user", uid, data: users[uid] });
         emit("peers", Object.assign({}, users));
-        addEventListener("pagehide", () => post({ type: "user", uid, data: null }));
-        timer = setInterval(() => post({ type: "user", uid, data: users[uid] }), 15000);
-        return uid;
+        addEventListener("pagehide", () => ch.postMessage({ type: "user", uid, data: null }));
+        timer = setInterval(() => { users[uid].seen = Date.now(); ch.postMessage({ type: "user", uid, data: users[uid] }); }, 15000);
       },
-      update(p) { Object.assign(users[uid], p); post({ type: "user", uid, data: users[uid] }); emit("peers", Object.assign({}, users)); },
-      send(m) { const d = Object.assign({ uid, t: Date.now() }, m); post({ type: "msg", data: d }); emit("msg", d); },
-      leave() { clearInterval(timer); post({ type: "user", uid, data: null }); delete users[uid]; room = null; }
+      update(p) { if (!users[uid]) return; Object.assign(users[uid], p); ch.postMessage({ type: "user", uid, data: users[uid] }); emit("peers", Object.assign({}, users)); },
+      send(m) { const d = Object.assign({ uid, t: Date.now() }, m); ch.postMessage({ type: "msg", data: d }); emit("msg", d); },
+      leave() { clearInterval(timer); ch.postMessage({ type: "user", uid, data: null }); delete users[uid]; emit("peers", Object.assign({}, users)); }
     };
   }
   function firebaseNet() {
     const H = {}, emit = (e, d) => (H[e] || []).forEach(f => f(d));
-    let F = null, db = null, uid = null, meRef = null, room = null, offs = [], hb = 0, joinedAt = 0;
-    async function load() {
-      const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
-      const [app, auth, rdb] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-database.js")]);
-      const a = app.initializeApp(FIREBASE_CONFIG);
-      const au = auth.getAuth(a);
-      const cred = await auth.signInAnonymously(au);
-      uid = cred.user.uid;
-      db = rdb.getDatabase(a);
-      F = rdb;
-    }
-    return {
-      get uid() { return uid; },
+    let F = null, db = null, meRef = null, offs = [], hb = 0;
+    const api = {
+      uid: null,
       on(e, f) { (H[e] = H[e] || []).push(f); },
-      async join(code, me) {
-        if (!F) await load();
-        room = code;
-        const usersRef = F.ref(db, `rooms/${room}/users`);
-        const snap = await F.get(usersRef);
-        const now = Date.now(), cur = snap.val() || {};
-        const live = Object.entries(cur).filter(([k, u]) => k !== uid && u && now - (u.seen || 0) < 120000);
-        if (live.length >= ROOM_MAX) throw new Error("full");
-        const taken = live.map(([, u]) => u.seat);
-        let s = 0; while (taken.includes(s)) s++;
-        meRef = F.ref(db, `rooms/${room}/users/${uid}`);
+      async join(me) {
+        if (!F) {
+          const base = `https://www.gstatic.com/firebasejs/${FB_VER}/`;
+          const [app, auth, rdb] = await Promise.all([import(base + "firebase-app.js"), import(base + "firebase-auth.js"), import(base + "firebase-database.js")]);
+          const a = app.initializeApp(FIREBASE_CONFIG);
+          const cred = await auth.signInAnonymously(auth.getAuth(a));
+          api.uid = cred.user.uid;
+          db = rdb.getDatabase(a); F = rdb;
+        }
+        const usersRef = F.ref(db, `rooms/${PUBLIC_ROOM}/users`);
+        meRef = F.ref(db, `rooms/${PUBLIC_ROOM}/users/${api.uid}`);
         await F.onDisconnect(meRef).remove();
-        await F.set(meRef, Object.assign({}, me, { seat: s, seen: Date.now(), t: F.serverTimestamp() }));
-        joinedAt = Date.now();
+        await F.set(meRef, Object.assign({}, me, { seat: 0, seen: Date.now() }));
+        const since = Date.now();
         offs.push(F.onValue(usersRef, sn => {
           const all = sn.val() || {}, t = Date.now(), out = {};
-          for (const [k, u] of Object.entries(all)) if (k === uid || t - (u.seen || 0) < 120000) out[k] = u;
+          for (const [k, u] of Object.entries(all)) if (u && (k === api.uid || t - (u.seen || 0) < 150000)) out[k] = u;
           emit("peers", out);
         }));
-        const q = F.query(F.ref(db, `rooms/${room}/chat`), F.orderByChild("t"), F.startAt(joinedAt - 60000));
+        const q = F.query(F.ref(db, `rooms/${PUBLIC_ROOM}/chat`), F.orderByChild("t"), F.startAt(since - 5000));
         offs.push(F.onChildAdded(q, sn => emit("msg", sn.val())));
-        hb = setInterval(() => F.update(meRef, { seen: Date.now() }), 30000);
-        return uid;
+        hb = setInterval(() => { if (meRef) F.update(meRef, { seen: Date.now() }); }, 45000);
       },
       update(p) { if (meRef) F.update(meRef, Object.assign({}, p, { seen: Date.now() })); },
-      send(m) { if (room) F.push(F.ref(db, `rooms/${room}/chat`), Object.assign({ uid, t: F.serverTimestamp() }, m)); },
-      leave() { clearInterval(hb); offs.forEach(f => f()); offs = []; if (meRef) F.remove(meRef); meRef = null; room = null; }
+      send(m) { if (meRef) F.push(F.ref(db, `rooms/${PUBLIC_ROOM}/chat`), Object.assign({ uid: api.uid, t: F.serverTimestamp() }, m)); },
+      leave() { clearInterval(hb); offs.forEach(f => f()); offs = []; if (meRef) { F.onDisconnect(meRef).cancel(); F.remove(meRef); } meRef = null; emit("peers", {}); }
     };
+    return api;
   }
 
-  /* ---------- состояние и события ---------- */
-  const frDlg = makeSheet("friends", "Бар с друзьями");
+  /* ---------- присутствие ---------- */
   function drinkInfo(c) { return c ? { id: c.id, name: String(c.name).slice(0, 32), cup: c.cup, pour: c.pour, garnish: c.garnish || "", ice: !!c.ice } : null; }
-  function zoneName(z) { return ["в читальне", "за стойкой", "в курилке", "у сцены", "в погребе"][z] || "в баре"; }
-  async function joinRoom(code, name) {
-    if (FR.joining || FR.room) return;
-    if (!validRoom(code)) { toast("Неверный код комнаты", "Код — 8 латинских букв и цифр"); return; }
-    name = (name || "").trim().replace(/\s+/g, " ").slice(0, 24);
-    if (!name) { toast("Как вас зовут?", "Напишите имя — его увидят друзья"); return; }
-    try { localStorage.setItem("hacheden-name", name); } catch (e) {}
-    FR.joining = true; renderFriends();
+  function mySnapshot() { return { name: myName(), look: FR.look, zone: typeof cur === "number" ? cur : 1, drink: drinkInfo(LAST_DRINK) }; }
+  FR.look = (() => { try { let v = localStorage.getItem("hacheden-look"); if (v == null) { v = String(Math.floor(Math.random() * 6)); localStorage.setItem("hacheden-look", v); } return +v; } catch (e) { return 0; } })();
+  async function goLive() {
+    if (FR.on || FR.connecting || FR.invisible) return;
+    FR.connecting = true;
     try {
-      FR.net = FR.net || (FIREBASE_CONFIG && QS_FR.get("net") !== "local" ? firebaseNet() : localNet());
+      FR.net = FR.net || (QS_FR.get("net") === "local" ? localNet() : firebaseNet());
       if (!FR.bound) {
         FR.bound = true;
-        FR.net.on("peers", p => { FR.uid = FR.net.uid; FR.peers = p; if (H3D.friends) H3D.friends.sync(p, FR.uid); renderFriends(true); });
-        FR.net.on("msg", m => onMsg(m));
+        FR.net.on("peers", p => { FR.uid = FR.net.uid; FR.peers = p; pushScene(); renderLive(true); });
+        FR.net.on("msg", onMsg);
       }
-      FR.me = { name, look: Math.floor(Math.random() * 5), drink: drinkInfo(LAST_DRINK), zone: typeof cur === "number" ? cur : 1 };
-      FR.uid = await FR.net.join(code, FR.me);
-      FR.room = code;
-      const u = new URL(location.href); u.searchParams.set("room", code); history.replaceState(null, "", u.pathname + u.search + u.hash);
-      toast("Вы в комнате", "Отправьте друзьям ссылку — и они сядут рядом");
-      uiSound("chime");
-      track("count", "friends");
+      await FR.net.join(mySnapshot());
+      FR.uid = FR.net.uid; FR.on = true; FR.failed = false;
     } catch (e) {
-      console.warn(e);
-      toast(e.message === "full" ? "Комната заполнена" : "Не получилось подключиться", e.message === "full" ? `За стойкой помещается ${ROOM_MAX} человек` : "Проверьте интернет и попробуйте ещё раз");
+      console.warn("live bar:", e && e.message);
+      FR.failed = true;
     }
-    FR.joining = false; renderFriends();
+    FR.connecting = false;
+    renderLive();
   }
-  function leaveRoom() {
-    if (!FR.room) return;
-    FR.net.leave();
-    FR.room = null; FR.peers = {}; FR.log = [];
-    if (H3D.friends) H3D.friends.sync({}, FR.uid);
-    const u = new URL(location.href); u.searchParams.delete("room"); history.replaceState(null, "", u.pathname + u.search + u.hash);
-    renderFriends();
+  function goQuiet() { if (!FR.on) return; FR.net.leave(); FR.on = false; FR.peers = {}; pushScene(); renderLive(); }
+  function pushScene() {
+    const shown = {};
+    for (const [k, u] of Object.entries(FR.peers)) if (k !== FR.uid && !FR.hidden.has(k)) shown[k] = Object.assign({}, u, { name: cleanName(u.name) });
+    if (H3D.friends) H3D.friends.sync(shown);
+    const n = Object.keys(shown).length, badge = document.getElementById("t-friends-n");
+    if (badge) { badge.hidden = n < 1; badge.textContent = n; }
   }
   function onMsg(m) {
-    if (!m || !m.uid) return;
-    const who = (FR.peers[m.uid] && FR.peers[m.uid].name) || m.name || "Гость";
-    FR.log.push({ who, me: m.uid === FR.uid, text: m.text, kind: m.kind });
-    if (FR.log.length > 40) FR.log.shift();
-    if (m.uid !== FR.uid) {
-      if (H3D.friends) H3D.friends.event(m.uid, m.kind, m.text);
-      if (m.kind === "cheers") toast(`${who} поднимает бокал`, "За вас!");
-      else if (!frDlg.open && (typeof cur !== "number" || cur !== 1)) toast(who, m.text);
-    }
+    if (!m || !m.uid || FR.hidden.has(m.uid)) return;
+    const text = PHRASE[m.p];
+    if (!text) return;   // только готовые фразы
+    const u = FR.peers[m.uid] || {}, who = cleanName(u.name), mine = m.uid === FR.uid;
+    const zone = mine ? (typeof cur === "number" ? cur : 1) : u.zone;
+    FR.log.push({ who, mine, text, zone, t: Date.now() });
+    if (FR.log.length > 30) FR.log.shift();
+    if (!mine && H3D.friends) H3D.friends.event(m.uid, m.p, text);
     renderLog();
   }
-  function say(text) {
-    text = (text || "").trim().slice(0, 140);
-    if (!text || !FR.room) return;
-    if (Date.now() - FR.lastSay < 1200) return;
+  function sayPhrase(p) {
+    if (!FR.on || !PHRASE[p] || Date.now() - FR.lastSay < 1500) return;
     FR.lastSay = Date.now();
-    FR.net.send({ kind: "say", text, name: FR.me.name });
+    FR.net.send({ kind: p === "cheers" ? "cheers" : "say", p, text: PHRASE[p] });
+    if (p === "cheers" && H3D.friends) H3D.friends.cheers();
   }
-  function cheers() {
-    if (!FR.room) return;
-    FR.net.send({ kind: "cheers", text: "За вас!", name: FR.me.name });
-    if (H3D.friends) H3D.friends.cheers();
-  }
-  onProgress((ev) => { if (ev === "drink" && FR.room) FR.net.update({ drink: drinkInfo(LAST_DRINK) }); if (ev === "room" && FR.room) FR.net.update({ zone: cur }); });
+  onProgress(ev => { if (FR.on && (ev === "drink" || ev === "room")) FR.net.update({ drink: drinkInfo(LAST_DRINK), zone: cur }); });
 
-  /* ---------- панель ---------- */
-  function linkFor(code) { const u = new URL(location.origin + location.pathname); u.searchParams.set("room", code); if (QS_FR.get("net") === "local") u.searchParams.set("net", "local"); return u.toString(); }
+  /* ---------- панель «Кто в баре» ---------- */
+  const frDlg = makeSheet("friends", "Кто в баре");
   function renderLog() {
     const box = frDlg.querySelector("#fr-log"); if (!box) return;
-    box.innerHTML = FR.log.length ? FR.log.map(l => `<p class="${l.me ? "me" : ""}"><b>${escH(l.who)}</b>${l.kind === "cheers" ? " 🥂 " : ": "}${escH(l.text)}</p>`).join("") : `<p class="note">Здесь появятся ваши разговоры.</p>`;
+    const here = typeof cur === "number" ? cur : 1, items = FR.log.filter(l => l.zone === here || l.mine).slice(-12);
+    box.innerHTML = items.length ? items.map(l => `<p class="${l.mine ? "me" : ""}"><b>${escH(l.mine ? "Вы" : l.who)}</b>: ${escH(l.text)}</p>`).join("") : `<p class="note">Здесь появится то, что говорят рядом с вами.</p>`;
     box.scrollTop = box.scrollHeight;
   }
-  function renderFriends(soft) {
-    if (soft && FR.room && frDlg.open) {
-      const pl = frDlg.querySelector("#fr-people");
-      if (pl) { pl.innerHTML = peopleHTML(); return; }
-    }
-    if (!friendsReady()) {
-      frDlg.body.innerHTML = `<p class="note">Скоро здесь можно будет позвать друзей: вы сядете рядом за стойкой, будете видеть их напитки, говорить и чокаться. Подключаем сервер.</p>`;
-      return;
-    }
-    if (!FR.room) {
-      const code = validRoom(QS_FR.get("room")) ? QS_FR.get("room") : "";
-      frDlg.body.innerHTML = `
-        <p class="note">Позовите друзей в Hacheden: каждый садится за стойку со своим именем, видно, кто что пьёт, можно говорить и чокаться. Без регистрации, до ${ROOM_MAX} человек.</p>
-        <div class="row" style="grid-template-columns:1fr"><label for="fr-name">Ваше имя</label><input class="fr-in" id="fr-name" maxlength="24" autocomplete="nickname" value="${escH(myName())}" placeholder="Как вас называть"></div>
-        ${code ? `<div class="acts"><button class="make big" type="button" data-fr-join="${code}"${FR.joining ? " disabled" : ""}>${FR.joining ? "Подключаемся…" : "Войти в комнату друга"}</button></div>`
-          : `<div class="acts"><button class="make big" type="button" data-fr-new${FR.joining ? " disabled" : ""}>${FR.joining ? "Подключаемся…" : "Создать комнату"}</button></div>
-        <h3>Есть код от друга?</h3>
-        <div class="fr-row"><input class="fr-in" id="fr-code" maxlength="8" autocomplete="off" placeholder="например, k3m9pqrs"><button class="make" type="button" data-fr-code>Войти</button></div>`}
-        <p class="note">Ссылку на комнату видят только те, кому вы её отправите.</p>`;
-      return;
-    }
+  function peopleHTML() {
+    const list = Object.entries(FR.peers).filter(([k]) => k !== FR.uid);
+    if (!list.length) return `<li class="note" style="list-style:none">Кроме вас пока никого. Как только кто-то зайдёт на сайт, он появится в зале — и здесь.</li>`;
+    return list.map(([k, u]) => `<li class="jitem${FR.hidden.has(k) ? " locked" : ""}"><span class="ji" aria-hidden="true">☺</span><div><b>${escH(cleanName(u.name))}</b><span>${ZONE_WORD[u.zone] || "в баре"}${u.drink ? " · пьёт «" + escH(u.drink.name) + "»" : ""}</span>
+      <button class="clear" type="button" data-fr-mute="${escH(k)}">${FR.hidden.has(k) ? "Показать" : "Скрыть у себя"}</button></div></li>`).join("");
+  }
+  function renderLive(soft) {
+    if (soft && frDlg.open && FR.on) { const pl = frDlg.querySelector("#fr-people"); if (pl) { pl.innerHTML = peopleHTML(); const c = frDlg.querySelector("#fr-count"); if (c) c.textContent = Object.keys(FR.peers).length; return; } }
+    if (!frDlg.open && soft) return;
+    const n = Object.keys(FR.peers).length;
     frDlg.body.innerHTML = `
-      <div class="fr-link"><span>Ссылка для друзей</span><code id="fr-url">${escH(linkFor(FR.room))}</code>
-        <div class="acts"><button class="make" type="button" data-fr-copy>Скопировать</button>${navigator.share ? `<button class="make ghost" type="button" data-fr-share>Отправить…</button>` : ""}</div></div>
-      <h3>За стойкой</h3>
-      <ul class="jlist" id="fr-people">${peopleHTML()}</ul>
-      <h3>Разговор</h3>
-      <div class="fr-log" id="fr-log" aria-live="polite"></div>
-      <form class="fr-row" id="fr-form"><input class="fr-in" id="fr-text" maxlength="140" autocomplete="off" placeholder="Сказать что-нибудь…" aria-label="Сообщение"><button class="make" type="submit">Сказать</button></form>
-      <div class="acts"><button class="make" type="button" data-fr-cheers>🥂 Чокнуться</button><button class="make ghost" type="button" data-fr-leave>Выйти из комнаты</button></div>`;
+      <p class="note">${FR.invisible ? "Вы невидимка: вас никто не видит, и вы не видите других." : FR.on ? `Сейчас на сайте: <b id="fr-count">${n}</b>. Все посетители видят друг друга в том зале, где находятся.` : FR.failed ? "Не получилось подключиться к живому бару. Проверьте интернет — попробуем ещё раз." : "Подключаемся к живому бару…"}</p>
+      <div class="row" style="grid-template-columns:1fr"><label for="fr-name">Ваше имя над головой</label>
+        <div class="fr-row" style="margin-top:6px"><input class="fr-in" id="fr-name" maxlength="20" autocomplete="nickname" value="${escH(myName())}"><button class="make" type="button" data-fr-name>Сохранить</button></div></div>
+      ${swRow("frVisible", "Меня видят другие", "выключите, чтобы сидеть невидимкой")}
+      ${FR.on ? `<h3>Сказать тем, кто рядом</h3>
+      <div class="seg" role="group" aria-label="Готовые фразы">${PHRASES.map(([id, t]) => `<button class="chip" type="button" data-fr-say="${id}">${t}</button>`).join("")}</div>
+      <div class="fr-log" id="fr-log" aria-live="polite" style="margin-top:12px"></div>
+      <h3>Посетители</h3><ul class="jlist" id="fr-people">${peopleHTML()}</ul>
+      <p class="note">С незнакомцами общаются только готовыми фразами — так вечер никому не испортят. Любого посетителя можно скрыть у себя.</p>` : FR.failed ? `<div class="acts"><button class="make" type="button" data-fr-retry>Подключиться снова</button></div>` : ""}`;
+    const sw = frDlg.querySelector("#s-frVisible"); if (sw) sw.checked = !FR.invisible;
     renderLog();
   }
-  function peopleHTML() {
-    const list = Object.entries(FR.peers).sort((a, b) => (a[1].seat || 0) - (b[1].seat || 0));
-    return list.map(([k, u]) => `<li class="jitem"><span class="ji" aria-hidden="true">${k === FR.uid ? "★" : "☺"}</span><div><b>${escH(u.name)}${k === FR.uid ? " (вы)" : ""}</b><span>${zoneName(u.zone)}${u.drink ? " · пьёт «" + escH(u.drink.name) + "»" : ""}</span></div></li>`).join("")
-      + (list.length < 2 ? `<li class="note" style="list-style:none">Пока вы одни. Отправьте ссылку — друзья появятся на соседних табуретах.</li>` : "");
-  }
-  frDlg.addEventListener("click", async e => {
+  frDlg.addEventListener("click", e => {
     const b = e.target.closest("button"); if (!b) return;
-    const name = () => (frDlg.querySelector("#fr-name") || {}).value || myName();
-    if ("frNew" in b.dataset) joinRoom(roomCode(), name());
-    else if (b.dataset.frJoin) joinRoom(b.dataset.frJoin, name());
-    else if ("frCode" in b.dataset) joinRoom(((frDlg.querySelector("#fr-code") || {}).value || "").trim().toLowerCase(), name());
-    else if ("frCopy" in b.dataset) { try { await navigator.clipboard.writeText(linkFor(FR.room)); toast("Ссылка скопирована", "Отправьте её друзьям"); } catch (er) { toast("Скопируйте ссылку вручную", linkFor(FR.room)); } }
-    else if ("frShare" in b.dataset) navigator.share({ title: "Hacheden", text: "Заходи в бар Hacheden, я за стойкой", url: linkFor(FR.room) }).catch(() => {});
-    else if ("frCheers" in b.dataset) cheers();
-    else if ("frLeave" in b.dataset) leaveRoom();
+    if (b.dataset.frSay) sayPhrase(b.dataset.frSay);
+    else if ("frName" in b.dataset) {
+      const v = cleanName(frDlg.querySelector("#fr-name").value);
+      try { localStorage.setItem("hacheden-name", v); } catch (er) {}
+      frDlg.querySelector("#fr-name").value = v;
+      if (FR.on) FR.net.update({ name: v });
+      toast("Имя сохранено", v === "Гость" ? "Над вами будет написано «Гость»" : `Над вами будет написано «${v}»`);
+    } else if (b.dataset.frMute) {
+      const k = b.dataset.frMute;
+      FR.hidden.has(k) ? FR.hidden.delete(k) : FR.hidden.add(k);
+      try { localStorage.setItem("hacheden-muted", JSON.stringify([...FR.hidden])); } catch (er) {}
+      pushScene(); renderLive(true);
+    } else if ("frRetry" in b.dataset) { FR.failed = false; renderLive(); goLive(); }
   });
-  frDlg.addEventListener("submit", e => {
-    e.preventDefault();
-    const inp = frDlg.querySelector("#fr-text"); say(inp.value); inp.value = ""; inp.focus();
+  frDlg.addEventListener("change", e => {
+    if (e.target.id !== "s-frVisible") return;
+    FR.invisible = !e.target.checked;
+    try { localStorage.setItem("hacheden-invisible", FR.invisible ? "1" : "0"); } catch (er) {}
+    if (FR.invisible) goQuiet(); else goLive().then(() => renderLive());
+    renderLive();
   });
-  function openFriends() { renderFriends(); openSheet(frDlg); }
-  document.getElementById("t-friends").addEventListener("click", openFriends);
-  // пока сервер не подключён, кнопку не показываем (кроме проверки ?net=local)
-  document.getElementById("t-friends").hidden = !friendsReady();
-  const FRIENDS = { get room() { return FR.room; }, get uid() { return FR.uid; }, get peers() { return FR.peers; }, open: openFriends, join: joinRoom, say, cheers, leave: leaveRoom };
+  frDlg.addEventListener("keydown", e => { if (e.target.id === "fr-name" && e.key === "Enter") { e.preventDefault(); frDlg.querySelector("[data-fr-name]").click(); } });
+  function openLive() { renderLive(); openSheet(frDlg); }
+  document.getElementById("t-friends").addEventListener("click", openLive);
+  const FRIENDS = { get on() { return FR.on; }, get uid() { return FR.uid; }, get peers() { return FR.peers; }, open: openLive, live: goLive, quiet: goQuiet, say: sayPhrase };
 
 </script>
 <script type="module">
@@ -4293,13 +4266,11 @@ try { OWNER = localStorage.getItem("hacheden-owner") === OWNER_HASH; } catch (e)
     history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
   }
 }
-/* приглашение в комнату друзей: частная вечеринка, бар открыт для гостей по ссылке в любое время */
-const PRIVATE_ROOM = /^[a-z0-9]{8}$/.test(QS.get("room") || "");
-const isOpen = (d = nowDate()) => OWNER || PRIVATE_ROOM || openByClock(d);
+const isOpen = (d = nowDate()) => OWNER || openByClock(d);
 /* хозяин в закрытые часы видит бар таким, каким он бывает в половине девятого вечера */
 const sceneDate = () => {
   const d = nowDate();
-  if (!(OWNER || PRIVATE_ROOM) || openByClock(d)) return d;
+  if (!OWNER || openByClock(d)) return d;
   const e = new Date(d); e.setHours(20, 30, 0, 0); return e;
 };
 function minutesUntil(target, d = nowDate()) { let diff = target - hoursOf(d); if (diff <= 0) diff += 24; return Math.ceil(diff * 60); }
@@ -10877,8 +10848,7 @@ function showOpen() {
   introTitle.classList.remove("off");
   const left = minutesUntil(CLOSE_H);
   introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
-  statusEl.textContent = PRIVATE_ROOM && !OWNER ? (openByClock() ? "Вас пригласили друзья — заходите, вам займут место за стойкой" : "Частная вечеринка: для вашей компании бар открыт и сейчас")
-    : OWNER
+  statusEl.textContent = OWNER
     ? (openByClock() ? "Режим хозяина. Для гостей открыто до 3:00" : "Режим хозяина: для тебя открыто. Гостей ждём с 17:00")
     : left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
   ownerOut.hidden = !OWNER;
@@ -11732,111 +11702,137 @@ setInterval(() => {
 }, 5000);
 Object.assign(H3D, { raid: playRaid });
 
-/* ================= друзья за стойкой: фигуры, имена, напитки, реплики ================= */
-const FRS = { slots: [], on: false };
-const FR_X = [-1.25, -2.5, 2.5, 0];   // табурет 1.25 — ваш собственный; центральный — последним, чтобы не заслонять бармена
-const FR_LOOKS = [
+/* ================= живой бар: другие посетители сайта в залах ================= */
+const LIVE_LOOKS = [
   { kind: "suit", body: "#3a2a4a", tie: "#c9944a", skin: 0xd0a07e, hair: 0x2a1a10 },
   { kind: "dress", body: "#6a1424", skin: 0xe0b090, hair: 0x5a2e14, hairStyle: "bob", lady: true },
   { kind: "suit", body: "#1f3a2c", tie: "#8a1428", skin: 0xa8704e, hair: 0x0c0806, mustache: true },
-  { kind: "dress", body: "#1c2a4a", skin: 0xc89070, hair: 0x140c08, hairStyle: "bob", lady: true }
+  { kind: "dress", body: "#1c2a4a", skin: 0xc89070, hair: 0x140c08, hairStyle: "bob", lady: true },
+  { kind: "suit", body: "#4a3020", tie: "#1f3a5a", skin: 0xe2b896, hair: 0x6a4a2a, hat: 0x1c1a18 },
+  { kind: "cardigan", body: "#5a4a30", shirt: "#e2d8c4", skin: 0x8a5a40, hair: 0x101010 }
 ];
-function frSlot(i) {
-  const x = FR_X[i];
-  const F = makeFigure(Object.assign({ seated: true, hipY: .93 }, FR_LOOKS[i]));
-  placeFig(F, x, -1.5, Math.PI);
-  F.legsFixed = true;
-  F.legs.forEach(lg => { lg.tgt.set(lg.side * .1, .33, .14); lg.cur.copy(lg.tgt); });
-  F.leanT = .12;
-  F.root.visible = false;
-  const spot = fromFig(F, V3(-.1, CT.top, .62));
-  const G = { F, glass: null, spot, busy: true, x, friend: true, uid: null, drinkId: null };
-  restHands(G);
-  const tag = document.createElement("div"); tag.className = "nametag"; tag.hidden = true; app.appendChild(tag);
-  const bub = document.createElement("div"); bub.className = "fbubble"; app.appendChild(bub);
-  G.tag = tag; G.bub = bub; G.bubUntil = 0;
-  hot(F.root, 1, "Друг", () => { if (G.uid) { FRIENDS.cheers(); } }, { grow: 0, noChip: true });
-  GUESTS.push(G);
-  return G;
-}
-function frGlass(G, d) {
-  const id = d ? d.id + d.pour : null;
-  if (id === G.drinkId) return;
-  G.drinkId = id;
-  if (!d) { if (G.glass) G.glass.visible = false; return; }   // сам бокал не удаляем: вдруг гость как раз пьёт
-  if (G.glass) world.remove(G.glass);
-  G.glass = makeGlass(d.cup || "rocks", d.pour || "#c27a1a", { garnish: d.garnish || null, ice: !!d.ice, op: .85 });
-  G.glass.position.copy(G.spot); G.glass.scale.setScalar(1.25);
-  world.add(G.glass);
-}
-function frHideGuests(hide) {
-  for (const G of GUESTS) {
-    if (G.friend) continue;
-    G.F.root.visible = !hide; if (G.glass) G.glass.visible = !hide;
-    G.busy = hide ? true : false;
+const faceTo = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
+/* места: табуреты у стойки (ваш — 1.25 — свободен), стоячие места в каждом зале */
+const LIVE_SLOTS = [
+  ...[-1.25, -2.5, 2.5, 0].map(x => ({ zone: 1, x, z: -1.5, face: Math.PI, seated: true })),
+  ...[[-1.9, -.65], [1.9, -.65], [-.65, -.45], [.65, -.45]].map(([x, z]) => ({ zone: 1, x, z, face: Math.PI })),
+  ...[[-3.9, -1.7], [-5.2, -.2], [-3.5, -.3]].map(([x, z]) => ({ zone: 0, x, z, face: faceTo(x, z, -4.6, -2.6) + .5 })),
+  ...[[4.7, -1.1], [5.5, .3], [4.4, -2.7]].map(([x, z]) => ({ zone: 2, x, z, face: faceTo(x, z, 7.2, -1.6) - .3 })),
+  ...[[-3.7, 2.7], [-4.7, 3.0], [-5.7, 2.7], [-3.2, 2.0]].map(([x, z]) => ({ zone: 3, x, z, face: faceTo(x, z, -4.8, 5.2) }))
+];
+const LIVE = { peers: {}, figs: new Map(), on: false, greeted: new Set() };
+LIVE_SLOTS.forEach((s, i) => {
+  s.i = i; s.uid = null; s.F = null; s.glass = null; s.drinkId = null;
+  s.tag = document.createElement("div"); s.tag.className = "nametag"; s.tag.hidden = true; app.appendChild(s.tag);
+  s.bub = document.createElement("div"); s.bub.className = "fbubble"; app.appendChild(s.bub);
+  s.bubUntil = 0;
+  s.spot = null;
+});
+function liveFigure(s, look) {
+  const key = s.i + ":" + look;
+  let F = LIVE.figs.get(key);
+  if (F) return F;
+  F = makeFigure(Object.assign(s.seated ? { seated: true, hipY: .93 } : {}, LIVE_LOOKS[look % LIVE_LOOKS.length]));
+  placeFig(F, s.x, s.z, s.face);
+  if (s.seated) {
+    F.legsFixed = true;
+    F.legs.forEach(lg => { lg.tgt.set(lg.side * .1, .33, .14); lg.cur.copy(lg.tgt); });
+    F.leanT = .12;
+    reach(F.L, .15, 1.15, .6, V3(-.3, -.15, 1), DIR.down, .35);
+    reach(F.R, -.13, 1.15, .58, V3(.3, -.15, 1), DIR.down, .35);
   }
+  F.root.visible = false;
+  hot(F.root, s.zone, "Посетитель", () => { if (s.uid) FRIENDS.open(); }, { grow: 0, noChip: true });
+  LIVE.figs.set(key, F);
+  return F;
 }
-function frSync(peers, myUid) {
-  const others = Object.entries(peers).filter(([k]) => k !== myUid).sort((a, b) => (a[1].seat || 0) - (b[1].seat || 0)).slice(0, FR_X.length);
-  const n = Object.keys(peers).length;
-  const badge = document.getElementById("t-friends-n");
-  if (badge) { badge.hidden = n < 2; badge.textContent = n; }
-  if (!FRS.slots.length && others.length) FRS.slots = FR_X.map((_, i) => frSlot(i));
-  frHideGuests(n > 0);
-  FRS.on = n > 0;
-  FRS.slots.forEach((G, i) => {
-    const o = others[i];
-    if (!o) {
-      if (G.uid) { G.uid = null; G.F.root.visible = false; G.busy = true; G.tag.hidden = true; G.bub.classList.remove("show"); frGlass(G, null); }
-      return;
+function liveGlass(s, d) {
+  const id = d && s.seated ? d.id + d.pour : null;
+  if (id === s.drinkId) return;
+  s.drinkId = id;
+  if (s.glass) { world.remove(s.glass); s.glass = null; }
+  if (!id) return;
+  s.spot = s.spot || fromFig(s.F, V3(-.1, CT.top, .62));
+  s.glass = makeGlass(d.cup || "rocks", d.pour || "#c27a1a", { garnish: d.garnish || null, ice: !!d.ice, op: .85 });
+  s.glass.position.copy(s.spot); s.glass.scale.setScalar(1.25);
+  world.add(s.glass);
+}
+function liveSync(peers) {
+  LIVE.peers = peers;
+  const byZone = {};
+  for (const [uid, u] of Object.entries(peers)) (byZone[u.zone ?? 1] = byZone[u.zone ?? 1] || []).push([uid, u]);
+  const used = new Set();
+  for (const z of Object.keys(byZone)) {
+    const list = byZone[z].sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const slots = LIVE_SLOTS.filter(s => s.zone === +z);
+    // кто уже сидит — остаётся на своём месте
+    for (const [uid] of list) { const s = slots.find(x => x.uid === uid); if (s) used.add(s); }
+    for (const [uid] of list) {
+      if (slots.some(x => x.uid === uid)) continue;
+      const free = slots.find(x => !used.has(x) && !Object.prototype.hasOwnProperty.call(peers, x.uid || "-"));
+      if (!free) break;
+      free.uid = uid; used.add(free);
     }
-    const [uid, u] = o;
-    const fresh = G.uid !== uid;
-    G.uid = uid; G.name = u.name; G.zone = u.zone;
-    G.F.root.visible = true;
-    G.F.root.userData.hot.label = `${u.name}: чокнуться`;
-    G.tag.textContent = u.name + (u.zone !== 1 && u.zone != null ? " · " + (["в читальне", "", "в курилке", "у сцены", "в погребе"][u.zone] || "") : "");
-    frGlass(G, u.drink);
-    G.busy = !u.drink;   // без бокала гость только болтает
-    if (fresh) { say(bt, `${u.name}, добрый вечер! Ваше место свободно.`, 4); if (!STILL) laugh(G); }
-  });
+  }
+  for (const s of LIVE_SLOTS) {
+    const u = s.uid && peers[s.uid];
+    if (!u || u.zone !== s.zone || !used.has(s)) {
+      if (s.F) s.F.root.visible = false;
+      if (s.glass) s.glass.visible = false;
+      s.uid = null; s.tag.hidden = true; s.bub.classList.remove("show");
+      continue;
+    }
+    const F = liveFigure(s, u.look || 0);
+    if (s.F && s.F !== F) s.F.root.visible = false;
+    s.F = F; F.root.visible = true;
+    s.name = u.name;
+    s.tag.textContent = u.name;
+    liveGlass(s, u.drink);
+    if (s.glass) s.glass.visible = true;
+    if (!LIVE.greeted.has(s.uid) && s.zone === 1 && curZone === 1 && started && !busy && !SEAT.on) { LIVE.greeted.add(s.uid); say(bt, `${u.name}, добрый вечер! Проходите.`, 4); }
+  }
+  // настоящие посетители за стойкой — нарисованные гости уступают им табуреты
+  const atBar = LIVE_SLOTS.some(s => s.zone === 1 && s.seated && s.uid);
+  if (atBar !== LIVE.atBar) { LIVE.atBar = atBar; for (const G of GUESTS) { G.F.root.visible = !atBar; if (G.glass) G.glass.visible = !atBar; G.busy = atBar; } }
+  LIVE.on = Object.keys(peers).length > 0;
 }
-function frSlotOf(uid) { return FRS.slots.find(G => G.uid === uid); }
-function frEvent(uid, kind, text) {
-  const G = frSlotOf(uid); if (!G) return;
-  if (kind === "cheers") { if (!G.busy && G.glass && G.glass.visible) sip(G); clink(); }
-  G.bub.textContent = kind === "cheers" ? "🥂 За вас!" : text;
-  G.bubUntil = NOW + Math.min(9000, 2500 + (text || "").length * 70);
+function liveSlotOf(uid) { return LIVE_SLOTS.find(s => s.uid === uid); }
+function liveEvent(uid, p, text) {
+  const s = liveSlotOf(uid); if (!s) return;
+  s.bub.textContent = text;
+  s.bubUntil = NOW + 4500;
+  if (s.zone === curZone && (p === "cheers")) clink();
+  if (s.zone === curZone && (p === "laugh" || p === "hi") && s.F && !STILL) { s.F.nod = -.1; setTimeout(() => { if (s.F) s.F.nod = 0; }, 600); }
 }
-function frCheers() {
+function liveCheers() {
   clink();
-  for (const G of FRS.slots) if (G.uid && G.glass && G.glass.visible && !G.busy) sip(G);
+  for (const s of LIVE_SLOTS) if (s.uid && s.zone === curZone && s.glass && s.F) { s.bub.textContent = "🥂"; s.bubUntil = NOW + 2500; }
 }
-const _ft = V3();
+const _lt = V3();
 onTick(() => {
-  if (!FRS.on) return;
-  const vis = curZone === 1 && !STREET.on && !SHOW.on;
-  for (const G of FRS.slots) {
-    if (!G.uid || !vis) { G.tag.hidden = true; G.bub.classList.remove("show"); continue; }
-    G.F.head.getWorldPosition(_ft); _ft.y += .2;
-    const p = _ft.clone().project(camera);
+  if (!LIVE.on) return;
+  for (const s of LIVE_SLOTS) {
+    const vis = s.uid && s.zone === curZone && !STREET.on && !SHOW.on && !CLOSING.on;
+    if (!vis) { s.tag.hidden = true; s.bub.classList.remove("show"); continue; }
+    s.F.head.getWorldPosition(_lt); _lt.y += .22;
+    const p = _lt.project(camera);
     const ok = p.z < 1 && Math.abs(p.x) < 1.05 && Math.abs(p.y) < 1.05;
-    G.tag.hidden = !ok;
-    if (!ok) { G.bub.classList.remove("show"); continue; }
+    s.tag.hidden = !ok;
+    if (!ok) { s.bub.classList.remove("show"); continue; }
     const x = (p.x + 1) / 2 * innerWidth, y = (1 - p.y) / 2 * innerHeight;
-    G.tag.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
-    const talk = NOW < G.bubUntil;
-    G.bub.classList.toggle("show", talk);
-    if (talk) { const half = G.bub.offsetWidth / 2 + 8; G.bub.style.transform = `translate(${clamp(x, half, innerWidth - half)}px, ${Math.max(G.bub.offsetHeight + 8, y - 30)}px) translate(-50%, -100%)`; }
+    s.tag.style.transform = `translate(${x}px, ${y}px) translate(-50%, -100%)`;
+    const talk = NOW < s.bubUntil;
+    s.bub.classList.toggle("show", talk);
+    if (talk) { const half = s.bub.offsetWidth / 2 + 8; s.bub.style.transform = `translate(${clamp(x, half, innerWidth - half)}px, ${Math.max(s.bub.offsetHeight + 8, y - 28)}px) translate(-50%, -100%)`; }
   }
 });
-H3D.friends = { sync: frSync, event: frEvent, cheers: frCheers, slots: FRS.slots };
-/* по ссылке с комнатой: после входа в бар сразу предлагаем сесть к друзьям */
-if (/^[a-z0-9]{8}$/.test(QS.get("room") || "")) {
+H3D.friends = { sync: liveSync, event: liveEvent, cheers: liveCheers, slots: LIVE_SLOTS };
+/* как только гость вошёл в бар — он в живом зале (если не выбрал невидимку) */
+{
   const t = setInterval(() => {
-    if (!started || STREET.on || busy) return;
+    if (!started || STREET.on) return;
     clearInterval(t);
-    FRIENDS.open();
+    FRIENDS.live();
   }, 1500);
 }
 

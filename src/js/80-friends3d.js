@@ -1,6 +1,6 @@
 /* ================= друзья за стойкой: фигуры, имена, напитки, реплики ================= */
 const FRS = { slots: [], on: false };
-const FR_X = [0, -1.25, -2.5, 2.5];   // табурет 1.25 — ваш собственный
+const FR_X = [-1.25, -2.5, 2.5, 0];   // табурет 1.25 — ваш собственный; центральный — последним, чтобы не заслонять бармена
 const FR_LOOKS = [
   { kind: "suit", body: "#3a2a4a", tie: "#c9944a", skin: 0xd0a07e, hair: 0x2a1a10 },
   { kind: "dress", body: "#6a1424", skin: 0xe0b090, hair: 0x5a2e14, hairStyle: "bob", lady: true },
@@ -29,8 +29,8 @@ function frGlass(G, d) {
   const id = d ? d.id + d.pour : null;
   if (id === G.drinkId) return;
   G.drinkId = id;
-  if (G.glass) { world.remove(G.glass); G.glass = null; }
-  if (!d) return;
+  if (!d) { if (G.glass) G.glass.visible = false; return; }   // сам бокал не удаляем: вдруг гость как раз пьёт
+  if (G.glass) world.remove(G.glass);
   G.glass = makeGlass(d.cup || "rocks", d.pour || "#c27a1a", { garnish: d.garnish || null, ice: !!d.ice, op: .85 });
   G.glass.position.copy(G.spot); G.glass.scale.setScalar(1.25);
   world.add(G.glass);
@@ -63,20 +63,20 @@ function frSync(peers, myUid) {
     G.F.root.userData.hot.label = `${u.name}: чокнуться`;
     G.tag.textContent = u.name + (u.zone !== 1 && u.zone != null ? " · " + (["в читальне", "", "в курилке", "у сцены", "в погребе"][u.zone] || "") : "");
     frGlass(G, u.drink);
-    G.busy = !G.glass;   // без бокала гость только болтает
+    G.busy = !u.drink;   // без бокала гость только болтает
     if (fresh) { say(bt, `${u.name}, добрый вечер! Ваше место свободно.`, 4); if (!STILL) laugh(G); }
   });
 }
 function frSlotOf(uid) { return FRS.slots.find(G => G.uid === uid); }
 function frEvent(uid, kind, text) {
   const G = frSlotOf(uid); if (!G) return;
-  if (kind === "cheers") { if (!G.busy && G.glass) sip(G); clink(); }
+  if (kind === "cheers") { if (!G.busy && G.glass && G.glass.visible) sip(G); clink(); }
   G.bub.textContent = kind === "cheers" ? "🥂 За вас!" : text;
   G.bubUntil = NOW + Math.min(9000, 2500 + (text || "").length * 70);
 }
 function frCheers() {
   clink();
-  for (const G of FRS.slots) if (G.uid && G.glass && !G.busy) sip(G);
+  for (const G of FRS.slots) if (G.uid && G.glass && G.glass.visible && !G.busy) sip(G);
 }
 const _ft = V3();
 onTick(() => {

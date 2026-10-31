@@ -2,7 +2,13 @@
    Связь через Firebase Realtime Database (бесплатный тариф). Ключи ниже не секретные:
    их видит любой браузер, а защиту дают правила базы (docs/firebase-rules.json).
    Для проверки без сервера: ?room=…&net=local — вкладки одного браузера видят друг друга. */
-  const FIREBASE_CONFIG = null;
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAGn2L_2GiVGIADqtomVD14jTVZlQlP4Dc",
+    authDomain: "hacheden-9946b.firebaseapp.com",
+    databaseURL: "https://hacheden-9946b-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "hacheden-9946b",
+    appId: "1:774316675789:web:9347526f7df621d2d34f84"
+  };
   const FB_VER = "10.12.2";
   const ROOM_MAX = 5;
   const FR = { room: null, me: null, uid: null, peers: {}, log: [], net: null, joining: false, lastSay: 0 };
@@ -25,6 +31,7 @@
       else if (m.type === "msg") emit("msg", m.data);
     };
     return {
+      get uid() { return uid; },
       on(e, f) { (H[e] = H[e] || []).push(f); },
       async join(code, me) {
         room = code; users[uid] = Object.assign({}, me, { t: Date.now() });
@@ -59,6 +66,7 @@
       F = rdb;
     }
     return {
+      get uid() { return uid; },
       on(e, f) { (H[e] = H[e] || []).push(f); },
       async join(code, me) {
         if (!F) await load();
@@ -105,7 +113,7 @@
       FR.net = FR.net || (FIREBASE_CONFIG && QS_FR.get("net") !== "local" ? firebaseNet() : localNet());
       if (!FR.bound) {
         FR.bound = true;
-        FR.net.on("peers", p => { FR.peers = p; if (H3D.friends) H3D.friends.sync(p, FR.uid); renderFriends(true); });
+        FR.net.on("peers", p => { FR.uid = FR.net.uid; FR.peers = p; if (H3D.friends) H3D.friends.sync(p, FR.uid); renderFriends(true); });
         FR.net.on("msg", m => onMsg(m));
       }
       FR.me = { name, look: Math.floor(Math.random() * 5), drink: drinkInfo(LAST_DRINK), zone: typeof cur === "number" ? cur : 1 };

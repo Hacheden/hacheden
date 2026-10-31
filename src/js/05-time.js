@@ -40,11 +40,13 @@ try { OWNER = localStorage.getItem("hacheden-owner") === OWNER_HASH; } catch (e)
     history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
   }
 }
-const isOpen = (d = nowDate()) => OWNER || openByClock(d);
+/* приглашение в комнату друзей: частная вечеринка, бар открыт для гостей по ссылке в любое время */
+const PRIVATE_ROOM = /^[a-z0-9]{8}$/.test(QS.get("room") || "");
+const isOpen = (d = nowDate()) => OWNER || PRIVATE_ROOM || openByClock(d);
 /* хозяин в закрытые часы видит бар таким, каким он бывает в половине девятого вечера */
 const sceneDate = () => {
   const d = nowDate();
-  if (!OWNER || openByClock(d)) return d;
+  if (!(OWNER || PRIVATE_ROOM) || openByClock(d)) return d;
   const e = new Date(d); e.setHours(20, 30, 0, 0); return e;
 };
 function minutesUntil(target, d = nowDate()) { let diff = target - hoursOf(d); if (diff <= 0) diff += 24; return Math.ceil(diff * 60); }

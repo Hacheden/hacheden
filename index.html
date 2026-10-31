@@ -3886,7 +3886,13 @@
    Связь через Firebase Realtime Database (бесплатный тариф). Ключи ниже не секретные:
    их видит любой браузер, а защиту дают правила базы (docs/firebase-rules.json).
    Для проверки без сервера: ?room=…&net=local — вкладки одного браузера видят друг друга. */
-  const FIREBASE_CONFIG = null;
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAGn2L_2GiVGIADqtomVD14jTVZlQlP4Dc",
+    authDomain: "hacheden-9946b.firebaseapp.com",
+    databaseURL: "https://hacheden-9946b-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "hacheden-9946b",
+    appId: "1:774316675789:web:9347526f7df621d2d34f84"
+  };
   const FB_VER = "10.12.2";
   const ROOM_MAX = 5;
   const FR = { room: null, me: null, uid: null, peers: {}, log: [], net: null, joining: false, lastSay: 0 };
@@ -3909,6 +3915,7 @@
       else if (m.type === "msg") emit("msg", m.data);
     };
     return {
+      get uid() { return uid; },
       on(e, f) { (H[e] = H[e] || []).push(f); },
       async join(code, me) {
         room = code; users[uid] = Object.assign({}, me, { t: Date.now() });
@@ -3943,6 +3950,7 @@
       F = rdb;
     }
     return {
+      get uid() { return uid; },
       on(e, f) { (H[e] = H[e] || []).push(f); },
       async join(code, me) {
         if (!F) await load();
@@ -3989,7 +3997,7 @@
       FR.net = FR.net || (FIREBASE_CONFIG && QS_FR.get("net") !== "local" ? firebaseNet() : localNet());
       if (!FR.bound) {
         FR.bound = true;
-        FR.net.on("peers", p => { FR.peers = p; if (H3D.friends) H3D.friends.sync(p, FR.uid); renderFriends(true); });
+        FR.net.on("peers", p => { FR.uid = FR.net.uid; FR.peers = p; if (H3D.friends) H3D.friends.sync(p, FR.uid); renderFriends(true); });
         FR.net.on("msg", m => onMsg(m));
       }
       FR.me = { name, look: Math.floor(Math.random() * 5), drink: drinkInfo(LAST_DRINK), zone: typeof cur === "number" ? cur : 1 };
@@ -4285,11 +4293,13 @@ try { OWNER = localStorage.getItem("hacheden-owner") === OWNER_HASH; } catch (e)
     history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
   }
 }
-const isOpen = (d = nowDate()) => OWNER || openByClock(d);
+/* приглашение в комнату друзей: частная вечеринка, бар открыт для гостей по ссылке в любое время */
+const PRIVATE_ROOM = /^[a-z0-9]{8}$/.test(QS.get("room") || "");
+const isOpen = (d = nowDate()) => OWNER || PRIVATE_ROOM || openByClock(d);
 /* хозяин в закрытые часы видит бар таким, каким он бывает в половине девятого вечера */
 const sceneDate = () => {
   const d = nowDate();
-  if (!OWNER || openByClock(d)) return d;
+  if (!(OWNER || PRIVATE_ROOM) || openByClock(d)) return d;
   const e = new Date(d); e.setHours(20, 30, 0, 0); return e;
 };
 function minutesUntil(target, d = nowDate()) { let diff = target - hoursOf(d); if (diff <= 0) diff += 24; return Math.ceil(diff * 60); }
@@ -10867,7 +10877,8 @@ function showOpen() {
   introTitle.classList.remove("off");
   const left = minutesUntil(CLOSE_H);
   introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
-  statusEl.textContent = OWNER
+  statusEl.textContent = PRIVATE_ROOM && !OWNER ? (openByClock() ? "Вас пригласили друзья — заходите, вам займут место за стойкой" : "Частная вечеринка: для вашей компании бар открыт и сейчас")
+    : OWNER
     ? (openByClock() ? "Режим хозяина. Для гостей открыто до 3:00" : "Режим хозяина: для тебя открыто. Гостей ждём с 17:00")
     : left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
   ownerOut.hidden = !OWNER;
@@ -11723,7 +11734,7 @@ Object.assign(H3D, { raid: playRaid });
 
 /* ================= друзья за стойкой: фигуры, имена, напитки, реплики ================= */
 const FRS = { slots: [], on: false };
-const FR_X = [0, -1.25, -2.5, 2.5];   // табурет 1.25 — ваш собственный
+const FR_X = [-1.25, -2.5, 2.5, 0];   // табурет 1.25 — ваш собственный; центральный — последним, чтобы не заслонять бармена
 const FR_LOOKS = [
   { kind: "suit", body: "#3a2a4a", tie: "#c9944a", skin: 0xd0a07e, hair: 0x2a1a10 },
   { kind: "dress", body: "#6a1424", skin: 0xe0b090, hair: 0x5a2e14, hairStyle: "bob", lady: true },
@@ -11752,8 +11763,8 @@ function frGlass(G, d) {
   const id = d ? d.id + d.pour : null;
   if (id === G.drinkId) return;
   G.drinkId = id;
-  if (G.glass) { world.remove(G.glass); G.glass = null; }
-  if (!d) return;
+  if (!d) { if (G.glass) G.glass.visible = false; return; }   // сам бокал не удаляем: вдруг гость как раз пьёт
+  if (G.glass) world.remove(G.glass);
   G.glass = makeGlass(d.cup || "rocks", d.pour || "#c27a1a", { garnish: d.garnish || null, ice: !!d.ice, op: .85 });
   G.glass.position.copy(G.spot); G.glass.scale.setScalar(1.25);
   world.add(G.glass);
@@ -11786,20 +11797,20 @@ function frSync(peers, myUid) {
     G.F.root.userData.hot.label = `${u.name}: чокнуться`;
     G.tag.textContent = u.name + (u.zone !== 1 && u.zone != null ? " · " + (["в читальне", "", "в курилке", "у сцены", "в погребе"][u.zone] || "") : "");
     frGlass(G, u.drink);
-    G.busy = !G.glass;   // без бокала гость только болтает
+    G.busy = !u.drink;   // без бокала гость только болтает
     if (fresh) { say(bt, `${u.name}, добрый вечер! Ваше место свободно.`, 4); if (!STILL) laugh(G); }
   });
 }
 function frSlotOf(uid) { return FRS.slots.find(G => G.uid === uid); }
 function frEvent(uid, kind, text) {
   const G = frSlotOf(uid); if (!G) return;
-  if (kind === "cheers") { if (!G.busy && G.glass) sip(G); clink(); }
+  if (kind === "cheers") { if (!G.busy && G.glass && G.glass.visible) sip(G); clink(); }
   G.bub.textContent = kind === "cheers" ? "🥂 За вас!" : text;
   G.bubUntil = NOW + Math.min(9000, 2500 + (text || "").length * 70);
 }
 function frCheers() {
   clink();
-  for (const G of FRS.slots) if (G.uid && G.glass && !G.busy) sip(G);
+  for (const G of FRS.slots) if (G.uid && G.glass && G.glass.visible && !G.busy) sip(G);
 }
 const _ft = V3();
 onTick(() => {

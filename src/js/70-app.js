@@ -453,7 +453,8 @@ function showOpen() {
   introTitle.classList.remove("off");
   const left = minutesUntil(CLOSE_H);
   introText.textContent = `${SEASON_INFO[SEASON].line} Стойка, курилка у камина и читальня ждут.`;
-  statusEl.textContent = OWNER
+  statusEl.textContent = PRIVATE_ROOM && !OWNER ? (openByClock() ? "Вас пригласили друзья — заходите, вам займут место за стойкой" : "Частная вечеринка: для вашей компании бар открыт и сейчас")
+    : OWNER
     ? (openByClock() ? "Режим хозяина. Для гостей открыто до 3:00" : "Режим хозяина: для тебя открыто. Гостей ждём с 17:00")
     : left <= 30 ? `Последний заказ: закрываемся через ${spell(left)}` : "Открыто до 3:00";
   ownerOut.hidden = !OWNER;
